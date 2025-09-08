@@ -33,11 +33,20 @@ class DifyService {
         query: message,
         response_mode: 'blocking', // hoặc 'streaming' nếu muốn streaming response
         user: userId,
-        conversation_id: '', // Dify sẽ tự tạo nếu để trống
+        // Chỉ thêm conversation_id nếu có và không rỗng
+        ...(additionalData.conversation_id && additionalData.conversation_id.trim() !== '' ? { conversation_id: additionalData.conversation_id } : {}),
         files: [] // Có thể thêm file attachments nếu cần
       };
 
-      const response = await this.apiClient.post(`/chat-messages`, payload);
+      const url = `/chat-messages`;
+      logger.info('Sending request to Dify AI', {
+        url: `${this.apiUrl}${url}`,
+        appId: this.appId,
+        userId,
+        conversationId: additionalData.conversation_id
+      });
+      
+      const response = await this.apiClient.post(url, payload);
       
       logger.info('Message sent to Dify AI successfully', {
         userId,

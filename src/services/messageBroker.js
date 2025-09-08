@@ -6,6 +6,8 @@ const logger = require('../utils/logger');
 class MessageBroker {
   constructor() {
     this.conversationMap = new Map(); // Lưu mapping giữa platform conversation và Chatwoot conversation
+    this.difyConversationMap = new Map(); // Lưu mapping giữa platform conversation và Dify conversation
+    this.processedMessages = new Set(); // Tracking tin nhắn đã xử lý để tránh trả lời trùng lặp
   }
 
   /**
@@ -14,26 +16,53 @@ class MessageBroker {
    */
   async handleTelegramMessage(telegramMessage) {
     try {
+      // Tạo unique key cho tin nhắn để tracking
+      const messageKey = `${telegramMessage.chatId}_${telegramMessage.messageId}`;
+      
+      // Kiểm tra xem tin nhắn đã được xử lý chưa
+      if (this.processedMessages.has(messageKey)) {
+        logger.info('Message already processed, skipping', { messageKey });
+        return;
+      }
+
       logger.info('Processing Telegram message', {
         chatId: telegramMessage.chatId,
         userId: telegramMessage.userId,
-        text: telegramMessage.text
+        text: telegramMessage.text,
+        messageId: telegramMessage.messageId
       });
 
-      // 1. Lưu tin nhắn vào Chatwoot
-      const conversation = await chatwootService.getOrCreateConversation(
-        telegramMessage.userId,
-        {
-          name: `${telegramMessage.firstName} ${telegramMessage.lastName}`.trim(),
-          firstName: telegramMessage.firstName,
-          lastName: telegramMessage.lastName,
-          username: telegramMessage.username,
-          email: `${telegramMessage.userId}@telegram.local`
-        }
-      );
-
-      // Lưu mapping conversation
-      this.conversationMap.set(telegramMessage.chatId, conversation.id);
+      // 1. Lấy hoặc tạo conversation (chỉ 1 conversation cho mỗi Telegram chat)
+      let conversation;
+      if (this.conversationMap.has(telegramMessage.chatId)) {
+        // Sử dụng conversation đã có
+        const chatwootConversationId = this.conversationMap.get(telegramMessage.chatId);
+        conversation = { id: chatwootConversationId };
+        logger.info('Using existing conversation', { 
+          chatId: telegramMessage.chatId, 
+          conversationId: chatwootConversationId 
+        });
+      } else {
+        // Tạo conversation mới
+        conversation = await chatwootService.getOrCreateConversation(
+          telegramMessage.userId,
+          {
+            name: `${telegramMessage.firstName} ${telegramMessage.lastName}`.trim(),
+            firstName: telegramMessage.firstName,
+            lastName: telegramMessage.lastName,
+            username: telegramMessage.username,
+            email: `${telegramMessage.userId}@telegram.local`
+          },
+          telegramMessage.chatId // Truyền chatId làm platform conversation ID
+        );
+        
+        // Lưu mapping conversation
+        this.conversationMap.set(telegramMessage.chatId, conversation.id);
+        logger.info('Created new conversation', { 
+          chatId: telegramMessage.chatId, 
+          conversationId: conversation.id 
+        });
+      }
 
       // Lưu tin nhắn vào Chatwoot
       await chatwootService.sendMessage(
@@ -58,9 +87,15 @@ class MessageBroker {
         telegramMessage.userId,
         {
           platform: 'telegram',
-          chat_id: telegramMessage.chatId
+          chat_id: telegramMessage.chatId,
+          conversation_id: this.getDifyConversationId(telegramMessage.chatId)
         }
       );
+      
+      // Lưu Dify conversation ID
+      if (difyResponse.conversationId) {
+        this.difyConversationMap.set(telegramMessage.chatId, difyResponse.conversationId);
+      }
 
       // 3. Gửi phản hồi từ AI về Telegram
       await telegramService.sendMessage(
@@ -85,7 +120,11 @@ class MessageBroker {
         }
       );
 
+      // 5. Đánh dấu tin nhắn đã được xử lý
+      this.processedMessages.add(messageKey);
+      
       logger.info('Telegram message processed successfully', {
+        messageKey,
         chatId: telegramMessage.chatId,
         conversationId: conversation.id,
         difyConversationId: difyResponse.conversationId
@@ -187,6 +226,14 @@ class MessageBroker {
    */
   getConversationMapping(platformConversationId) {
     return this.conversationMap.get(platformConversationId);
+  }
+
+  /**
+   * Lấy Dify conversation ID
+   * @param {string} platformConversationId - ID conversation từ platform
+   */
+  getDifyConversationId(platformConversationId) {
+    return this.difyConversationMap.get(platformConversationId);
   }
 
   /**

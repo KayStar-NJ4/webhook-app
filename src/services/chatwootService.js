@@ -21,8 +21,9 @@ class ChatwootService {
    * Tạo hoặc lấy conversation cho contact
    * @param {string} sourceId - ID của contact từ platform (Telegram user ID)
    * @param {object} contactData - Thông tin contact
+   * @param {string} platformConversationId - ID conversation từ platform (Telegram chat ID)
    */
-  async getOrCreateConversation(sourceId, contactData) {
+  async getOrCreateConversation(sourceId, contactData, platformConversationId = null) {
     try {
       // Tìm contact theo source_id
       const contacts = await this.findContactBySourceId(sourceId);
@@ -37,12 +38,12 @@ class ChatwootService {
           return activeConversation;
         }
         
-        // Tạo conversation mới
-        return await this.createConversation(contact.id);
+        // Tạo conversation mới với source_id từ platform
+        return await this.createConversation(contact.id, platformConversationId);
       } else {
         // Tạo contact mới
         const contact = await this.createContact(sourceId, contactData);
-        return await this.createConversation(contact.id);
+        return await this.createConversation(contact.id, platformConversationId);
       }
     } catch (error) {
       logger.error('Failed to get or create conversation', {
@@ -123,27 +124,37 @@ class ChatwootService {
       const response = await this.apiClient.get(`/api/v1/accounts/${this.accountId}/inboxes`);
       const inboxes = response.data.payload || [];
       
+      logger.info('Found inboxes', { 
+        count: inboxes.length,
+        inboxes: inboxes.map(inbox => ({ id: inbox.id, name: inbox.name, type: inbox.channel_type }))
+      });
+      
       // Tìm API inbox
       let apiInbox = inboxes.find(inbox => inbox.channel_type === 'api');
       
       if (!apiInbox) {
+        logger.info('No API inbox found, creating new one');
         // Tạo API inbox mới
         const createResponse = await this.apiClient.post(`/api/v1/accounts/${this.accountId}/inboxes`, {
-          name: 'Telegram API',
+          name: 'Xiu xiu',
           channel: {
             type: 'api'
           }
         });
         apiInbox = createResponse.data;
         logger.info('Created new API inbox', { inboxId: apiInbox.id });
+      } else {
+        logger.info('Using existing API inbox', { inboxId: apiInbox.id, name: apiInbox.name });
       }
       
       return apiInbox.id;
     } catch (error) {
       logger.error('Failed to get or create API inbox', {
-        error: error.message
+        error: error.message,
+        response: error.response?.data
       });
       // Fallback to config inbox ID
+      logger.info('Falling back to config inbox ID', { inboxId: config.chatwoot.inboxId });
       return config.chatwoot.inboxId;
     }
   }
@@ -168,14 +179,15 @@ class ChatwootService {
   /**
    * Tạo conversation mới
    * @param {number} contactId - ID của contact
+   * @param {string} platformConversationId - ID conversation từ platform
    */
-  async createConversation(contactId) {
+  async createConversation(contactId, platformConversationId = null) {
     try {
       // Tìm hoặc tạo API inbox
       const inboxId = await this.getOrCreateApiInbox();
       
       const payload = {
-        source_id: `telegram_${Date.now()}`,
+        source_id: platformConversationId || `telegram_${Date.now()}`,
         inbox_id: inboxId,
         contact_id: contactId
       };
