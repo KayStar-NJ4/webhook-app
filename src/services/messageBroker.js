@@ -29,7 +29,7 @@ class MessageBroker {
         chatId: telegramMessage.chatId,
         conversationId: telegramMessage.conversationId,
         userId: telegramMessage.userId,
-        displayName: telegramMessage.displayName,
+        senderDisplayName: telegramMessage.senderDisplayName,
         isGroupChat: telegramMessage.isGroupChat,
         text: telegramMessage.text,
         messageId: telegramMessage.messageId
@@ -48,14 +48,14 @@ class MessageBroker {
       } else {
         // Tạo conversation mới với thông tin phù hợp
         const contactData = telegramMessage.isGroupChat ? {
-          name: telegramMessage.displayName,
+          name: telegramMessage.groupTitle || `Group ${telegramMessage.chatId}`,
           firstName: telegramMessage.groupTitle || 'Group',
           lastName: '',
           username: `group_${telegramMessage.chatId}`,
           email: `group_${telegramMessage.chatId}@telegram.local`,
           isGroup: true
         } : {
-          name: telegramMessage.displayName,
+          name: telegramMessage.senderDisplayName,
           firstName: telegramMessage.firstName,
           lastName: telegramMessage.lastName,
           username: telegramMessage.username,
@@ -80,7 +80,7 @@ class MessageBroker {
 
       // Lưu tin nhắn vào Chatwoot với thông tin người gửi
       const messageContent = telegramMessage.isGroupChat 
-        ? `[${telegramMessage.displayName}]: ${telegramMessage.text}`
+        ? `[${telegramMessage.senderDisplayName}]: ${telegramMessage.text}`
         : telegramMessage.text;
 
       await chatwootService.sendMessage(
@@ -96,7 +96,7 @@ class MessageBroker {
               telegram_chat_id: telegramMessage.chatId,
               telegram_conversation_id: telegramMessage.conversationId,
               is_group_chat: telegramMessage.isGroupChat,
-              sender_display_name: telegramMessage.displayName,
+              sender_display_name: telegramMessage.senderDisplayName,
               group_title: telegramMessage.groupTitle
             }
           }
@@ -112,7 +112,7 @@ class MessageBroker {
           chat_id: telegramMessage.chatId,
           conversation_id: this.getDifyConversationId(telegramMessage.conversationId),
           is_group_chat: telegramMessage.isGroupChat,
-          sender_name: telegramMessage.displayName
+          sender_name: telegramMessage.senderDisplayName
         }
       );
       

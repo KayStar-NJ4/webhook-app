@@ -30,15 +30,19 @@ async function testImprovements() {
   };
 
   const processedPrivate = telegramService.processMessage(privateMessage);
-  console.log('✅ Private message processed:', {
-    conversationId: processedPrivate.conversationId,
-    displayName: processedPrivate.displayName,
-    isGroupChat: processedPrivate.isGroupChat
-  });
+  if (processedPrivate) {
+    console.log('✅ Private message processed:', {
+      conversationId: processedPrivate.conversationId,
+      senderDisplayName: processedPrivate.senderDisplayName,
+      isGroupChat: processedPrivate.isGroupChat
+    });
+  } else {
+    console.log('❌ Private message not processed (should be processed)');
+  }
 
-  // Test 2: Xử lý tin nhắn group chat
-  console.log('\n👥 Test 2: Group Chat Message');
-  const groupMessage = {
+  // Test 2: Xử lý tin nhắn group chat (không mention bot)
+  console.log('\n👥 Test 2: Group Chat Message (No Bot Mention)');
+  const groupMessageNoMention = {
     message: {
       message_id: 124,
       from: {
@@ -58,86 +62,135 @@ async function testImprovements() {
     }
   };
 
-  const processedGroup = telegramService.processMessage(groupMessage);
-  console.log('✅ Group message processed:', {
-    conversationId: processedGroup.conversationId,
-    displayName: processedGroup.displayName,
-    isGroupChat: processedGroup.isGroupChat,
-    groupTitle: processedGroup.groupTitle
-  });
+  const processedGroupNoMention = telegramService.processMessage(groupMessageNoMention);
+  if (processedGroupNoMention) {
+    console.log('❌ Group message without mention was processed (should NOT be processed)');
+  } else {
+    console.log('✅ Group message without mention correctly ignored');
+  }
 
-  // Test 3: Kiểm tra conversation mapping
-  console.log('\n🗺️ Test 3: Conversation Mapping');
+  // Test 3: Xử lý tin nhắn group chat (có mention bot)
+  console.log('\n👥 Test 3: Group Chat Message (With Bot Mention)');
+  const groupMessageWithMention = {
+    message: {
+      message_id: 125,
+      from: {
+        id: 987654321,
+        is_bot: false,
+        first_name: 'Jane',
+        last_name: 'Smith',
+        username: 'janesmith'
+      },
+      chat: {
+        id: -1001234567890,
+        type: 'supergroup',
+        title: 'Test Group'
+      },
+      date: Date.now(),
+      text: '@testbot chào bot!'
+    }
+  };
+
+  const processedGroupWithMention = telegramService.processMessage(groupMessageWithMention);
+  if (processedGroupWithMention) {
+    console.log('✅ Group message with mention processed:', {
+      conversationId: processedGroupWithMention.conversationId,
+      senderDisplayName: processedGroupWithMention.senderDisplayName,
+      isGroupChat: processedGroupWithMention.isGroupChat,
+      groupTitle: processedGroupWithMention.groupTitle
+    });
+  } else {
+    console.log('❌ Group message with mention not processed (should be processed)');
+  }
+
+  // Test 4: Kiểm tra conversation mapping
+  console.log('\n🗺️ Test 4: Conversation Mapping');
   
   // Simulate conversation mapping
-  messageBroker.setConversationMapping(processedPrivate.conversationId, 1001);
-  messageBroker.setConversationMapping(processedGroup.conversationId, 1002);
+  if (processedPrivate) {
+    messageBroker.setConversationMapping(processedPrivate.conversationId, 1001);
+  }
+  if (processedGroupWithMention) {
+    messageBroker.setConversationMapping(processedGroupWithMention.conversationId, 1002);
+  }
   
   const mappings = messageBroker.getAllConversationMappings();
   console.log('✅ Conversation mappings:', mappings);
 
-  // Test 4: Kiểm tra message deduplication
-  console.log('\n🔄 Test 4: Message Deduplication');
+  // Test 5: Kiểm tra message deduplication
+  console.log('\n🔄 Test 5: Message Deduplication');
   
-  const messageKey1 = `${processedPrivate.conversationId}_${processedPrivate.messageId}`;
-  const messageKey2 = `${processedGroup.conversationId}_${processedGroup.messageId}`;
+  if (processedPrivate && processedGroupWithMention) {
+    const messageKey1 = `${processedPrivate.conversationId}_${processedPrivate.messageId}`;
+    const messageKey2 = `${processedGroupWithMention.conversationId}_${processedGroupWithMention.messageId}`;
+    
+    console.log('✅ Message keys generated:', {
+      private: messageKey1,
+      group: messageKey2
+    });
+  }
+
+  // Test 6: Kiểm tra contact data generation
+  console.log('\n👤 Test 6: Contact Data Generation');
   
-  console.log('✅ Message keys generated:', {
-    private: messageKey1,
-    group: messageKey2
-  });
+  if (processedPrivate) {
+    const privateContactData = processedPrivate.isGroupChat ? {
+      name: processedPrivate.groupTitle || `Group ${processedPrivate.chatId}`,
+      firstName: processedPrivate.groupTitle || 'Group',
+      lastName: '',
+      username: `group_${processedPrivate.chatId}`,
+      email: `group_${processedPrivate.chatId}@telegram.local`,
+      isGroup: true
+    } : {
+      name: processedPrivate.senderDisplayName,
+      firstName: processedPrivate.firstName,
+      lastName: processedPrivate.lastName,
+      username: processedPrivate.username,
+      email: `${processedPrivate.userId}@telegram.local`,
+      isGroup: false
+    };
 
-  // Test 5: Kiểm tra contact data generation
-  console.log('\n👤 Test 5: Contact Data Generation');
+    console.log('✅ Private contact data:', privateContactData);
+  }
+
+  if (processedGroupWithMention) {
+    const groupContactData = processedGroupWithMention.isGroupChat ? {
+      name: processedGroupWithMention.groupTitle || `Group ${processedGroupWithMention.chatId}`,
+      firstName: processedGroupWithMention.groupTitle || 'Group',
+      lastName: '',
+      username: `group_${processedGroupWithMention.chatId}`,
+      email: `group_${processedGroupWithMention.chatId}@telegram.local`,
+      isGroup: true
+    } : {
+      name: processedGroupWithMention.senderDisplayName,
+      firstName: processedGroupWithMention.firstName,
+      lastName: processedGroupWithMention.lastName,
+      username: processedGroupWithMention.username,
+      email: `${processedGroupWithMention.userId}@telegram.local`,
+      isGroup: false
+    };
+
+    console.log('✅ Group contact data:', groupContactData);
+  }
+
+  // Test 7: Kiểm tra message content formatting
+  console.log('\n💬 Test 7: Message Content Formatting');
   
-  const privateContactData = processedPrivate.isGroupChat ? {
-    name: processedPrivate.displayName,
-    firstName: processedPrivate.groupTitle || 'Group',
-    lastName: '',
-    username: `group_${processedPrivate.chatId}`,
-    email: `group_${processedPrivate.chatId}@telegram.local`,
-    isGroup: true
-  } : {
-    name: processedPrivate.displayName,
-    firstName: processedPrivate.firstName,
-    lastName: processedPrivate.lastName,
-    username: processedPrivate.username,
-    email: `${processedPrivate.userId}@telegram.local`,
-    isGroup: false
-  };
+  if (processedPrivate) {
+    const privateMessageContent = processedPrivate.isGroupChat 
+      ? `[${processedPrivate.senderDisplayName}]: ${processedPrivate.text}`
+      : processedPrivate.text;
 
-  const groupContactData = processedGroup.isGroupChat ? {
-    name: processedGroup.displayName,
-    firstName: processedGroup.groupTitle || 'Group',
-    lastName: '',
-    username: `group_${processedGroup.chatId}`,
-    email: `group_${processedGroup.chatId}@telegram.local`,
-    isGroup: true
-  } : {
-    name: processedGroup.displayName,
-    firstName: processedGroup.firstName,
-    lastName: processedGroup.lastName,
-    username: processedGroup.username,
-    email: `${processedGroup.userId}@telegram.local`,
-    isGroup: false
-  };
+    console.log('✅ Private message content:', privateMessageContent);
+  }
 
-  console.log('✅ Private contact data:', privateContactData);
-  console.log('✅ Group contact data:', groupContactData);
+  if (processedGroupWithMention) {
+    const groupMessageContent = processedGroupWithMention.isGroupChat 
+      ? `[${processedGroupWithMention.senderDisplayName}]: ${processedGroupWithMention.text}`
+      : processedGroupWithMention.text;
 
-  // Test 6: Kiểm tra message content formatting
-  console.log('\n💬 Test 6: Message Content Formatting');
-  
-  const privateMessageContent = processedPrivate.isGroupChat 
-    ? `[${processedPrivate.displayName}]: ${processedPrivate.text}`
-    : processedPrivate.text;
-
-  const groupMessageContent = processedGroup.isGroupChat 
-    ? `[${processedGroup.displayName}]: ${processedGroup.text}`
-    : processedGroup.text;
-
-  console.log('✅ Private message content:', privateMessageContent);
-  console.log('✅ Group message content:', groupMessageContent);
+    console.log('✅ Group message content:', groupMessageContent);
+  }
 
   console.log('\n🎉 Tất cả tests đã hoàn thành thành công!');
   console.log('\n📋 Tóm tắt cải tiến:');

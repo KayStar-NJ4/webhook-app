@@ -6,6 +6,7 @@ class TelegramService {
   constructor() {
     this.botToken = config.telegram.botToken;
     this.baseUrl = `https://api.telegram.org/bot${this.botToken}`;
+    this.botUsername = null; // Sẽ được lấy từ getBotInfo()
   }
 
   /**
@@ -100,6 +101,7 @@ class TelegramService {
   async getBotInfo() {
     try {
       const response = await axios.get(`${this.baseUrl}/getMe`);
+      this.botUsername = response.data.result.username;
       return response.data;
     } catch (error) {
       logger.error('Failed to get Telegram bot info', {
@@ -122,16 +124,37 @@ class TelegramService {
     const chat = message.chat;
     const from = message.from;
 
+    // Bỏ qua tin nhắn từ bot
+    if (from.is_bot) {
+      return null;
+    }
+
     // Xác định loại chat và tạo identifier phù hợp
     const isGroupChat = chat.type === 'group' || chat.type === 'supergroup';
     const conversationId = isGroupChat ? chat.id.toString() : from.id.toString();
     
-    // Tạo tên hiển thị dựa trên loại chat
-    let displayName;
+    // Tạo tên hiển thị của người gửi (không phải tên group)
+    const senderDisplayName = `${from.first_name || ''} ${from.last_name || ''}`.trim() || from.username || `User ${from.id}`;
+    
+    // Kiểm tra xem bot có được mention trong group chat không
+    let shouldProcess = false;
     if (isGroupChat) {
-      displayName = chat.title || `Group ${chat.id}`;
+      // Trong group chat, chỉ xử lý khi bot được mention hoặc reply
+      const botMention = message.text && (
+        message.text.includes('@' + (this.botUsername || 'bot')) ||
+        message.text.startsWith('/') ||
+        message.reply_to_message?.from?.is_bot ||
+        message.entities?.some(entity => entity.type === 'mention')
+      );
+      shouldProcess = botMention;
     } else {
-      displayName = `${from.first_name || ''} ${from.last_name || ''}`.trim() || from.username || `User ${from.id}`;
+      // Trong private chat, xử lý tất cả tin nhắn
+      shouldProcess = true;
+    }
+
+    // Chỉ trả về tin nhắn nếu cần xử lý
+    if (!shouldProcess) {
+      return null;
     }
 
     return {
@@ -142,7 +165,7 @@ class TelegramService {
       username: from.username,
       firstName: from.first_name,
       lastName: from.last_name,
-      displayName: displayName,
+      senderDisplayName: senderDisplayName, // Tên người gửi
       text: message.text,
       timestamp: message.date,
       chatType: chat.type,
