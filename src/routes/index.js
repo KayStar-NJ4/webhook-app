@@ -37,6 +37,42 @@ router.get('/api/status', (req, res) => {
   });
 });
 
+// API endpoint để tạo conversation mapping thủ công
+router.post('/api/mapping', (req, res) => {
+  try {
+    const { telegramConversationId, chatwootConversationId } = req.body;
+    
+    if (!telegramConversationId || !chatwootConversationId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Missing telegramConversationId or chatwootConversationId'
+      });
+    }
+    
+    const messageBroker = require('../services/messageBroker');
+    messageBroker.conversationMap.set(telegramConversationId, chatwootConversationId);
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Mapping created successfully',
+      mapping: {
+        telegram: telegramConversationId,
+        chatwoot: chatwootConversationId
+      }
+    });
+    
+  } catch (error) {
+    logger.error('Failed to create mapping', {
+      error: error.message
+    });
+    
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to create mapping'
+    });
+  }
+});
+
 // Get conversation mappings
 router.get('/api/conversations', (req, res) => {
   try {

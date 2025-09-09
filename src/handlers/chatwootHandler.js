@@ -63,10 +63,56 @@ class ChatwootHandler {
    */
   async handleMessageCreated(webhookData) {
     try {
+      // Debug: Log toàn bộ webhook data
+      try {
+        logger.info('Full webhook data:', JSON.stringify(webhookData, null, 2));
+      } catch (error) {
+        logger.info('Webhook data (string):', webhookData.toString());
+      }
+      
       const { message, conversation, account } = webhookData;
       
       if (!message || !conversation) {
         logger.warn('Missing message or conversation data in webhook');
+        logger.info('Webhook data structure:', JSON.stringify(webhookData, null, 2));
+        
+        // Thử xử lý webhook thực tế từ Chatwoot
+        if (webhookData.event === 'message_created' && webhookData.conversation) {
+          logger.info('Attempting to process real Chatwoot webhook');
+          
+          // Webhook thực tế có thể có cấu trúc khác
+          // Thử tìm message trong conversation
+          if (webhookData.conversation.messages && webhookData.conversation.messages.length > 0) {
+            const latestMessage = webhookData.conversation.messages[webhookData.conversation.messages.length - 1];
+            
+            if (latestMessage.message_type === 1 && latestMessage.sender_type === 'User') {
+              logger.info('Found agent message in real webhook', {
+                messageId: latestMessage.id,
+                conversationId: webhookData.conversation.id,
+                content: latestMessage.content
+              });
+
+              const chatwootMessage = {
+                id: latestMessage.id,
+                conversationId: webhookData.conversation.id,
+                content: latestMessage.content,
+                messageType: 'outgoing',
+                sender: latestMessage.sender,
+                createdAt: latestMessage.created_at,
+                accountId: webhookData.account?.id || 1
+              };
+
+              // Xử lý tin nhắn thông qua message broker
+              await messageBroker.handleChatwootMessage(chatwootMessage);
+
+              logger.info('Real Chatwoot message processed successfully', {
+                messageId: latestMessage.id,
+                conversationId: webhookData.conversation.id
+              });
+            }
+          }
+          return;
+        }
         return;
       }
 
@@ -94,7 +140,7 @@ class ChatwootHandler {
         messageType: message.message_type,
         sender: message.sender,
         createdAt: message.created_at,
-        accountId: account.id
+        accountId: account?.id || webhookData.account?.id || 1
       };
 
       // Xử lý tin nhắn thông qua message broker
@@ -124,7 +170,7 @@ class ChatwootHandler {
       logger.info('New conversation created in Chatwoot', {
         conversationId: conversation.id,
         contactId: contact.id,
-        accountId: account.id,
+        accountId: account?.id || 1,
         status: conversation.status
       });
 
@@ -147,14 +193,43 @@ class ChatwootHandler {
     try {
       const { conversation, account } = webhookData;
       
+      // Kiểm tra xem có tin nhắn mới từ agent không
+      if (conversation.messages && conversation.messages.length > 0) {
+        const latestMessage = conversation.messages[conversation.messages.length - 1];
+        
+        // Chỉ xử lý tin nhắn từ agent (outgoing)
+        if (latestMessage.message_type === 1 && latestMessage.sender_type === 'User') {
+          logger.info('Found agent message in conversation_updated', {
+            messageId: latestMessage.id,
+            conversationId: conversation.id,
+            content: latestMessage.content
+          });
+
+          const chatwootMessage = {
+            id: latestMessage.id,
+            conversationId: conversation.id,
+            content: latestMessage.content,
+            messageType: 'outgoing',
+            sender: latestMessage.sender,
+            createdAt: latestMessage.created_at,
+            accountId: account?.id || 1
+          };
+
+          // Xử lý tin nhắn thông qua message broker
+          await messageBroker.handleChatwootMessage(chatwootMessage);
+
+          logger.info('Agent message processed successfully', {
+            messageId: latestMessage.id,
+            conversationId: conversation.id
+          });
+        }
+      }
+      
       logger.info('Conversation updated in Chatwoot', {
         conversationId: conversation.id,
-        accountId: account.id,
+        accountId: account?.id || 1,
         changes: webhookData.changes
       });
-
-      // Có thể thêm logic xử lý khi conversation được cập nhật
-      // Ví dụ: đồng bộ metadata, cập nhật trạng thái, etc.
 
     } catch (error) {
       logger.error('Failed to handle conversation updated event', {
@@ -174,7 +249,7 @@ class ChatwootHandler {
       
       logger.info('Conversation status changed in Chatwoot', {
         conversationId: conversation.id,
-        accountId: account.id,
+        accountId: account?.id || 1,
         oldStatus: webhookData.changes?.status?.[0],
         newStatus: webhookData.changes?.status?.[1]
       });
