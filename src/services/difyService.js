@@ -25,12 +25,21 @@ class DifyService {
    */
   async sendMessage(message, userId, additionalData = {}) {
     try {
+      // Tạo context message cho group chat
+      let processedMessage = message;
+      if (additionalData.is_group_chat && additionalData.sender_name) {
+        processedMessage = `[${additionalData.sender_name}]: ${message}`;
+      }
+
       const payload = {
         inputs: {
-          query: message,
-          ...additionalData
+          query: processedMessage,
+          platform: additionalData.platform || 'telegram',
+          chat_id: additionalData.chat_id,
+          is_group_chat: additionalData.is_group_chat || false,
+          sender_name: additionalData.sender_name || null
         },
-        query: message,
+        query: processedMessage,
         response_mode: 'blocking', // hoặc 'streaming' nếu muốn streaming response
         user: userId,
         // Chỉ thêm conversation_id nếu có và không rỗng
@@ -43,7 +52,9 @@ class DifyService {
         url: `${this.apiUrl}${url}`,
         appId: this.appId,
         userId,
-        conversationId: additionalData.conversation_id
+        conversationId: additionalData.conversation_id,
+        isGroupChat: additionalData.is_group_chat,
+        senderName: additionalData.sender_name
       });
       
       const response = await this.apiClient.post(url, payload);
@@ -51,7 +62,8 @@ class DifyService {
       logger.info('Message sent to Dify AI successfully', {
         userId,
         messageId: response.data.id,
-        conversationId: response.data.conversation_id
+        conversationId: response.data.conversation_id,
+        isGroupChat: additionalData.is_group_chat
       });
 
       return {

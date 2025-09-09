@@ -93,7 +93,9 @@ class ChatwootService {
           platform: 'telegram',
           username: contactData.username,
           first_name: contactData.firstName,
-          last_name: contactData.lastName
+          last_name: contactData.lastName,
+          is_group: contactData.isGroup || false,
+          group_title: contactData.groupTitle || null
         }
       };
 
@@ -101,7 +103,9 @@ class ChatwootService {
       
       logger.info('Contact created successfully', {
         contactId: response.data.payload.id,
-        sourceId
+        sourceId,
+        isGroup: contactData.isGroup,
+        name: contactData.name
       });
 
       return response.data.payload;

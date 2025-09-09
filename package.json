@@ -10,6 +10,7 @@
     "setup-telegram": "node scripts/setup-telegram.js",
     "setup-local": "node scripts/setup-local.js",
     "test-integration": "node scripts/test-integration.js",
+    "test-improvements": "node scripts/test-improvements.js",
     "logs": "tail -f logs/combined.log",
     "logs:error": "tail -f logs/error.log"
   },

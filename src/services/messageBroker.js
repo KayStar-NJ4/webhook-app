@@ -17,7 +17,7 @@ class MessageBroker {
   async handleTelegramMessage(telegramMessage) {
     try {
       // Tạo unique key cho tin nhắn để tracking
-      const messageKey = `${telegramMessage.chatId}_${telegramMessage.messageId}`;
+      const messageKey = `${telegramMessage.conversationId}_${telegramMessage.messageId}`;
       
       // Kiểm tra xem tin nhắn đã được xử lý chưa
       if (this.processedMessages.has(messageKey)) {
@@ -27,47 +27,65 @@ class MessageBroker {
 
       logger.info('Processing Telegram message', {
         chatId: telegramMessage.chatId,
+        conversationId: telegramMessage.conversationId,
         userId: telegramMessage.userId,
+        displayName: telegramMessage.displayName,
+        isGroupChat: telegramMessage.isGroupChat,
         text: telegramMessage.text,
         messageId: telegramMessage.messageId
       });
 
-      // 1. Lấy hoặc tạo conversation (chỉ 1 conversation cho mỗi Telegram chat)
+      // 1. Lấy hoặc tạo conversation dựa trên conversationId
       let conversation;
-      if (this.conversationMap.has(telegramMessage.chatId)) {
+      if (this.conversationMap.has(telegramMessage.conversationId)) {
         // Sử dụng conversation đã có
-        const chatwootConversationId = this.conversationMap.get(telegramMessage.chatId);
+        const chatwootConversationId = this.conversationMap.get(telegramMessage.conversationId);
         conversation = { id: chatwootConversationId };
         logger.info('Using existing conversation', { 
-          chatId: telegramMessage.chatId, 
-          conversationId: chatwootConversationId 
+          conversationId: telegramMessage.conversationId, 
+          chatwootConversationId: chatwootConversationId 
         });
       } else {
-        // Tạo conversation mới
+        // Tạo conversation mới với thông tin phù hợp
+        const contactData = telegramMessage.isGroupChat ? {
+          name: telegramMessage.displayName,
+          firstName: telegramMessage.groupTitle || 'Group',
+          lastName: '',
+          username: `group_${telegramMessage.chatId}`,
+          email: `group_${telegramMessage.chatId}@telegram.local`,
+          isGroup: true
+        } : {
+          name: telegramMessage.displayName,
+          firstName: telegramMessage.firstName,
+          lastName: telegramMessage.lastName,
+          username: telegramMessage.username,
+          email: `${telegramMessage.userId}@telegram.local`,
+          isGroup: false
+        };
+
         conversation = await chatwootService.getOrCreateConversation(
-          telegramMessage.userId,
-          {
-            name: `${telegramMessage.firstName} ${telegramMessage.lastName}`.trim(),
-            firstName: telegramMessage.firstName,
-            lastName: telegramMessage.lastName,
-            username: telegramMessage.username,
-            email: `${telegramMessage.userId}@telegram.local`
-          },
-          telegramMessage.chatId // Truyền chatId làm platform conversation ID
+          telegramMessage.conversationId, // Sử dụng conversationId thay vì userId
+          contactData,
+          telegramMessage.conversationId
         );
         
         // Lưu mapping conversation
-        this.conversationMap.set(telegramMessage.chatId, conversation.id);
+        this.conversationMap.set(telegramMessage.conversationId, conversation.id);
         logger.info('Created new conversation', { 
-          chatId: telegramMessage.chatId, 
-          conversationId: conversation.id 
+          conversationId: telegramMessage.conversationId, 
+          chatwootConversationId: conversation.id,
+          isGroupChat: telegramMessage.isGroupChat
         });
       }
 
-      // Lưu tin nhắn vào Chatwoot
+      // Lưu tin nhắn vào Chatwoot với thông tin người gửi
+      const messageContent = telegramMessage.isGroupChat 
+        ? `[${telegramMessage.displayName}]: ${telegramMessage.text}`
+        : telegramMessage.text;
+
       await chatwootService.sendMessage(
         conversation.id,
-        telegramMessage.text,
+        messageContent,
         'incoming',
         {
           sender: {
@@ -75,7 +93,11 @@ class MessageBroker {
             additional_attributes: {
               platform: 'telegram',
               telegram_user_id: telegramMessage.userId,
-              telegram_chat_id: telegramMessage.chatId
+              telegram_chat_id: telegramMessage.chatId,
+              telegram_conversation_id: telegramMessage.conversationId,
+              is_group_chat: telegramMessage.isGroupChat,
+              sender_display_name: telegramMessage.displayName,
+              group_title: telegramMessage.groupTitle
             }
           }
         }
@@ -84,17 +106,19 @@ class MessageBroker {
       // 2. Gửi tin nhắn đến Dify AI
       const difyResponse = await difyService.sendMessage(
         telegramMessage.text,
-        telegramMessage.userId,
+        telegramMessage.conversationId, // Sử dụng conversationId thay vì userId
         {
           platform: 'telegram',
           chat_id: telegramMessage.chatId,
-          conversation_id: this.getDifyConversationId(telegramMessage.chatId)
+          conversation_id: this.getDifyConversationId(telegramMessage.conversationId),
+          is_group_chat: telegramMessage.isGroupChat,
+          sender_name: telegramMessage.displayName
         }
       );
       
       // Lưu Dify conversation ID
       if (difyResponse.conversationId) {
-        this.difyConversationMap.set(telegramMessage.chatId, difyResponse.conversationId);
+        this.difyConversationMap.set(telegramMessage.conversationId, difyResponse.conversationId);
       }
 
       // 3. Gửi phản hồi từ AI về Telegram
@@ -114,7 +138,9 @@ class MessageBroker {
             additional_attributes: {
               platform: 'dify_ai',
               dify_message_id: difyResponse.id,
-              dify_conversation_id: difyResponse.conversationId
+              dify_conversation_id: difyResponse.conversationId,
+              telegram_conversation_id: telegramMessage.conversationId,
+              is_group_chat: telegramMessage.isGroupChat
             }
           }
         }
@@ -126,8 +152,10 @@ class MessageBroker {
       logger.info('Telegram message processed successfully', {
         messageKey,
         chatId: telegramMessage.chatId,
-        conversationId: conversation.id,
-        difyConversationId: difyResponse.conversationId
+        conversationId: telegramMessage.conversationId,
+        chatwootConversationId: conversation.id,
+        difyConversationId: difyResponse.conversationId,
+        isGroupChat: telegramMessage.isGroupChat
       });
 
       return {
@@ -179,9 +207,9 @@ class MessageBroker {
 
       // Tìm platform conversation ID từ mapping
       let platformConversationId = null;
-      for (const [chatId, conversationId] of this.conversationMap.entries()) {
-        if (conversationId === chatwootMessage.conversationId) {
-          platformConversationId = chatId;
+      for (const [conversationId, chatwootConversationId] of this.conversationMap.entries()) {
+        if (chatwootConversationId === chatwootMessage.conversationId) {
+          platformConversationId = conversationId;
           break;
         }
       }

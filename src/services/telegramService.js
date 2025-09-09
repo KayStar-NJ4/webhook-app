@@ -122,16 +122,32 @@ class TelegramService {
     const chat = message.chat;
     const from = message.from;
 
+    // Xác định loại chat và tạo identifier phù hợp
+    const isGroupChat = chat.type === 'group' || chat.type === 'supergroup';
+    const conversationId = isGroupChat ? chat.id.toString() : from.id.toString();
+    
+    // Tạo tên hiển thị dựa trên loại chat
+    let displayName;
+    if (isGroupChat) {
+      displayName = chat.title || `Group ${chat.id}`;
+    } else {
+      displayName = `${from.first_name || ''} ${from.last_name || ''}`.trim() || from.username || `User ${from.id}`;
+    }
+
     return {
       messageId: message.message_id,
       chatId: chat.id.toString(),
       userId: from.id.toString(),
+      conversationId: conversationId, // ID để tracking conversation
       username: from.username,
       firstName: from.first_name,
       lastName: from.last_name,
+      displayName: displayName,
       text: message.text,
       timestamp: message.date,
       chatType: chat.type,
+      isGroupChat: isGroupChat,
+      groupTitle: chat.title,
       isBot: from.is_bot
     };
   }
