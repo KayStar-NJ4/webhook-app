@@ -167,9 +167,15 @@ class ChatwootHandler {
     try {
       const { conversation, contact, account } = webhookData;
       
+      // Kiểm tra xem conversation có tồn tại không
+      if (!conversation || !conversation.id) {
+        logger.warn('Missing conversation data in conversation_created event');
+        return;
+      }
+      
       logger.info('New conversation created in Chatwoot', {
         conversationId: conversation.id,
-        contactId: contact.id,
+        contactId: contact?.id,
         accountId: account?.id || 1,
         status: conversation.status
       });
@@ -192,6 +198,12 @@ class ChatwootHandler {
   async handleConversationUpdated(webhookData) {
     try {
       const { conversation, account } = webhookData;
+      
+      // Kiểm tra xem conversation có tồn tại không
+      if (!conversation || !conversation.id) {
+        logger.warn('Missing conversation data in conversation_updated event');
+        return;
+      }
       
       // Kiểm tra xem có tin nhắn mới từ agent không
       if (conversation.messages && conversation.messages.length > 0) {

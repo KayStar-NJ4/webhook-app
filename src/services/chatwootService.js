@@ -30,15 +30,36 @@ class ChatwootService {
       
       if (contacts.length > 0) {
         const contact = contacts[0];
+        logger.info('Found existing contact', {
+          contactId: contact.id,
+          sourceId,
+          contactName: contact.name
+        });
+        
         // Tìm conversation active
         const conversations = await this.getContactConversations(contact.id);
+        logger.info('Contact conversations', {
+          contactId: contact.id,
+          conversationCount: conversations.length,
+          conversations: conversations.map(c => ({ id: c.id, status: c.status, source_id: c.source_id }))
+        });
+        
         const activeConversation = conversations.find(conv => conv.status === 'open');
         
         if (activeConversation) {
+          logger.info('Found active conversation', {
+            conversationId: activeConversation.id,
+            status: activeConversation.status,
+            source_id: activeConversation.source_id
+          });
           return activeConversation;
         }
         
         // Tạo conversation mới với source_id từ platform
+        logger.info('Creating new conversation for existing contact', {
+          contactId: contact.id,
+          platformConversationId
+        });
         return await this.createConversation(contact.id, platformConversationId);
       } else {
         // Tạo contact mới

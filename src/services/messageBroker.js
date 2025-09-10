@@ -8,6 +8,7 @@ class MessageBroker {
     this.conversationMap = new Map(); // Lưu mapping giữa platform conversation và Chatwoot conversation
     this.difyConversationMap = new Map(); // Lưu mapping giữa platform conversation và Dify conversation
     this.processedMessages = new Set(); // Tracking tin nhắn đã xử lý để tránh trả lời trùng lặp
+    this.processedChatwootMessages = new Set(); // Tracking tin nhắn Chatwoot đã xử lý
   }
 
   /**
@@ -121,13 +122,7 @@ class MessageBroker {
         this.difyConversationMap.set(telegramMessage.conversationId, difyResponse.conversationId);
       }
 
-      // 3. Gửi phản hồi từ AI về Telegram
-      await telegramService.sendMessage(
-        telegramMessage.chatId,
-        difyResponse.answer
-      );
-
-      // 4. Lưu phản hồi AI vào Chatwoot
+      // 3. Lưu phản hồi AI vào Chatwoot (Chatwoot webhook sẽ gửi về Telegram)
       await chatwootService.sendMessage(
         conversation.id,
         difyResponse.answer,
@@ -146,16 +141,18 @@ class MessageBroker {
         }
       );
 
-      // 5. Đánh dấu tin nhắn đã được xử lý
+      // 4. Đánh dấu tin nhắn đã được xử lý
       this.processedMessages.add(messageKey);
       
-      logger.info('Telegram message processed successfully', {
+      logger.info('Telegram message processed successfully - Dify response saved to Chatwoot', {
         messageKey,
         chatId: telegramMessage.chatId,
         conversationId: telegramMessage.conversationId,
         chatwootConversationId: conversation.id,
         difyConversationId: difyResponse.conversationId,
-        isGroupChat: telegramMessage.isGroupChat
+        isGroupChat: telegramMessage.isGroupChat,
+        processedMessagesCount: this.processedMessages.size,
+        note: 'Chatwoot webhook will sync response to Telegram'
       });
 
       return {
@@ -171,18 +168,9 @@ class MessageBroker {
         stack: error.stack
       });
 
-      // Gửi thông báo lỗi về Telegram
-      try {
-        await telegramService.sendMessage(
-          telegramMessage.chatId,
-          'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.'
-        );
-      } catch (telegramError) {
-        logger.error('Failed to send error message to Telegram', {
-          chatId: telegramMessage.chatId,
-          error: telegramError.message
-        });
-      }
+      // Không gửi tin nhắn lỗi về Telegram vì Chatwoot webhook sẽ xử lý
+      // việc gửi tin nhắn trả lời từ Dify AI
+      logger.info('Skipping error message to Telegram - Chatwoot webhook will handle response');
 
       throw error;
     }
@@ -194,10 +182,24 @@ class MessageBroker {
    */
   async handleChatwootMessage(chatwootMessage) {
     try {
+      // Tạo unique key cho tin nhắn Chatwoot để tracking
+      const messageKey = `chatwoot_${chatwootMessage.conversationId}_${chatwootMessage.id}`;
+      
+      // Kiểm tra xem tin nhắn đã được xử lý chưa
+      if (this.processedChatwootMessages.has(messageKey)) {
+        logger.info('Chatwoot message already processed, skipping', {
+          messageKey,
+          conversationId: chatwootMessage.conversationId,
+          messageId: chatwootMessage.id
+        });
+        return { success: true, message: 'Message already processed' };
+      }
+
       logger.info('Processing Chatwoot message', {
         conversationId: chatwootMessage.conversationId,
         messageType: chatwootMessage.messageType,
-        content: chatwootMessage.content
+        content: chatwootMessage.content,
+        messageKey
       });
 
       // Chỉ xử lý tin nhắn outgoing từ agent
@@ -227,9 +229,14 @@ class MessageBroker {
         chatwootMessage.content
       );
 
+      // Đánh dấu tin nhắn đã được xử lý
+      this.processedChatwootMessages.add(messageKey);
+
       logger.info('Chatwoot message forwarded to Telegram successfully', {
         conversationId: chatwootMessage.conversationId,
-        platformConversationId
+        platformConversationId,
+        messageKey,
+        processedChatwootMessagesCount: this.processedChatwootMessages.size
       });
 
       return {
