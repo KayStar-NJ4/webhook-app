@@ -3,10 +3,17 @@ window.PageComponent = {
     template: `
         <section class="content">
             <div class="container-fluid">
-                <ListComponent :userPermissions="userPermissions" />
+                <ListComponent 
+                    :key="currentRoute" 
+                    :userPermissions="userPermissions" 
+                    :currentRoute="currentRoute" 
+                />
             </div>
         </section>
     `,
+    components: {
+        ListComponent: window.ListComponent
+    },
     data() {
         return {
             pageConfigs: {
@@ -42,6 +49,11 @@ window.PageComponent = {
     },
     mounted() {
         this.loadUserData();
+    },
+    watch: {
+        '$route'(to, from) {
+            this.currentRoute = to.path;
+        }
     },
     methods: {
         loadUserData() {

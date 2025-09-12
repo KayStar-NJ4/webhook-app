@@ -110,7 +110,7 @@ window.ListComponent = {
             </div>
         </div>
     `,
-    props: ['userPermissions'],
+    props: ['userPermissions', 'currentRoute'],
     data() {
         return {
             is_loading: false,
@@ -151,9 +151,20 @@ window.ListComponent = {
         this.debouncedFetchData = this.debounce(this.fetchData, 500);
         this.debouncedFetchData();
     },
+    watch: {
+        currentRoute(newRoute, oldRoute) {
+            if (newRoute !== oldRoute) {
+                this.items = [];
+                this.meta = { total_item: 0, total_page: 0 };
+                this.params.page = 1;
+                this.setupPage();
+                this.debouncedFetchData();
+            }
+        }
+    },
     methods: {
         setupPage() {
-            const route = this.$route.path;
+            const route = this.currentRoute || this.$route?.path || window.location.pathname;
             if (route.includes('telegram-bots')) {
                 this.resource = 'telegram';
                 this.resourceName = 'Bot';
