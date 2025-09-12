@@ -1,0 +1,156 @@
+name: Performance Tests
+
+on:
+  schedule:
+    - cron: '0 2 * * 0' # Run every Sunday at 2 AM
+  workflow_dispatch:
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: chatwoot_webhook_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'yarn'
+        
+    - name: Install dependencies
+      run: yarn install --frozen-lockfile
+      
+    - name: Start application
+      env:
+        REPOSITORY_TYPE: redis
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: chatwoot_webhook_test
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+      run: |
+        yarn start &
+        sleep 10
+        
+    - name: Run performance tests
+      run: |
+        # Install artillery for load testing
+        npm install -g artillery
+        
+        # Create performance test configuration
+        cat > artillery-config.yml << EOF
+        config:
+          target: 'http://localhost:3000'
+          phases:
+            - duration: 60
+              arrivalRate: 10
+            - duration: 120
+              arrivalRate: 20
+            - duration: 60
+              arrivalRate: 10
+        scenarios:
+          - name: "Health check"
+            weight: 30
+            flow:
+              - get:
+                  url: "/webhook/health"
+          - name: "API status"
+            weight: 30
+            flow:
+              - get:
+                  url: "/api/status"
+          - name: "Get conversations"
+            weight: 20
+            flow:
+              - get:
+                  url: "/api/conversations"
+          - name: "Telegram webhook"
+            weight: 20
+            flow:
+              - post:
+                  url: "/webhook/telegram"
+                  json:
+                    update_id: 123456789
+                    message:
+                      message_id: 1
+                      from:
+                        id: 123456789
+                        first_name: "Test"
+                        last_name: "User"
+                      chat:
+                        id: 123456789
+                        type: "private"
+                      text: "Hello"
+                      date: 1234567890
+        EOF
+        
+        # Run performance tests
+        artillery run artillery-config.yml --output performance-report.json
+        
+    - name: Generate performance report
+      run: |
+        artillery report performance-report.json --output performance-report.html
+        
+    - name: Upload performance report
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-report
+        path: |
+          performance-report.json
+          performance-report.html
+          
+    - name: Comment performance results
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('performance-report.json', 'utf8'));
+          
+          const summary = report.aggregate;
+          const comment = `## Performance Test Results
+          
+          **Test Duration:** ${summary.duration}ms
+          **Total Requests:** ${summary.counters['http.requests']}
+          **Successful Requests:** ${summary.counters['http.responses']}
+          **Failed Requests:** ${summary.counters['http.request_rate']}
+          **Average Response Time:** ${summary.summaries['http.response_time'].mean}ms
+          **95th Percentile:** ${summary.summaries['http.response_time'].p95}ms
+          
+          [View detailed report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

@@ -14,8 +14,8 @@ const config = {
   chatwoot: {
     baseUrl: process.env.CHATWOOT_BASE_URL,
     accessToken: process.env.CHATWOOT_ACCESS_TOKEN,
-    accountId: process.env.CHATWOOT_ACCOUNT_ID,
-    inboxId: process.env.CHATWOOT_INBOX_ID || 1
+    accountId: process.env.CHATWOOT_ACCOUNT_ID
+    // inboxId will be auto-detected, not required in config
   },
   
   dify: {
