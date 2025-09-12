@@ -11,8 +11,48 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- AdminLTE -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+    
+    <!-- Custom CSS -->
+    <style>
+        .wrapper {
+            height: 100vh !important;
+        }
+        .main-sidebar {
+            height: 100vh !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+        }
+        .content-wrapper {
+            margin-left: 250px !important;
+            min-height: 100vh !important;
+            padding-left: 0 !important;
+        }
+        .main-header {
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            left: 250px !important;
+            z-index: 1030 !important;
+            margin-left: 0 !important;
+            padding-left: 0 !important;
+        }
+        .content {
+            margin-top: 56px !important;
+            padding-left: 0 !important;
+            margin-left: 0 !important;
+        }
+        @media (max-width: 767.98px) {
+            .content-wrapper {
+                margin-left: 0 !important;
+            }
+            .main-header {
+                left: 0 !important;
+            }
+        }
+    </style>
 </head>
-<body class="hold-transition sidebar-mini">
+<body class="hold-transition sidebar-mini layout-fixed">
     <div id="app"></div>
 
     <!-- jQuery -->
@@ -28,7 +68,7 @@
     <!-- Vue Router 4 -->
     <script src="https://unpkg.com/vue-router@4/dist/vue-router.global.js"></script>
     
-    <!-- Service Layer -->
+    <!-- Services -->
     <script src="/admin/src/services/BaseService.js"></script>
     <script src="/admin/src/services/AuthService.js"></script>
     <script src="/admin/src/services/AdminService.js"></script>
@@ -37,6 +77,7 @@
     <script src="/admin/src/services/DifyService.js"></script>
     <script src="/admin/src/services/UserService.js"></script>
     <script src="/admin/src/services/ConfigurationService.js"></script>
+    <script src="/admin/src/services/LogsService.js"></script>
     <script src="/admin/src/services/index.js"></script>
     
     <!-- Utils -->
@@ -44,476 +85,104 @@
     
     <!-- Components -->
     <script src="/admin/src/pages/LoginPage.js"></script>
+    
+        <!-- Module Components -->
+        <script src="/admin/src/modules/dashboard/DashboardPageComponent.js"></script>
+        <script src="/admin/src/modules/users/UsersPageComponent.js"></script>
+        <script src="/admin/src/modules/configurations/ConfigurationsPageComponent.js"></script>
+        <script src="/admin/src/modules/logs/LogsPageComponent.js"></script>
+
+    <!-- Layout Components -->
+    <script src="/admin/src/components/SidebarComponent.js"></script>
+    <script src="/admin/src/components/HeaderComponent.js"></script>
+    <script src="/admin/src/components/AdminLayoutComponent.js"></script>
+    
+    <!-- Page Component -->
+    <script src="/admin/src/components/PageComponent.js"></script>
+    
+    <!-- List Component -->
+    <script src="/admin/src/components/ListComponent.js"></script>
 
     <script>
         const { createApp } = Vue;
         const { createRouter, createWebHistory } = VueRouter;
-
-        // Use services directly from window object (avoid const declarations)
-        // This prevents "Identifier already declared" errors
-        
-        // Debug: Check if services are available
-        const servicesCheck = {
-            TelegramService: !!window.TelegramService,
-            ChatwootService: !!window.ChatwootService,
-            DifyService: !!window.DifyService,
-            UserService: !!window.UserService,
-            ConfigurationService: !!window.ConfigurationService,
-            AuthService: !!window.AuthService
-        };
-        
-        // Helper function removed - use services instead
-
-        // Import LoginPage component from external file
-        // LoginPage is now handled by LoginPage.vue
-
-        // Main Layout Component
-        const MainLayout = {
-            template: `
-                <div class="wrapper">
-                    <!-- Navbar -->
-                    <nav class="main-header navbar navbar-expand navbar-white navbar-light">
-                        <ul class="navbar-nav">
-                            <li class="nav-item">
-                                <a class="nav-link" data-widget="pushmenu" href="#" role="button">
-                                    <i class="fas fa-bars"></i>
-                                </a>
-                            </li>
-                        </ul>
-                        <ul class="navbar-nav ml-auto">
-                            <li class="nav-item dropdown">
-                                <a class="nav-link" data-toggle="dropdown" href="#">
-                                    <i class="far fa-user"></i>
-                                </a>
-                                <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                                    <a href="#" class="dropdown-item" @click="logout">
-                                        <i class="fas fa-sign-out-alt mr-2"></i> Đăng xuất
-                                    </a>
-                                </div>
-                            </li>
-                        </ul>
-                    </nav>
-
-                    <!-- Main Sidebar -->
-                    <aside class="main-sidebar sidebar-dark-primary elevation-4">
-                        <a href="#" class="brand-link">
-                            <span class="brand-text font-weight-light">Turbo Chatwoot Webhook</span>
-                        </a>
-                        <div class="sidebar">
-                            <nav class="mt-2">
-                                <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
-                                    <li class="nav-item">
-                                        <router-link to="/admin/dashboard" class="nav-link" :class="{ active: $route.path === '/admin/dashboard' }">
-                                            <i class="nav-icon fas fa-tachometer-alt"></i>
-                                            <p>Dashboard</p>
-                                        </router-link>
-                                    </li>
-                                    <li class="nav-item">
-                                        <router-link to="/admin/users" class="nav-link" :class="{ active: $route.path === '/admin/users' }">
-                                            <i class="nav-icon fas fa-users"></i>
-                                            <p>Quản lý người dùng</p>
-                                        </router-link>
-                                    </li>
-                                    <li class="nav-item">
-                                        <router-link to="/admin/telegram-bots" class="nav-link" :class="{ active: $route.path === '/admin/telegram-bots' }">
-                                            <i class="nav-icon fab fa-telegram"></i>
-                                            <p>Telegram Bots</p>
-                                        </router-link>
-                                    </li>
-                                    <li class="nav-item">
-                                        <router-link to="/admin/chatwoot-accounts" class="nav-link" :class="{ active: $route.path === '/admin/chatwoot-accounts' }">
-                                            <i class="nav-icon fas fa-comments"></i>
-                                            <p>Chatwoot Accounts</p>
-                                        </router-link>
-                                    </li>
-                                    <li class="nav-item">
-                                        <router-link to="/admin/dify-apps" class="nav-link" :class="{ active: $route.path === '/admin/dify-apps' }">
-                                            <i class="nav-icon fas fa-robot"></i>
-                                            <p>Dify Apps</p>
-                                        </router-link>
-                                    </li>
-                                    <li class="nav-item">
-                                        <router-link to="/admin/configurations" class="nav-link" :class="{ active: $route.path === '/admin/configurations' }">
-                                            <i class="nav-icon fas fa-cogs"></i>
-                                            <p>Cấu hình</p>
-                                        </router-link>
-                                    </li>
-                                    <li class="nav-item">
-                                        <router-link to="/admin/logs" class="nav-link" :class="{ active: $route.path === '/admin/logs' }">
-                                            <i class="nav-icon fas fa-file-alt"></i>
-                                            <p>Logs</p>
-                                        </router-link>
-                                    </li>
-                                </ul>
-                            </nav>
-                        </div>
-                    </aside>
-
-                    <!-- Content Wrapper -->
-                    <div class="content-wrapper">
-                        <router-view></router-view>
-                    </div>
-
-                    <!-- Footer -->
-                    <footer class="main-footer">
-                        <div class="float-right d-none d-sm-block">
-                            <b>Version</b> 3.0.0
-                        </div>
-                        <strong>Copyright &copy; 2025 <a href="#">Turbo Chatwoot Webhook</a>.</strong>
-                        All rights reserved.
-                    </footer>
-                </div>
-            `,
-            mounted() {
-            },
-            methods: {
-                async logout() {
-                    try {
-                        await window.AuthService.logout();
-                    } catch (error) {
-                        console.error('Logout error:', error);
-                    } finally {
-                        window.AuthUtils.clearAuth();
-                        this.$router.push('/admin/login');
-                    }
-                }
-            }
-        };
-
-        // Dashboard Component
-        const DashboardPage = {
-            template: `
-                <div class="content-header">
-                    <div class="container-fluid">
-                        <div class="row mb-2">
-                            <div class="col-sm-6">
-                                <h1 class="m-0">Dashboard</h1>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <section class="content">
-                    <div class="container-fluid">
-                        <div class="row">
-                            <div class="col-lg-3 col-6">
-                                <div class="small-box bg-info">
-                                    <div class="inner">
-                                        <h3>{{ stats.totalBots || 0 }}</h3>
-                                        <p>Telegram Bots</p>
-                                    </div>
-                                    <div class="icon">
-                                        <i class="fab fa-telegram"></i>
-                                    </div>
-                                    <router-link to="/admin/telegram-bots" class="small-box-footer">
-                                        Xem chi tiết <i class="fas fa-arrow-circle-right"></i>
-                                    </router-link>
-                                </div>
-                            </div>
-                            <div class="col-lg-3 col-6">
-                                <div class="small-box bg-success">
-                                    <div class="inner">
-                                        <h3>{{ stats.totalAccounts || 0 }}</h3>
-                                        <p>Chatwoot Accounts</p>
-                                    </div>
-                                    <div class="icon">
-                                        <i class="fas fa-comments"></i>
-                                    </div>
-                                    <router-link to="/admin/chatwoot-accounts" class="small-box-footer">
-                                        Xem chi tiết <i class="fas fa-arrow-circle-right"></i>
-                                    </router-link>
-                                </div>
-                            </div>
-                            <div class="col-lg-3 col-6">
-                                <div class="small-box bg-warning">
-                                    <div class="inner">
-                                        <h3>{{ stats.totalApps || 0 }}</h3>
-                                        <p>Dify Apps</p>
-                                    </div>
-                                    <div class="icon">
-                                        <i class="fas fa-robot"></i>
-                                    </div>
-                                    <router-link to="/admin/dify-apps" class="small-box-footer">
-                                        Xem chi tiết <i class="fas fa-arrow-circle-right"></i>
-                                    </router-link>
-                                </div>
-                            </div>
-                            <div class="col-lg-3 col-6">
-                                <div class="small-box bg-danger">
-                                    <div class="inner">
-                                        <h3>{{ stats.totalUsers || 0 }}</h3>
-                                        <p>Users</p>
-                                    </div>
-                                    <div class="icon">
-                                        <i class="fas fa-users"></i>
-                                    </div>
-                                    <router-link to="/admin/users" class="small-box-footer">
-                                        Xem chi tiết <i class="fas fa-arrow-circle-right"></i>
-                                    </router-link>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            `,
-            data() {
-                return {
-                    stats: {
-                        totalUsers: 0,
-                        totalBots: 0,
-                        totalAccounts: 0,
-                        totalApps: 0
-                    }
-                }
-            },
-            mounted() {
-                this.loadStats();
-            },
-            methods: {
-                async loadStats() {
-                    try {
-                        const response = await window.AdminService.getDashboard();
-                        
-                        if (response.data.success) {
-                            this.stats = response.data.data.stats || this.stats;
-                        } else {
-                            console.error('Dashboard API returned error:', response.data.message);
-                            if (response.status === 401) {
-                                this.handleTokenExpired();
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Failed to load dashboard stats:', error);
-                        if (error.response?.status === 401) {
-                            this.handleTokenExpired();
-                        }
-                    }
-                },
-                handleTokenExpired() {
-                    window.AuthUtils.clearAuth();
-                    this.$router.push('/admin/login');
-                }
-            }
-        };
-
-
-
-
-        // Other Page Components (Placeholders)
-        const UsersPage = {
-            template: `
-                <div class="content-header">
-                    <div class="container-fluid">
-                        <div class="row mb-2">
-                            <div class="col-sm-6">
-                                <h1 class="m-0">Quản lý người dùng</h1>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <section class="content">
-                    <div class="container-fluid">
-                        <div class="card">
-                            <div class="card-body">
-                                <p class="text-center text-muted">Chức năng đang được phát triển...</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            `
-        };
-
-        const ConfigurationsPage = {
-            template: `
-                <div class="content-header">
-                    <div class="container-fluid">
-                        <div class="row mb-2">
-                            <div class="col-sm-6">
-                                <h1 class="m-0">Cấu hình hệ thống</h1>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <section class="content">
-                    <div class="container-fluid">
-                        <div class="card">
-                            <div class="card-body">
-                                <p class="text-center text-muted">Chức năng đang được phát triển...</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            `
-        };
-
-        const LogsPage = {
-            template: `
-                <div class="content-header">
-                    <div class="container-fluid">
-                        <div class="row mb-2">
-                            <div class="col-sm-6">
-                                <h1 class="m-0">Logs hệ thống</h1>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <section class="content">
-                    <div class="container-fluid">
-                        <div class="card">
-                            <div class="card-body">
-                                <p class="text-center text-muted">Chức năng đang được phát triển...</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            `
-        };
-
-        // Module Components (simplified)
-        const TelegramBotsPage = {
-            template: `
-                <div class="content-header">
-                    <div class="container-fluid">
-                        <div class="row mb-2">
-                            <div class="col-sm-6">
-                                <h1 class="m-0">Quản lý Telegram Bots</h1>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <section class="content">
-                    <div class="container-fluid">
-                        <div class="card">
-                            <div class="card-body">
-                                <p class="text-center text-muted">Chức năng đang được phát triển...</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            `
-        };
-
-        const ChatwootAccountsPage = {
-            template: `
-                <div class="content-header">
-                    <div class="container-fluid">
-                        <div class="row mb-2">
-                            <div class="col-sm-6">
-                                <h1 class="m-0">Quản lý Chatwoot Accounts</h1>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <section class="content">
-                    <div class="container-fluid">
-                        <div class="card">
-                            <div class="card-body">
-                                <p class="text-center text-muted">Chức năng đang được phát triển...</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            `
-        };
-
-        const DifyAppsPage = {
-            template: `
-                <div class="content-header">
-                    <div class="container-fluid">
-                        <div class="row mb-2">
-                            <div class="col-sm-6">
-                                <h1 class="m-0">Quản lý Dify Apps</h1>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <section class="content">
-                    <div class="container-fluid">
-                        <div class="card">
-                            <div class="card-body">
-                                <p class="text-center text-muted">Chức năng đang được phát triển...</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            `
-        };
 
         // Router Configuration
         const routes = [
             { path: '/admin/login', component: window.LoginPage },
             {
                 path: '/admin',
-                component: MainLayout,
+                component: window.AdminLayoutComponent,
                 children: [
                     { path: '', redirect: '/admin/dashboard' }
                 ]
             },
             {
                 path: '/admin/dashboard',
-                component: MainLayout,
+                component: window.AdminLayoutComponent,
                 children: [
-                    { path: '', component: DashboardPage }
+                    { path: '', component: window.DashboardPageComponent }
                 ]
             },
             {
                 path: '/admin/users',
-                component: MainLayout,
+                component: window.AdminLayoutComponent,
                 children: [
-                    { path: '', component: UsersPage }
+                    { path: '', component: window.UsersPageComponent }
                 ]
             },
             {
                 path: '/admin/telegram-bots',
-                component: MainLayout,
+                component: window.AdminLayoutComponent,
                 children: [
-                    { path: '', component: TelegramBotsPage }
+                    { path: '', component: window.PageComponent }
                 ]
             },
             {
                 path: '/admin/chatwoot-accounts',
-                component: MainLayout,
+                component: window.AdminLayoutComponent,
                 children: [
-                    { path: '', component: ChatwootAccountsPage }
+                    { path: '', component: window.PageComponent }
                 ]
             },
             {
                 path: '/admin/dify-apps',
-                component: MainLayout,
+                component: window.AdminLayoutComponent,
                 children: [
-                    { path: '', component: DifyAppsPage }
+                    { path: '', component: window.PageComponent }
                 ]
             },
             {
                 path: '/admin/configurations',
-                component: MainLayout,
+                component: window.AdminLayoutComponent,
                 children: [
-                    { path: '', component: ConfigurationsPage }
+                    { path: '', component: window.ConfigurationsPageComponent }
                 ]
             },
             {
                 path: '/admin/logs',
-                component: MainLayout,
+                component: window.AdminLayoutComponent,
                 children: [
-                    { path: '', component: LogsPage }
+                    { path: '', component: window.LogsPageComponent }
                 ]
             },
             { path: '/', redirect: '/admin/login' },
             { path: '/admin/:pathMatch(.*)*', redirect: '/admin/login' }
         ];
 
+        // Create router
         const router = createRouter({
             history: createWebHistory(),
             routes
         });
 
-        // Set up router guard BEFORE creating the app
+        // Set up router guard
         router.beforeEach((to, from, next) => {
             const token = localStorage.getItem('token');
             const isLoginPage = to.path === '/admin/login';
             const isAdminRoot = to.path === '/admin' || to.path === '/admin/';
             const isAdminRoute = to.path.startsWith('/admin');
             
-            // Nếu không có token
             if (!token) {
                 if (isLoginPage) {
                     next();
@@ -522,9 +191,7 @@
                 } else {
                     next('/admin/login');
                 }
-            } 
-            // Nếu có token
-            else {
+            } else {
                 if (isLoginPage) {
                     next('/admin/dashboard');
                 } else if (isAdminRoot) {
@@ -544,7 +211,6 @@
                 }
             },
             mounted() {
-                // Set axios default header if token exists
                 const token = localStorage.getItem('token');
                 if (token) {
                     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -554,47 +220,13 @@
 
         app.use(router);
         
-        // Debug: Check if services are loaded
-        const loadedServices = {
-            AuthService: !!window.AuthService,
-            AdminService: !!window.AdminService,
-            TelegramService: !!window.TelegramService,
-            ChatwootService: !!window.ChatwootService,
-            DifyService: !!window.DifyService,
-            UserService: !!window.UserService,
-            ConfigurationService: !!window.ConfigurationService,
-            BaseService: !!window.BaseService
-        };
-        
-        // Check if all required services are available
-        const requiredServices = ['BaseService', 'AuthService', 'AdminService', 'TelegramService', 'ChatwootService', 'DifyService', 'UserService', 'ConfigurationService'];
-        const missingServices = requiredServices.filter(service => !window[service]);
-        
-        if (missingServices.length > 0) {
-            console.error('❌ Missing services:', missingServices);
-            console.error('❌ This will cause the app to fail. Please check service files.');
-        } else {
-        }
-        
-        // Debug: Check if all required libraries are loaded
-        const loadedLibraries = {
-            Vue: !!Vue,
-            VueRouter: !!VueRouter,
-            axios: !!axios,
-            jQuery: !!jQuery
-        };
-        
-        // Debug: Check if router is created
-        
-        // Wait a bit for all services to load, then mount
+        // Wait for all services to load, then mount
         setTimeout(() => {
             try {
-                
-                // Final check: Ensure all services are loaded
                 const allServicesLoaded = window.BaseService && window.AuthService && 
                                         window.TelegramService && window.ChatwootService && 
                                         window.DifyService && window.UserService && 
-                                        window.ConfigurationService;
+                                        window.ConfigurationService && window.LogsService;
                 
                 if (!allServicesLoaded) {
                     console.error('❌ Not all services loaded, cannot mount app');
@@ -603,12 +235,7 @@
                 
                 app.mount('#app');
                 
-                // Debug: Check current route after mount
-                
-                // Force router to check current path and trigger guards
                 const currentPath = window.location.pathname;
-                
-                // Let router handle the navigation - guards will be triggered
                 router.replace(currentPath).then(() => {
                 }).catch(error => {
                     console.error('❌ Router navigation failed:', error);
@@ -616,9 +243,8 @@
                 
             } catch (error) {
                 console.error('❌ Failed to mount Vue app:', error);
-                console.error('❌ Error stack:', error.stack);
             }
-        }, 100); // Wait 100ms for all services to load
+        }, 100);
     </script>
 </body>
 </html>

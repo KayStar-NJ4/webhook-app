@@ -7,5 +7,6 @@ window.Services = {
   DifyService: window.DifyService,
   UserService: window.UserService,
   ConfigurationService: window.ConfigurationService,
+  LogsService: window.LogsService,
   BaseService: window.BaseService
 };
