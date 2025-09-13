@@ -66,15 +66,15 @@
 </template>
 
 <script>
-import { FormModalComponent, FormInputTextComponent, FormCheckBoxComponent, FormButtonComponent } from '../../components'
+// Form components will be loaded dynamically
 
 export default {
   name: 'UserFormComponent',
   components: {
-    FormModalComponent,
-    FormInputTextComponent,
-    FormCheckBoxComponent,
-    FormButtonComponent
+    FormModalComponent: window.FormModalComponent,
+    FormInputTextComponent: window.FormInputTextComponent,
+    FormCheckBoxComponent: window.FormCheckBoxComponent,
+    FormButtonComponent: window.FormButtonComponent
   },
   props: {
     isVisible: {

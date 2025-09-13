@@ -93,12 +93,12 @@
 </template>
 
 <script>
-import FormButtonComponent from '../../components/shared/FormButtonComponent.vue'
+// FormButtonComponent will be loaded dynamically
 
 export default {
   name: 'ChatwootListComponent',
   components: {
-    FormButtonComponent
+    FormButtonComponent: window.FormButtonComponent
   },
   props: {
     accounts: {

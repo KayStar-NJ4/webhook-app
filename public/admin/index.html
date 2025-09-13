@@ -38,10 +38,56 @@
             padding-left: 0 !important;
         }
         .content {
-            margin-top: 56px !important;
+            margin-top: 70px !important;
             padding-left: 0 !important;
             margin-left: 0 !important;
         }
+        
+        /* Custom styles for 2-level menu */
+        .nav-treeview {
+            padding-left: 1rem;
+        }
+        .nav-treeview .nav-link {
+            padding-left: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .nav-treeview .nav-link i {
+            font-size: 0.8rem;
+        }
+        .nav-item.has-treeview > .nav-link .right {
+            transition: transform 0.3s ease;
+        }
+        .nav-item.has-treeview.menu-open > .nav-link .right {
+            transform: rotate(-90deg);
+        }
+        .nav-item.has-treeview > .nav-link:hover .right {
+            transform: rotate(-45deg);
+        }
+        .nav-item.has-treeview.menu-open > .nav-link:hover .right {
+            transform: rotate(-90deg);
+        }
+
+        /* Menu cha active - màu trắng */
+        .nav-item.has-treeview > .nav-link.active {
+            background-color: #fff !important;
+            color: #007bff !important;
+        }
+
+        /* Menu con active - màu xanh */
+        .nav-treeview .nav-link.active {
+            background-color: #007bff !important;
+            color: #fff !important;
+        }
+
+        /* Hover effects */
+        .nav-item.has-treeview > .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-treeview .nav-link:hover {
+            background-color: rgba(0, 123, 255, 0.1);
+        }
+        
         @media (max-width: 767.98px) {
             .content-wrapper {
                 margin-left: 0 !important;
@@ -86,29 +132,157 @@
     <!-- Components -->
     <script src="/admin/src/pages/LoginPage.js"></script>
     
-        <!-- Module Components -->
-        <script src="/admin/src/modules/dashboard/DashboardPageComponent.js"></script>
-        <script src="/admin/src/modules/users/UsersPageComponent.js"></script>
-        <script src="/admin/src/modules/configurations/ConfigurationsPageComponent.js"></script>
-        <script src="/admin/src/modules/logs/LogsPageComponent.js"></script>
+        <!-- Module Components will be loaded dynamically -->
 
-    <!-- Layout Components -->
-    <script src="/admin/src/components/SidebarComponent.js"></script>
-    <script src="/admin/src/components/HeaderComponent.js"></script>
-    <script src="/admin/src/components/AdminLayoutComponent.js"></script>
-    
-    <!-- List Component -->
-    <script src="/admin/src/components/ListComponent.js"></script>
-    
-    <!-- Page Component -->
-    <script src="/admin/src/components/PageComponent.js"></script>
+    <!-- Vue Components will be loaded dynamically -->
 
     <script>
         const { createApp } = Vue;
         const { createRouter, createWebHistory } = VueRouter;
 
-        // Router Configuration
-        const routes = [
+        // Simple Vue SFC loader
+        async function loadVueComponent(path) {
+            try {
+                const response = await fetch(path);
+                const text = await response.text();
+                
+                // Parse template, script, and style sections
+                const templateMatch = text.match(/<template>([\s\S]*?)<\/template>/);
+                const scriptMatch = text.match(/<script>([\s\S]*?)<\/script>/);
+                const styleMatch = text.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+                
+                const template = templateMatch ? templateMatch[1].trim() : '';
+                const scriptContent = scriptMatch ? scriptMatch[1].trim() : '';
+                
+                // Create component object
+                const component = {
+                    template: template
+                };
+                
+                // Parse script content - improved regex
+                if (scriptContent) {
+                    // Remove export default and get the object
+                    let cleanScript = scriptContent.replace(/export\s+default\s*/, '').trim();
+                    if (cleanScript.endsWith(';')) {
+                        cleanScript = cleanScript.slice(0, -1);
+                    }
+                    
+                    try {
+                        const scriptObj = new Function('return ' + cleanScript)();
+                        Object.assign(component, scriptObj);
+                    } catch (e) {
+                        console.error('Error parsing script for', path, e);
+                        // Fallback: try to extract just the object part
+                        const objMatch = cleanScript.match(/\{[\s\S]*\}/);
+                        if (objMatch) {
+                            const scriptObj = new Function('return ' + objMatch[0])();
+                            Object.assign(component, scriptObj);
+                        }
+                    }
+                }
+                
+                return component;
+            } catch (error) {
+                console.error('Failed to load Vue component:', path, error);
+                return null;
+            }
+        }
+        
+        // Load Vue components
+        let SidebarComponent, HeaderComponent, AdminLayoutComponent, ListComponent, PageComponent;
+        let DashboardPageComponent, UsersPageComponent, ConfigurationsPageComponent, LogsPageComponent;
+        let ChatwootAccountsListComponent, DifyAppsListComponent, TelegramBotsListComponent;
+        let FormListingSortComponent, FormTableFiltersComponent, FormCheckBoxComponent, PaginateComponent, ActionButtonsComponent;
+        
+        async function loadComponents() {
+            console.log('🔄 Loading Vue components...');
+            
+            // Load main components
+            SidebarComponent = await loadVueComponent('/admin/src/components/SidebarComponent.vue');
+            console.log('SidebarComponent loaded:', !!SidebarComponent);
+            window.SidebarComponent = SidebarComponent;
+            
+            HeaderComponent = await loadVueComponent('/admin/src/components/HeaderComponent.vue');
+            console.log('HeaderComponent loaded:', !!HeaderComponent);
+            window.HeaderComponent = HeaderComponent;
+            
+            AdminLayoutComponent = await loadVueComponent('/admin/src/components/AdminLayoutComponent.vue');
+            console.log('AdminLayoutComponent loaded:', !!AdminLayoutComponent);
+            window.AdminLayoutComponent = AdminLayoutComponent;
+            
+            ListComponent = await loadVueComponent('/admin/src/components/ListComponent.vue');
+            console.log('ListComponent loaded:', !!ListComponent);
+            window.ListComponent = ListComponent;
+            
+            PageComponent = await loadVueComponent('/admin/src/components/PageComponent.vue');
+            console.log('PageComponent loaded:', !!PageComponent);
+            window.PageComponent = PageComponent;
+            
+            // Load module components
+            DashboardPageComponent = await loadVueComponent('/admin/src/modules/dashboard/DashboardPageComponent.vue');
+            console.log('DashboardPageComponent loaded:', !!DashboardPageComponent);
+            window.DashboardPageComponent = DashboardPageComponent;
+            
+            UsersPageComponent = await loadVueComponent('/admin/src/modules/users/UsersPageComponent.vue');
+            console.log('UsersPageComponent loaded:', !!UsersPageComponent);
+            window.UsersPageComponent = UsersPageComponent;
+            
+            ConfigurationsPageComponent = await loadVueComponent('/admin/src/modules/configurations/ConfigurationsPageComponent.vue');
+            console.log('ConfigurationsPageComponent loaded:', !!ConfigurationsPageComponent);
+            window.ConfigurationsPageComponent = ConfigurationsPageComponent;
+            
+            LogsPageComponent = await loadVueComponent('/admin/src/modules/logs/LogsPageComponent.vue');
+            console.log('LogsPageComponent loaded:', !!LogsPageComponent);
+            window.LogsPageComponent = LogsPageComponent;
+            
+            // Load additional components
+            ChatwootAccountsListComponent = await loadVueComponent('/admin/src/modules/chatwoot/ChatwootAccountsListComponent.vue');
+            console.log('ChatwootAccountsListComponent loaded:', !!ChatwootAccountsListComponent);
+            window.ChatwootAccountsListComponent = ChatwootAccountsListComponent;
+            
+            DifyAppsListComponent = await loadVueComponent('/admin/src/modules/dify/DifyAppsListComponent.vue');
+            console.log('DifyAppsListComponent loaded:', !!DifyAppsListComponent);
+            window.DifyAppsListComponent = DifyAppsListComponent;
+            
+            TelegramBotsListComponent = await loadVueComponent('/admin/src/modules/telegram/TelegramBotsListComponent.vue');
+            console.log('TelegramBotsListComponent loaded:', !!TelegramBotsListComponent);
+            window.TelegramBotsListComponent = TelegramBotsListComponent;
+            
+            // Load shared components
+            FormListingSortComponent = await loadVueComponent('/admin/src/components/shared/FormListingSortComponent.vue');
+            console.log('FormListingSortComponent loaded:', !!FormListingSortComponent);
+            window.FormListingSortComponent = FormListingSortComponent;
+            
+            FormTableFiltersComponent = await loadVueComponent('/admin/src/components/shared/FormTableFiltersComponent.vue');
+            console.log('FormTableFiltersComponent loaded:', !!FormTableFiltersComponent);
+            window.FormTableFiltersComponent = FormTableFiltersComponent;
+            
+            FormCheckBoxComponent = await loadVueComponent('/admin/src/components/shared/FormCheckBoxComponent.vue');
+            console.log('FormCheckBoxComponent loaded:', !!FormCheckBoxComponent);
+            window.FormCheckBoxComponent = FormCheckBoxComponent;
+            
+            PaginateComponent = await loadVueComponent('/admin/src/components/shared/PaginateComponent.vue');
+            console.log('PaginateComponent loaded:', !!PaginateComponent);
+            window.PaginateComponent = PaginateComponent;
+            
+            ActionButtonsComponent = await loadVueComponent('/admin/src/components/shared/ActionButtonsComponent.vue');
+            console.log('ActionButtonsComponent loaded:', !!ActionButtonsComponent);
+            window.ActionButtonsComponent = ActionButtonsComponent;
+            
+            console.log('✅ All components loaded and registered globally');
+        }
+
+
+        // Initialize app
+        async function initializeApp() {
+            try {
+                // Load Vue components first
+                await loadComponents();
+                
+                // Create router with loaded components
+                const router = createRouter({
+                    history: createWebHistory(),
+                    routes: [
             { path: '/admin/login', component: window.LoginPage },
             {
                 path: '/admin',
@@ -132,24 +306,31 @@
                 ]
             },
             {
-                path: '/admin/telegram-bots',
+                path: '/admin/roles',
                 component: window.AdminLayoutComponent,
                 children: [
                     { path: '', component: window.PageComponent }
+                ]
+            },
+            {
+                path: '/admin/telegram-bots',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.TelegramBotsListComponent }
                 ]
             },
             {
                 path: '/admin/chatwoot-accounts',
                 component: window.AdminLayoutComponent,
                 children: [
-                    { path: '', component: window.PageComponent }
+                    { path: '', component: window.ChatwootAccountsListComponent }
                 ]
             },
             {
                 path: '/admin/dify-apps',
                 component: window.AdminLayoutComponent,
                 children: [
-                    { path: '', component: window.PageComponent }
+                    { path: '', component: window.DifyAppsListComponent }
                 ]
             },
             {
@@ -168,12 +349,7 @@
             },
             { path: '/', redirect: '/admin/login' },
             { path: '/admin/:pathMatch(.*)*', redirect: '/admin/login' }
-        ];
-
-        // Create router
-        const router = createRouter({
-            history: createWebHistory(),
-            routes
+                    ]
         });
 
         // Set up router guard
@@ -221,8 +397,6 @@
         app.use(router);
         
         // Wait for all services to load, then mount
-        setTimeout(() => {
-            try {
                 const allServicesLoaded = window.BaseService && window.AuthService && 
                                         window.TelegramService && window.ChatwootService && 
                                         window.DifyService && window.UserService && 
@@ -242,9 +416,12 @@
                 });
                 
             } catch (error) {
-                console.error('❌ Failed to mount Vue app:', error);
+                console.error('❌ Failed to initialize app:', error);
             }
-        }, 100);
+        }
+        
+        // Start the app
+        initializeApp();
     </script>
 </body>
 </html>

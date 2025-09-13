@@ -78,18 +78,15 @@
 </template>
 
 <script>
-import FormModalComponent from '../../components/shared/FormModalComponent.vue'
-import FormInputTextComponent from '../../components/shared/FormInputTextComponent.vue'
-import FormCheckBoxComponent from '../../components/shared/FormCheckBoxComponent.vue'
-import FormButtonComponent from '../../components/shared/FormButtonComponent.vue'
+// Form components will be loaded dynamically
 
 export default {
   name: 'ChatwootFormComponent',
   components: {
-    FormModalComponent,
-    FormInputTextComponent,
-    FormCheckBoxComponent,
-    FormButtonComponent
+    FormModalComponent: window.FormModalComponent,
+    FormInputTextComponent: window.FormInputTextComponent,
+    FormCheckBoxComponent: window.FormCheckBoxComponent,
+    FormButtonComponent: window.FormButtonComponent
   },
   props: {
     isVisible: {

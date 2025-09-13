@@ -1,169 +1,326 @@
 <template>
-    <div>
-        <div class="content-header">
-            <div class="container-fluid">
-                <div class="row mb-2">
-                    <div class="col-sm-6">
-                        <h1 class="m-0">Chatwoot Accounts</h1>
-                    </div>
-                    <div class="col-sm-6">
-                        <button class="btn btn-primary float-right" @click="showAddModal = true">
-                            <i class="fas fa-plus"></i> Thêm Account
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <section class="content">
-        <div class="container-fluid">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Danh sách Chatwoot Accounts</h3>
-                </div>
-                <div class="card-body">
-                    <div v-if="loading" class="text-center">
-                        <i class="fas fa-spinner fa-spin"></i> Đang tải...
-                    </div>
-                    <div v-else-if="accounts.length === 0" class="text-center text-muted">
-                        <i class="fas fa-comments fa-3x mb-3"></i>
-                        <p>Chưa có account nào được cấu hình</p>
-                        <button class="btn btn-primary" @click="showAddModal = true">
-                            <i class="fas fa-plus"></i> Thêm Account đầu tiên
-                        </button>
-                    </div>
-                    <div v-else class="table-responsive">
-                        <table class="table table-bordered table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Tên Account</th>
-                                    <th>URL</th>
-                                    <th>Account ID</th>
-                                    <th>Inbox ID</th>
-                                    <th>Trạng thái</th>
-                                    <th>Ngày tạo</th>
-                                    <th>Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="account in accounts" :key="account.id">
-                                    <td>{{ account.name }}</td>
-                                    <td>{{ account.url }}</td>
-                                    <td>{{ account.accountId }}</td>
-                                    <td>{{ account.inboxId || 'N/A' }}</td>
-                                    <td>
-                                        <span class="badge" :class="account.isActive ? 'badge-success' : 'badge-danger'">
-                                            {{ account.isActive ? 'Hoạt động' : 'Tạm dừng' }}
-                                        </span>
-                                    </td>
-                                    <td>{{ formatDate(account.createdAt) }}</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-info" @click="testAccount(account)">
-                                            <i class="fas fa-play"></i> Test
-                                        </button>
-                                        <button class="btn btn-sm btn-warning" @click="editAccount(account)">
-                                            <i class="fas fa-edit"></i> Sửa
-                                        </button>
-                                        <button class="btn btn-sm btn-danger" @click="deleteAccount(account)">
-                                            <i class="fas fa-trash"></i> Xóa
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+  <div>
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-12" :class="{'overlay-wrapper' : is_loading}">
+          <div class="overlay" v-if="is_loading">
+            <i class="fas fa-3x fa-spinner fa-spin"></i>
+            <div class="text-bold pt-2">Loading...</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header d-flex align-items-center">
+              <h3 class="card-title flex-grow-1">Quản lý Chatwoot Accounts</h3>
+              <div class="form-group">
+                <a v-if="!! permission?.create"
+                   class="btn btn-success float-right pt-md-1 pb-md-1"
+                   href="javascript:void(0);"
+                   data-toggle="modal"
+                   data-target="#form-modal"
+                   @click="selected_id = 0; selected_item = {};"
+                ><i class="fa fa-plus"></i> Thêm mới</a>
+              </div>
             </div>
 
-            <!-- Add/Edit Modal -->
-            <ChatwootAccountFormComponent 
-                v-if="showAddModal"
-                :account="editingAccount"
-                @close="closeModal"
-                @saved="onAccountSaved"
-            />
+            <div class="card-body">
+              <div class="row col-12 overflow-auto px-0 min-h-35">
+                <div class="w-100">
+                  <table class="table table-bordered table-hover">
+                    <thead class="table-header">
+                    <tr>
+                      <th></th>
+                      <th class="text-center text-nowrap">Tên Account</th>
+                      <th class="text-center text-nowrap">API URL</th>
+                      <th class="text-center text-nowrap">Account ID</th>
+                      <th class="text-center text-nowrap">API Token</th>
+                      <th class="text-center text-nowrap">Trạng thái</th>
+                      <th class="text-center text-nowrap">Ngày tạo</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="item in items" :key="item.id">
+                      <td class="text-right align-middle pr-2 text-nowrap pl-2" style="width: 66px">
+                        <a href="javascript:void(0);" data-toggle="modal" data-target="#form-modal"
+                           @click="selected_id = item.id; selected_item = {...item}">
+                          <i class="fa text-primary"
+                             :class="!!permission?.update ? 'fa-pencil-alt' : 'fa-eye'"
+                          ></i>
+                        </a>
+                      </td>
+                      <td class="align-middle">{{ item.name || '' }}</td>
+                      <td class="align-middle">{{ item.api_url || '' }}</td>
+                      <td class="align-middle">{{ item.account_id || '' }}</td>
+                      <td class="align-middle">{{ item.api_token ? '***' + item.api_token.slice(-4) : '' }}</td>
+                      <td class="align-middle text-center">
+                        <span :class="item.is_active ? 'badge badge-success' : 'badge badge-danger'">
+                          {{ item.is_active ? 'Hoạt động' : 'Không hoạt động' }}
+                        </span>
+                      </td>
+                      <td class="align-middle">{{ formatDate(item.created_at) }}</td>
+                    </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="float-left mt-2" v-if="this.meta.total_item > 0">
+                <div class="form-group d-inline-block mr-3">
+                  <label>Sắp xếp theo:</label>
+                  <select v-model="params.sort_by" class="form-control form-control-sm d-inline-block w-auto ml-2">
+                    <option value="created_at.desc">Ngày tạo (mới nhất)</option>
+                    <option value="created_at.asc">Ngày tạo (cũ nhất)</option>
+                    <option value="name.asc">Tên Account (A-Z)</option>
+                    <option value="name.desc">Tên Account (Z-A)</option>
+                  </select>
+                </div>
+                <div class="form-group d-inline-block">
+                  <label>Hiển thị:</label>
+                  <select v-model="params.limit" class="form-control form-control-sm d-inline-block w-auto ml-2">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="float-right mt-3">
+                <nav aria-label="Page navigation">
+                  <ul class="pagination">
+                    <li class="page-item" :class="{ disabled: params.page <= 1 }">
+                      <a class="page-link" href="#" @click.prevent="doPaginate(params.page - 1)">«</a>
+                    </li>
+                    <li v-for="page in visiblePages" :key="page" class="page-item" :class="{ active: page === params.page }">
+                      <a class="page-link" href="#" @click.prevent="doPaginate(page)">{{ page }}</a>
+                    </li>
+                    <li class="page-item" :class="{ disabled: params.page >= meta.total_page }">
+                      <a class="page-link" href="#" @click.prevent="doPaginate(params.page + 1)">»</a>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
+          </div>
         </div>
-        </section>
+      </div>
     </div>
+
+    <div class="modal fade" id="form-modal" data-backdrop="static">
+      <ChatwootAccountFormComponent
+          :object_info="selected_item"
+          :permission="permission"
+          @create:success="this.debouncedFetchData()"
+      />
+    </div>
+  </div>
 </template>
 
 <script>
-import ChatwootAccountFormComponent from './ChatwootAccountFormComponent.vue'
-
 export default {
-    name: 'ChatwootAccountsListComponent',
-    components: {
-        ChatwootAccountFormComponent
-    },
-    data() {
-        return {
-            loading: false,
-            accounts: [],
-            showAddModal: false,
-            editingAccount: null
-        }
-    },
-    mounted() {
-        this.loadAccounts();
-    },
-    methods: {
-        async loadAccounts() {
-            this.loading = true;
-            try {
-                const response = await this.$apiCall('get', '/api/admin/chatwoot-accounts');
-                this.accounts = response.data.data || [];
-            } catch (error) {
-                console.error('Error loading accounts:', error);
-                if (error.response?.status === 401) {
-                    this.$router.push('/admin/login');
-                }
-                this.accounts = [];
-            } finally {
-                this.loading = false;
-            }
+  name: 'ChatwootAccountsListComponent',
+  components: {
+    ChatwootAccountFormComponent: window.ChatwootAccountFormComponent
+  },
+  props: [
+    'permission',
+  ],
+  data() {
+    return {
+      controller_key: 'chatwoot_account',
+      service_factory_key: 'chatwoot_account',
+      is_loading: false,
+      selected_id: 0,
+      selected_item: {},
+      params: {
+        sort_by: 'created_at.desc',
+        limit: '10',
+        page: 1,
+      },
+      range_sorts: [
+        {
+          id: 'created_at.asc',
+          text: 'Ngày tạo (cũ nhất)'
         },
-        editAccount(account) {
-            this.editingAccount = account;
-            this.showAddModal = true;
+        {
+          id: 'created_at.desc',
+          text: 'Ngày tạo (mới nhất)'
         },
-        async deleteAccount(account) {
-            if (confirm(`Bạn có chắc muốn xóa account "${account.name}"?`)) {
-                try {
-                    await this.$apiCall('delete', `/api/admin/chatwoot-accounts/${account.id}`);
-                    this.loadAccounts();
-                } catch (error) {
-                    console.error('Error deleting account:', error);
-                    if (error.response?.status === 401) {
-                        this.$router.push('/admin/login');
-                    } else {
-                        alert('Có lỗi xảy ra khi xóa account');
-                    }
-                }
-            }
+        {
+          id: 'name.asc',
+          text: 'Tên Account (A-Z)'
         },
-        async testAccount(account) {
-            try {
-                await this.$apiCall('post', '/api/admin/chatwoot-accounts/test', { accountId: account.id });
-                alert('Test account thành công!');
-            } catch (error) {
-                console.error('Error testing account:', error);
-                if (error.response?.status === 401) {
-                    this.$router.push('/admin/login');
-                } else {
-                    alert('Có lỗi xảy ra khi test account');
-                }
-            }
+        {
+          id: 'name.desc',
+          text: 'Tên Account (Z-A)'
         },
-        closeModal() {
-            this.showAddModal = false;
-            this.editingAccount = null;
-        },
-        onAccountSaved() {
-            this.closeModal();
-            this.loadAccounts();
-        },
-        formatDate(date) {
-            return new Date(date).toLocaleDateString('vi-VN');
-        }
+      ],
+      items: [],
+      meta: {
+        total_item: 0,
+        total_page: 0,
+      }
     }
+  },
+  mounted() {
+    this.debouncedFetchData = this.debounce(this.fetchData, 500);
+    this.debouncedFetchData();
+  },
+  computed: {
+    visiblePages() {
+      const current = this.params.page;
+      const total = this.meta.total_page;
+      const pages = [];
+      
+      // Show max 5 pages
+      let start = Math.max(1, current - 2);
+      let end = Math.min(total, current + 2);
+      
+      // Adjust if we're near the beginning or end
+      if (end - start < 4) {
+        if (start === 1) {
+          end = Math.min(total, start + 4);
+        } else {
+          start = Math.max(1, end - 4);
+        }
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      
+      return pages;
+    }
+  },
+  methods: {
+    debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    },
+    submitSearch() {
+      this.params.page = 1;
+      this.debouncedFetchData();
+    },
+    doPaginate(pageNum) {
+      if (pageNum >= 1 && pageNum <= this.meta.total_page) {
+        this.params.page = pageNum;
+        this.debouncedFetchData();
+      }
+    },
+    fetchData() {
+      let _context = this;
+      _context.is_loading = true;
+
+      // Mock data for now - replace with actual API call
+      setTimeout(() => {
+        _context.items = [
+          {
+            id: 1,
+            name: 'Main Support',
+            api_url: 'https://app.chatwoot.com',
+            account_id: '12345',
+            api_token: 'token_abcdef1234567890',
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z'
+          },
+          {
+            id: 2,
+            name: 'Sales Team',
+            api_url: 'https://app.chatwoot.com',
+            account_id: '67890',
+            api_token: 'token_xyz9876543210',
+            is_active: true,
+            created_at: '2024-01-02T00:00:00Z'
+          },
+          {
+            id: 3,
+            name: 'Marketing',
+            api_url: 'https://app.chatwoot.com',
+            account_id: '11111',
+            api_token: 'token_mno4567890123',
+            is_active: false,
+            created_at: '2024-01-03T00:00:00Z'
+          }
+        ];
+        _context.meta.total_page = 1;
+        _context.meta.total_item = 3;
+        _context.is_loading = false;
+      }, 500);
+    },
+    formatDate(date) {
+      if (!date) return '';
+      return new Date(date).toLocaleDateString('vi-VN');
+    }
+  },
+  watch: {
+    'params.limit': function (newVal, oldVal) {
+      this.submitSearch();
+    },
+    'params.sort_by': function (newVal, oldVal) {
+      this.submitSearch();
+    },
+  }
 }
 </script>
+
+<style scoped>
+.overlay-wrapper {
+  position: relative;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.min-h-35 {
+  min-height: 350px;
+}
+
+.table-header {
+  background-color: #f8f9fa;
+}
+
+.table-header th {
+  border-top: none;
+  font-weight: 600;
+}
+
+.pagination {
+  margin: 0;
+}
+
+.page-link {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.page-link:hover {
+  color: #0056b3;
+}
+
+.page-item.active .page-link {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.page-item.disabled .page-link {
+  color: #6c757d;
+  pointer-events: none;
+}
+</style>
