@@ -128,6 +128,13 @@
     <!-- Vue Router 4 -->
     <script src="https://unpkg.com/vue-router@4/dist/vue-router.global.js"></script>
     
+    <!-- Vuelidate -->
+    <script src="https://unpkg.com/@vuelidate/core@2.0.0-alpha.33/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@vuelidate/validators@2.0.0-alpha.22/dist/index.umd.js"></script>
+    
+    <!-- Lodash -->
+    <script src="https://unpkg.com/lodash@4.17.21/lodash.min.js"></script>
+    
     <!-- Services -->
     <script src="/admin/src/services/BaseService.js"></script>
     <script src="/admin/src/services/AuthService.js"></script>
@@ -154,15 +161,15 @@
         const { createApp } = Vue;
         const { createRouter, createWebHistory } = VueRouter;
 
-        // Simple Vue SFC loader
+        // Enhanced Vue SFC loader for Vue 3.5.21
         async function loadVueComponent(path) {
             try {
                 const response = await fetch(path);
                 const text = await response.text();
                 
                 // Parse template, script, and style sections
-                const templateMatch = text.match(/<template>([\s\S]*?)<\/template>/);
-                const scriptMatch = text.match(/<script>([\s\S]*?)<\/script>/);
+                const templateMatch = text.match(/<template[^>]*>([\s\S]*?)<\/template>/);
+                const scriptMatch = text.match(/<script[^>]*>([\s\S]*?)<\/script>/);
                 const styleMatch = text.match(/<style[^>]*>([\s\S]*?)<\/style>/);
                 
                 const template = templateMatch ? templateMatch[1].trim() : '';
@@ -173,24 +180,46 @@
                     template: template
                 };
                 
-                // Parse script content - improved regex
+                // Parse script content with better error handling
                 if (scriptContent) {
-                    // Remove export default and get the object
-                    let cleanScript = scriptContent.replace(/export\s+default\s*/, '').trim();
-                    if (cleanScript.endsWith(';')) {
-                        cleanScript = cleanScript.slice(0, -1);
-                    }
-                    
                     try {
-                        const scriptObj = new Function('return ' + cleanScript)();
-                        Object.assign(component, scriptObj);
+                        // Remove export default and clean up
+                        let cleanScript = scriptContent.replace(/export\s+default\s*/, '').trim();
+                        
+                        // Remove trailing semicolon if present
+                        if (cleanScript.endsWith(';')) {
+                            cleanScript = cleanScript.slice(0, -1);
+                        }
+                        
+                        // Handle object literal syntax
+                        if (cleanScript.startsWith('{') && cleanScript.endsWith('}')) {
+                            // Direct object literal
+                            const scriptObj = new Function('return ' + cleanScript)();
+                            Object.assign(component, scriptObj);
+                        } else {
+                            // Try to extract object from more complex syntax
+                            const objMatch = cleanScript.match(/\{[\s\S]*\}/);
+                            if (objMatch) {
+                                const scriptObj = new Function('return ' + objMatch[0])();
+                                Object.assign(component, scriptObj);
+                            } else {
+                                console.warn('Could not parse script content for', path);
+                            }
+                        }
                     } catch (e) {
                         console.error('Error parsing script for', path, e);
-                        // Fallback: try to extract just the object part
-                        const objMatch = cleanScript.match(/\{[\s\S]*\}/);
-                        if (objMatch) {
-                            const scriptObj = new Function('return ' + objMatch[0])();
-                            Object.assign(component, scriptObj);
+                        console.error('Script content:', scriptContent.substring(0, 200) + '...');
+                        
+                        // Try fallback parsing
+                        try {
+                            // Look for the main object definition
+                            const objMatch = scriptContent.match(/\{[\s\S]*\}/);
+                            if (objMatch) {
+                                const scriptObj = new Function('return ' + objMatch[0])();
+                                Object.assign(component, scriptObj);
+                            }
+                        } catch (fallbackError) {
+                            console.error('Fallback parsing also failed for', path, fallbackError);
                         }
                     }
                 }
@@ -204,86 +233,91 @@
         
         // Load Vue components
         let SidebarComponent, HeaderComponent, AdminLayoutComponent, ListComponent, PageComponent;
-        let DashboardPageComponent, UsersPageComponent, ConfigurationsPageComponent, LogsPageComponent;
+        let DashboardPageComponent, UsersPageComponent, UserListComponent, UserFormComponent, UserPasswordFormComponent, ConfigurationsPageComponent, LogsPageComponent;
         let ChatwootAccountsListComponent, DifyAppsListComponent, TelegramBotsListComponent;
         let FormListingSortComponent, FormTableFiltersComponent, FormCheckBoxComponent, PaginateComponent, ActionButtonsComponent;
+        let FormInputTextComponent, FormImageComponent, FormSelectComponent, FormInputDateComponent;
         
         async function loadComponents() {
-            console.log('🔄 Loading Vue components...');
             
-            // Load main components
+            // Load main components first
             SidebarComponent = await loadVueComponent('/admin/src/components/SidebarComponent.vue');
-            console.log('SidebarComponent loaded:', !!SidebarComponent);
             window.SidebarComponent = SidebarComponent;
             
             HeaderComponent = await loadVueComponent('/admin/src/components/HeaderComponent.vue');
-            console.log('HeaderComponent loaded:', !!HeaderComponent);
             window.HeaderComponent = HeaderComponent;
             
             AdminLayoutComponent = await loadVueComponent('/admin/src/components/AdminLayoutComponent.vue');
-            console.log('AdminLayoutComponent loaded:', !!AdminLayoutComponent);
             window.AdminLayoutComponent = AdminLayoutComponent;
             
             ListComponent = await loadVueComponent('/admin/src/components/ListComponent.vue');
-            console.log('ListComponent loaded:', !!ListComponent);
             window.ListComponent = ListComponent;
             
             PageComponent = await loadVueComponent('/admin/src/components/PageComponent.vue');
-            console.log('PageComponent loaded:', !!PageComponent);
             window.PageComponent = PageComponent;
             
-            // Load module components
+            // Load user sub-components FIRST (before UsersPageComponent)
+            UserListComponent = await loadVueComponent('/admin/src/modules/users/UserListComponent.vue');
+            window.UserListComponent = UserListComponent;
+            
+            UserFormComponent = await loadVueComponent('/admin/src/modules/users/UserFormComponent.vue');
+            window.UserFormComponent = UserFormComponent;
+            
+            // Load UserPasswordFormComponent
+            UserPasswordFormComponent = await loadVueComponent('/admin/src/modules/users/UserPasswordFormComponent.vue');
+            window.UserPasswordFormComponent = UserPasswordFormComponent;
+            
+            // Load module components (after sub-components are loaded)
             DashboardPageComponent = await loadVueComponent('/admin/src/modules/dashboard/DashboardPageComponent.vue');
-            console.log('DashboardPageComponent loaded:', !!DashboardPageComponent);
             window.DashboardPageComponent = DashboardPageComponent;
             
             UsersPageComponent = await loadVueComponent('/admin/src/modules/users/UsersPageComponent.vue');
-            console.log('UsersPageComponent loaded:', !!UsersPageComponent);
             window.UsersPageComponent = UsersPageComponent;
             
             ConfigurationsPageComponent = await loadVueComponent('/admin/src/modules/configurations/ConfigurationsPageComponent.vue');
-            console.log('ConfigurationsPageComponent loaded:', !!ConfigurationsPageComponent);
             window.ConfigurationsPageComponent = ConfigurationsPageComponent;
             
             LogsPageComponent = await loadVueComponent('/admin/src/modules/logs/LogsPageComponent.vue');
-            console.log('LogsPageComponent loaded:', !!LogsPageComponent);
             window.LogsPageComponent = LogsPageComponent;
             
             // Load additional components
             ChatwootAccountsListComponent = await loadVueComponent('/admin/src/modules/chatwoot/ChatwootAccountsListComponent.vue');
-            console.log('ChatwootAccountsListComponent loaded:', !!ChatwootAccountsListComponent);
             window.ChatwootAccountsListComponent = ChatwootAccountsListComponent;
             
             DifyAppsListComponent = await loadVueComponent('/admin/src/modules/dify/DifyAppsListComponent.vue');
-            console.log('DifyAppsListComponent loaded:', !!DifyAppsListComponent);
             window.DifyAppsListComponent = DifyAppsListComponent;
             
             TelegramBotsListComponent = await loadVueComponent('/admin/src/modules/telegram/TelegramBotsListComponent.vue');
-            console.log('TelegramBotsListComponent loaded:', !!TelegramBotsListComponent);
             window.TelegramBotsListComponent = TelegramBotsListComponent;
             
             // Load shared components
             FormListingSortComponent = await loadVueComponent('/admin/src/components/shared/FormListingSortComponent.vue');
-            console.log('FormListingSortComponent loaded:', !!FormListingSortComponent);
             window.FormListingSortComponent = FormListingSortComponent;
             
             FormTableFiltersComponent = await loadVueComponent('/admin/src/components/shared/FormTableFiltersComponent.vue');
-            console.log('FormTableFiltersComponent loaded:', !!FormTableFiltersComponent);
             window.FormTableFiltersComponent = FormTableFiltersComponent;
             
             FormCheckBoxComponent = await loadVueComponent('/admin/src/components/shared/FormCheckBoxComponent.vue');
-            console.log('FormCheckBoxComponent loaded:', !!FormCheckBoxComponent);
             window.FormCheckBoxComponent = FormCheckBoxComponent;
             
             PaginateComponent = await loadVueComponent('/admin/src/components/shared/PaginateComponent.vue');
-            console.log('PaginateComponent loaded:', !!PaginateComponent);
             window.PaginateComponent = PaginateComponent;
             
             ActionButtonsComponent = await loadVueComponent('/admin/src/components/shared/ActionButtonsComponent.vue');
-            console.log('ActionButtonsComponent loaded:', !!ActionButtonsComponent);
             window.ActionButtonsComponent = ActionButtonsComponent;
             
-            console.log('✅ All components loaded and registered globally');
+            // Load shared form components
+            FormInputTextComponent = await loadVueComponent('/admin/src/components/shared/FormInputTextComponent.vue');
+            window.FormInputTextComponent = FormInputTextComponent;
+            
+            FormImageComponent = await loadVueComponent('/admin/src/components/shared/FormImageComponent.vue');
+            window.FormImageComponent = FormImageComponent;
+            
+            FormSelectComponent = await loadVueComponent('/admin/src/components/shared/FormSelectComponent.vue');
+            window.FormSelectComponent = FormSelectComponent;
+            
+            FormInputDateComponent = await loadVueComponent('/admin/src/components/shared/FormInputDateComponent.vue');
+            window.FormInputDateComponent = FormInputDateComponent;
         }
 
 
@@ -408,7 +442,60 @@
             }
         });
 
+        // Register dependencies globally
+        function registerDependencies() {
+            // Register Vuelidate
+            if (window.Vuelidate) {
+                window.useVuelidate = window.Vuelidate.useVuelidate;
+            }
+            if (window.VuelidateValidators) {
+                window.required = window.VuelidateValidators.required;
+                window.email = window.VuelidateValidators.email;
+                window.minLength = window.VuelidateValidators.minLength;
+            }
+            
+            // Register Lodash
+            if (window._) {
+                window.lodash = window._;
+            }
+            
+        }
+
+        // Register all components globally
+        function registerGlobalComponents() {
+            if (window.SidebarComponent) app.component('SidebarComponent', window.SidebarComponent);
+            if (window.HeaderComponent) app.component('HeaderComponent', window.HeaderComponent);
+            if (window.AdminLayoutComponent) app.component('AdminLayoutComponent', window.AdminLayoutComponent);
+            if (window.ListComponent) app.component('ListComponent', window.ListComponent);
+            if (window.PageComponent) app.component('PageComponent', window.PageComponent);
+            if (window.DashboardPageComponent) app.component('DashboardPageComponent', window.DashboardPageComponent);
+            if (window.UsersPageComponent) app.component('UsersPageComponent', window.UsersPageComponent);
+            if (window.UserListComponent) app.component('UserListComponent', window.UserListComponent);
+            if (window.UserFormComponent) app.component('UserFormComponent', window.UserFormComponent);
+            if (window.UserPasswordFormComponent) app.component('UserPasswordFormComponent', window.UserPasswordFormComponent);
+            if (window.ConfigurationsPageComponent) app.component('ConfigurationsPageComponent', window.ConfigurationsPageComponent);
+            if (window.LogsPageComponent) app.component('LogsPageComponent', window.LogsPageComponent);
+            if (window.ChatwootAccountsListComponent) app.component('ChatwootAccountsListComponent', window.ChatwootAccountsListComponent);
+            if (window.DifyAppsListComponent) app.component('DifyAppsListComponent', window.DifyAppsListComponent);
+            if (window.TelegramBotsListComponent) app.component('TelegramBotsListComponent', window.TelegramBotsListComponent);
+            if (window.FormListingSortComponent) app.component('FormListingSortComponent', window.FormListingSortComponent);
+            if (window.FormTableFiltersComponent) app.component('FormTableFiltersComponent', window.FormTableFiltersComponent);
+            if (window.FormCheckBoxComponent) app.component('FormCheckBoxComponent', window.FormCheckBoxComponent);
+            if (window.PaginateComponent) app.component('PaginateComponent', window.PaginateComponent);
+            if (window.ActionButtonsComponent) app.component('ActionButtonsComponent', window.ActionButtonsComponent);
+            if (window.FormInputTextComponent) app.component('FormInputTextComponent', window.FormInputTextComponent);
+            if (window.FormImageComponent) app.component('FormImageComponent', window.FormImageComponent);
+            if (window.FormSelectComponent) app.component('FormSelectComponent', window.FormSelectComponent);
+            if (window.FormInputDateComponent) app.component('FormInputDateComponent', window.FormInputDateComponent);
+        }
+
         app.use(router);
+        
+        // Register dependencies first
+        registerDependencies();
+        
+        // Register components globally
+        registerGlobalComponents();
         
         // Wait for all services to load, then mount
                 const allServicesLoaded = window.BaseService && window.AuthService && 

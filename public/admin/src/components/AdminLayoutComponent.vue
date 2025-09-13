@@ -66,7 +66,6 @@ export default {
   mounted() {
     this.loadUserData();
     this.currentRoute = this.$route.path;
-    console.log('AdminLayoutComponent mounted');
   },
   watch: {
     '$route'(to) {

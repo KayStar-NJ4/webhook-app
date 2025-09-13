@@ -4,7 +4,7 @@ class UserService extends BaseService {
     this.endpoint = '/users'
   }
 
-  // Lấy danh sách users
+  // Lấy danh sách users với pagination và search
   getList(params = {}) {
     return this.get(this.endpoint, params)
   }
@@ -35,18 +35,32 @@ class UserService extends BaseService {
   }
 
   // Đổi mật khẩu
-  changePassword(id, data) {
-    return this.post(`${this.endpoint}/${id}/change-password`, data)
+  changePassword(id, password) {
+    return this.post(`${this.endpoint}/${id}/change-password`, { password })
   }
 
-  // Lấy permissions của user
+  // Lấy roles của user
+  getRoles(id) {
+    return this.get(`${this.endpoint}/${id}/roles`)
+  }
+
+  // Lấy permissions của user (deprecated - use getRoles instead)
   getPermissions(id) {
     return this.get(`${this.endpoint}/${id}/permissions`)
   }
 
-  // Cập nhật permissions
+  // Cập nhật permissions (deprecated - use role management instead)
   updatePermissions(id, data) {
     return this.put(`${this.endpoint}/${id}/permissions`, data)
+  }
+
+  // Helper method để tạo hoặc cập nhật user (compatible với code cũ)
+  createOrUpdate(data) {
+    if (data.id && data.id !== 0) {
+      return this.update(data.id, data)
+    } else {
+      return this.create(data)
+    }
   }
 }
 

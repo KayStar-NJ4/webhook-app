@@ -1,3 +1,5 @@
+// Services are loaded via script tags in index.html
+
 // Export all services to global window object
 window.Services = {
   AuthService: window.AuthService,
@@ -8,5 +10,6 @@ window.Services = {
   UserService: window.UserService,
   ConfigurationService: window.ConfigurationService,
   LogsService: window.LogsService,
-  BaseService: window.BaseService
+  BaseService: window.BaseService,
+  ServiceFactory: window.ServiceFactory
 };

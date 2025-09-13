@@ -1,6 +1,7 @@
 const express = require('express')
 const AuthController = require('../controllers/AuthController')
 const AdminController = require('../controllers/AdminController')
+const UserController = require('../controllers/UserController')
 const PermissionController = require('../controllers/PermissionController')
 const ConfigurationController = require('../controllers/ConfigurationController')
 const LogsController = require('../controllers/LogsController')
@@ -36,6 +37,10 @@ class AdminRoutes {
       telegramBotRepository, 
       chatwootAccountRepository, 
       difyAppRepository, 
+      logger 
+    })
+    this.userController = new UserController({ 
+      userRepository, 
       logger 
     })
     this.permissionController = new PermissionController({ 
@@ -85,12 +90,42 @@ class AdminRoutes {
     this.router.get('/api/admin/users', 
       this.authMiddleware.verifyToken, 
       this.permissionMiddleware.requirePermission('users', 'read'),
-      (req, res) => this.adminController.getUsers(req, res)
+      (req, res) => this.userController.getUsers(req, res)
+    )
+    this.router.get('/api/admin/users/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'read'),
+      (req, res) => this.userController.getUserById(req, res)
     )
     this.router.post('/api/admin/users', 
       this.authMiddleware.verifyToken, 
       this.permissionMiddleware.requirePermission('users', 'create'),
-      (req, res) => this.adminController.createUser(req, res)
+      (req, res) => this.userController.createUser(req, res)
+    )
+    this.router.put('/api/admin/users/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'update'),
+      (req, res) => this.userController.updateUser(req, res)
+    )
+    this.router.delete('/api/admin/users/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'delete'),
+      (req, res) => this.userController.deleteUser(req, res)
+    )
+    this.router.post('/api/admin/users/:id/change-password', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'update'),
+      (req, res) => this.userController.changePassword(req, res)
+    )
+    this.router.patch('/api/admin/users/:id/status', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'update'),
+      (req, res) => this.userController.updateUserStatus(req, res)
+    )
+    this.router.get('/api/admin/users/:id/roles', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'read'),
+      (req, res) => this.userController.getUserRoles(req, res)
     )
     
     // Telegram bot management API

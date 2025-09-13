@@ -1,52 +1,13 @@
 const { createApp } = Vue;
 const { createI18n } = VueI18n;
 
-// Import layouts
-import AdminLayout from '../src/layouts/AdminLayout.vue'
-import AuthLayout from '../src/layouts/AuthLayout.vue'
-
-// Import pages
-import UsersPage from '../src/pages/UsersPage.vue'
-import LoginPage from '../src/pages/LoginPage.vue'
-import DashboardPage from '../src/pages/DashboardPage.vue'
-import ConfigurationPage from '../src/pages/ConfigurationPage.vue'
-import ChatwootAccountsPage from '../src/pages/ChatwootAccountsPage.vue'
-import TelegramBotsPage from '../src/pages/TelegramBotsPage.vue'
-import DifyAppsPage from '../src/pages/DifyAppsPage.vue'
-import LogsPage from '../src/pages/LogsPage.vue'
-
-// Import components
-import { 
-  FormButtonComponent, 
-  FormModalComponent, 
-  FormInputTextComponent, 
-  FormCheckBoxComponent,
-  FormSelectComponent,
-  FormTextAreaComponent
-} from '../src/components'
-
-// Import i18n
-import i18n from '../src/i18n'
+// Components will be loaded dynamically via index.html
+// No ES6 imports needed as we're using script tags
 
 // Main App
 const app = createApp({
   components: {
-    AdminLayout,
-    AuthLayout,
-    UsersPage,
-    LoginPage,
-    DashboardPage,
-    ConfigurationPage,
-    ChatwootAccountsPage,
-    TelegramBotsPage,
-    DifyAppsPage,
-    LogsPage,
-    FormButtonComponent,
-    FormModalComponent,
-    FormInputTextComponent,
-    FormCheckBoxComponent,
-    FormSelectComponent,
-    FormTextAreaComponent
+    // Components will be registered globally via index.html
   },
   data() {
     return {
@@ -156,8 +117,8 @@ const app = createApp({
   }
 });
 
-// Use i18n
-app.use(i18n)
+// Services and utilities are loaded via script tags in index.html
+// No need to register them here as they're already global
 
 // Mount the app
 app.mount('#app');
