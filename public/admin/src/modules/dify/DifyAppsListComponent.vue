@@ -1,115 +1,117 @@
 <template>
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-md-12" :class="{'overlay-wrapper' : is_loading}">
-        <div class="overlay" v-if="is_loading">
-          <i class="fas fa-3x fa-spinner fa-spin"></i>
-          <div class="text-bold pt-2">Loading...</div>
-        </div>
-
-        <div class="card">
-          <div class="card-header d-flex align-items-center">
-            <h3 class="card-title flex-grow-1">Quản lý Dify Apps</h3>
-            <div class="form-group">
-              <a v-if="!! permission?.create"
-                 class="btn btn-success float-right pt-md-1 pb-md-1"
-                 href="javascript:void(0);"
-                 data-toggle="modal"
-                 data-target="#form-modal"
-                 @click="selected_id = 0; selected_item = {};"
-              ><i class="fa fa-plus"></i> Thêm mới</a>
-            </div>
+  <div>
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-12" :class="{'overlay-wrapper' : is_loading}">
+          <div class="overlay" v-if="is_loading">
+            <i class="fas fa-3x fa-spinner fa-spin"></i>
+            <div class="text-bold pt-2">Loading...</div>
           </div>
 
-          <div class="card-body">
-            <div class="row col-12 overflow-auto px-0 min-h-35">
-              <div class="w-100">
-                <table class="table table-bordered table-hover">
-                  <thead class="table-header">
-                  <tr>
-                    <th></th>
-                    <th class="text-center text-nowrap">Tên App</th>
-                    <th class="text-center text-nowrap">API URL</th>
-                    <th class="text-center text-nowrap">App ID</th>
-                    <th class="text-center text-nowrap">API Key</th>
-                    <th class="text-center text-nowrap">Trạng thái</th>
-                    <th class="text-center text-nowrap">Ngày tạo</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  <tr v-for="item in items" :key="item.id">
-                    <td class="text-right align-middle pr-2 text-nowrap pl-2" style="width: 66px">
-                      <a href="javascript:void(0);" data-toggle="modal" data-target="#form-modal"
-                         @click="selected_id = item.id; selected_item = {...item}">
-                        <i class="fa text-primary"
-                           :class="!!permission?.update ? 'fa-pencil-alt' : 'fa-eye'"
-                        ></i>
-                      </a>
-                    </td>
-                    <td class="align-middle">{{ item.name || '' }}</td>
-                    <td class="align-middle">{{ item.api_url || '' }}</td>
-                    <td class="align-middle">{{ item.app_id || '' }}</td>
-                    <td class="align-middle">{{ item.api_key ? '***' + item.api_key.slice(-4) : '' }}</td>
-                    <td class="align-middle text-center">
-                      <span :class="item.is_active ? 'badge badge-success' : 'badge badge-danger'">
-                        {{ item.is_active ? 'Hoạt động' : 'Không hoạt động' }}
-                      </span>
-                    </td>
-                    <td class="align-middle">{{ formatDate(item.created_at) }}</td>
-                  </tr>
-                  </tbody>
-                </table>
+          <div class="card">
+            <div class="card-header d-flex align-items-center">
+              <h3 class="card-title flex-grow-1">Quản lý Dify Apps</h3>
+              <div class="form-group">
+                <a v-if="!! permission?.create"
+                   class="btn btn-success float-right pt-md-1 pb-md-1"
+                   href="javascript:void(0);"
+                   data-toggle="modal"
+                   data-target="#form-modal"
+                   @click="selected_id = 0; selected_item = {};"
+                ><i class="fa fa-plus"></i> Thêm mới</a>
               </div>
             </div>
 
-            <div class="float-left mt-2" v-if="this.meta.total_item > 0">
-              <div class="form-group d-inline-block mr-3">
-                <label>Sắp xếp theo:</label>
-                <select v-model="params.sort_by" class="form-control form-control-sm d-inline-block w-auto ml-2">
-                  <option value="created_at.desc">Ngày tạo (mới nhất)</option>
-                  <option value="created_at.asc">Ngày tạo (cũ nhất)</option>
-                  <option value="name.asc">Tên App (A-Z)</option>
-                  <option value="name.desc">Tên App (Z-A)</option>
-                </select>
+            <div class="card-body">
+              <div class="row col-12 overflow-auto px-0 min-h-35">
+                <div class="w-100">
+                  <table class="table table-bordered table-hover">
+                    <thead class="table-header">
+                    <tr>
+                      <th></th>
+                      <th class="text-center text-nowrap">Tên App</th>
+                      <th class="text-center text-nowrap">API URL</th>
+                      <th class="text-center text-nowrap">App ID</th>
+                      <th class="text-center text-nowrap">API Key</th>
+                      <th class="text-center text-nowrap">Trạng thái</th>
+                      <th class="text-center text-nowrap">Ngày tạo</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="item in items" :key="item.id">
+                      <td class="text-right align-middle pr-2 text-nowrap pl-2" style="width: 66px">
+                        <a href="javascript:void(0);" data-toggle="modal" data-target="#form-modal"
+                           @click="selected_id = item.id; selected_item = {...item}">
+                          <i class="fa text-primary"
+                             :class="!!permission?.update ? 'fa-pencil-alt' : 'fa-eye'"
+                          ></i>
+                        </a>
+                      </td>
+                      <td class="align-middle">{{ item.name || '' }}</td>
+                      <td class="align-middle">{{ item.api_url || '' }}</td>
+                      <td class="align-middle">{{ item.app_id || '' }}</td>
+                      <td class="align-middle">{{ item.api_key ? '***' + item.api_key.slice(-4) : '' }}</td>
+                      <td class="align-middle text-center">
+                        <span :class="item.is_active ? 'badge badge-success' : 'badge badge-danger'">
+                          {{ item.is_active ? 'Hoạt động' : 'Không hoạt động' }}
+                        </span>
+                      </td>
+                      <td class="align-middle">{{ formatDate(item.created_at) }}</td>
+                    </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <div class="form-group d-inline-block">
-                <label>Hiển thị:</label>
-                <select v-model="params.limit" class="form-control form-control-sm d-inline-block w-auto ml-2">
-                  <option value="10">10</option>
-                  <option value="25">25</option>
-                  <option value="50">50</option>
-                  <option value="100">100</option>
-                </select>
-              </div>
-            </div>
 
-            <div class="float-right mt-3">
-              <nav aria-label="Page navigation">
-                <ul class="pagination">
-                  <li class="page-item" :class="{ disabled: params.page <= 1 }">
-                    <a class="page-link" href="#" @click.prevent="doPaginate(params.page - 1)">«</a>
-                  </li>
-                  <li v-for="page in visiblePages" :key="page" class="page-item" :class="{ active: page === params.page }">
-                    <a class="page-link" href="#" @click.prevent="doPaginate(page)">{{ page }}</a>
-                  </li>
-                  <li class="page-item" :class="{ disabled: params.page >= meta.total_page }">
-                    <a class="page-link" href="#" @click.prevent="doPaginate(params.page + 1)">»</a>
-                  </li>
-                </ul>
-              </nav>
+              <div class="float-left mt-2" v-if="this.meta.total_item > 0">
+                <div class="form-group d-inline-block mr-3">
+                  <label>Sắp xếp theo:</label>
+                  <select v-model="params.sort_by" class="form-control form-control-sm d-inline-block w-auto ml-2">
+                    <option value="created_at.desc">Ngày tạo (mới nhất)</option>
+                    <option value="created_at.asc">Ngày tạo (cũ nhất)</option>
+                    <option value="name.asc">Tên App (A-Z)</option>
+                    <option value="name.desc">Tên App (Z-A)</option>
+                  </select>
+                </div>
+                <div class="form-group d-inline-block">
+                  <label>Hiển thị:</label>
+                  <select v-model="params.limit" class="form-control form-control-sm d-inline-block w-auto ml-2">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="float-right mt-3">
+                <nav aria-label="Page navigation">
+                  <ul class="pagination">
+                    <li class="page-item" :class="{ disabled: params.page <= 1 }">
+                      <a class="page-link" href="#" @click.prevent="doPaginate(params.page - 1)">«</a>
+                    </li>
+                    <li v-for="page in visiblePages" :key="page" class="page-item" :class="{ active: page === params.page }">
+                      <a class="page-link" href="#" @click.prevent="doPaginate(page)">{{ page }}</a>
+                    </li>
+                    <li class="page-item" :class="{ disabled: params.page >= meta.total_page }">
+                      <a class="page-link" href="#" @click.prevent="doPaginate(params.page + 1)">»</a>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="modal fade" id="form-modal" data-backdrop="static">
-    <DifyAppFormComponent
-        :object_info="selected_item"
-        :permission="permission"
-        @create:success="this.debouncedFetchData()"
-    />
+    <div class="modal fade" id="form-modal" data-backdrop="static">
+      <DifyAppFormComponent
+          :object_info="selected_item"
+          :permission="permission"
+          @create:success="this.debouncedFetchData()"
+      />
+    </div>
   </div>
 </template>
 
@@ -215,41 +217,11 @@ export default {
       let _context = this;
       _context.is_loading = true;
 
-      // Mock data for now - replace with actual API call
-      setTimeout(() => {
-        _context.items = [
-          {
-            id: 1,
-            name: 'Customer Support Bot',
-            api_url: 'https://api.dify.ai/v1',
-            app_id: 'app-123456',
-            api_key: 'sk-abcdef1234567890',
-            is_active: true,
-            created_at: '2024-01-01T00:00:00Z'
-          },
-          {
-            id: 2,
-            name: 'Sales Assistant',
-            api_url: 'https://api.dify.ai/v1',
-            app_id: 'app-789012',
-            api_key: 'sk-xyz9876543210',
-            is_active: true,
-            created_at: '2024-01-02T00:00:00Z'
-          },
-          {
-            id: 3,
-            name: 'FAQ Bot',
-            api_url: 'https://api.dify.ai/v1',
-            app_id: 'app-345678',
-            api_key: 'sk-mno4567890123',
-            is_active: false,
-            created_at: '2024-01-03T00:00:00Z'
-          }
-        ];
-        _context.meta.total_page = 1;
-        _context.meta.total_item = 3;
-        _context.is_loading = false;
-      }, 500);
+      // TODO: Implement actual API call
+      _context.items = [];
+      _context.meta.total_page = 0;
+      _context.meta.total_item = 0;
+      _context.is_loading = false;
     },
     formatDate(date) {
       if (!date) return '';

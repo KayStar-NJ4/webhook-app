@@ -1,96 +1,98 @@
 <template>
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-md-12" :class="{'overlay-wrapper' : is_loading}">
-        <div class="overlay" v-if="is_loading">
-          <i class="fas fa-3x fa-spinner fa-spin"></i>
-          <div class="text-bold pt-2">Loading...</div>
-        </div>
-
-        <div class="card">
-          <div class="card-header d-flex align-items-center">
-            <h3 class="card-title flex-grow-1">Quản lý người dùng</h3>
-            <ActionButtonsComponent
-              :permission="permission"
-              :selectedItem="null"
-              @add="handleAdd"
-            />
+  <div>
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-12" :class="{'overlay-wrapper' : is_loading}">
+          <div class="overlay" v-if="is_loading">
+            <i class="fas fa-3x fa-spinner fa-spin"></i>
+            <div class="text-bold pt-2">Loading...</div>
           </div>
 
-          <div class="card-body">
-            <div class="row col-12 overflow-auto px-0 min-h-35">
-              <div class="w-100">
-                <table class="table table-bordered table-hover">
-                  <thead class="table-header">
-                  <tr>
-                    <th></th>
-                    <th class="text-center text-nowrap">Tên đăng nhập</th>
-                    <th class="text-center text-nowrap">Họ tên</th>
-                    <th class="text-center text-nowrap">Email</th>
-                    <th class="text-center text-nowrap">Vai trò</th>
-                    <th class="text-center text-nowrap">Trạng thái</th>
-                    <th class="text-center text-nowrap">Ngày tạo</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  <tr v-for="item in items" :key="item.id">
-                    <td class="text-right align-middle pr-2 text-nowrap pl-2" style="width: 66px">
-                      <ActionButtonsComponent
-                        :permission="permission"
-                        :selectedItem="item"
-                        @edit="handleEdit"
-                        @delete="handleDelete"
-                        @view="handleView"
-                      />
-                    </td>
-                    <td class="align-middle">{{ item.username || '' }}</td>
-                    <td class="align-middle">{{ item.full_name || '' }}</td>
-                    <td class="align-middle">{{ item.email || '' }}</td>
-                    <td class="align-middle">{{ item.role?.name || 'Chưa phân quyền' }}</td>
-                    <td class="align-middle text-center">
-                      <FormCheckBoxComponent
-                        :id="`user_active_${item.id}`"
-                        name="is_active"
-                        :checked="item.is_active"
-                        :is_disabled="true"
-                      />
-                    </td>
-                    <td class="align-middle">{{ formatDate(item.created_at) }}</td>
-                  </tr>
-                  </tbody>
-                </table>
+          <div class="card">
+            <div class="card-header d-flex align-items-center">
+              <h3 class="card-title flex-grow-1">Quản lý người dùng</h3>
+              <ActionButtonsComponent
+                :permission="permission"
+                :selectedItem="null"
+                @add="handleAdd"
+              />
+            </div>
+
+            <div class="card-body">
+              <div class="row col-12 overflow-auto px-0 min-h-35">
+                <div class="w-100">
+                  <table class="table table-bordered table-hover">
+                    <thead class="table-header">
+                    <tr>
+                      <th></th>
+                      <th class="text-center text-nowrap">Tên đăng nhập</th>
+                      <th class="text-center text-nowrap">Họ tên</th>
+                      <th class="text-center text-nowrap">Email</th>
+                      <th class="text-center text-nowrap">Vai trò</th>
+                      <th class="text-center text-nowrap">Trạng thái</th>
+                      <th class="text-center text-nowrap">Ngày tạo</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="item in items" :key="item.id">
+                      <td class="text-right align-middle pr-2 text-nowrap pl-2" style="width: 66px">
+                        <ActionButtonsComponent
+                          :permission="permission"
+                          :selectedItem="item"
+                          @edit="handleEdit"
+                          @delete="handleDelete"
+                          @view="handleView"
+                        />
+                      </td>
+                      <td class="align-middle">{{ item.username || '' }}</td>
+                      <td class="align-middle">{{ item.full_name || '' }}</td>
+                      <td class="align-middle">{{ item.email || '' }}</td>
+                      <td class="align-middle">{{ item.role?.name || 'Chưa phân quyền' }}</td>
+                      <td class="align-middle text-center">
+                        <FormCheckBoxComponent
+                          :id="`user_active_${item.id}`"
+                          name="is_active"
+                          :checked="item.is_active"
+                          :is_disabled="true"
+                        />
+                      </td>
+                      <td class="align-middle">{{ formatDate(item.created_at) }}</td>
+                    </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
 
-            <div class="float-left mt-2" v-if="this.meta.total_item > 0">
-              <FormListingSortComponent
-                :range_sorts="range_sorts"
-                :limit="params.limit"
-                :sort_by="params.sort_by"
-                @update:limit="params.limit = $event"
-                @update:sort_by="params.sort_by = $event"
-              />
-            </div>
+              <div class="float-left mt-2" v-if="this.meta.total_item > 0">
+                <FormListingSortComponent
+                  :range_sorts="range_sorts"
+                  :limit="params.limit"
+                  :sort_by="params.sort_by"
+                  @update:limit="params.limit = $event"
+                  @update:sort_by="params.sort_by = $event"
+                />
+              </div>
 
-            <div class="float-right mt-3">
-              <PaginateComponent
-                :totalPages="meta.total_page"
-                :currentPage="params.page"
-                @page-change="doPaginate"
-              />
+              <div class="float-right mt-3">
+                <PaginateComponent
+                  :totalPages="meta.total_page"
+                  :currentPage="params.page"
+                  @page-change="doPaginate"
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="modal fade" id="form-modal" data-backdrop="static">
-    <UserFormComponent
-        :object_info="selected_item"
-        :permission="permission"
-        @create:success="this.debouncedFetchData()"
-    />
+    <div class="modal fade" id="form-modal" data-backdrop="static">
+      <UserFormComponent
+          :object_info="selected_item"
+          :permission="permission"
+          @create:success="this.debouncedFetchData()"
+      />
+    </div>
   </div>
 </template>
 
@@ -200,41 +202,11 @@ export default {
       let _context = this;
       _context.is_loading = true;
 
-      // Mock data for now - replace with actual API call
-      setTimeout(() => {
-        _context.items = [
-          {
-            id: 1,
-            username: 'admin',
-            full_name: 'Administrator',
-            email: 'admin@example.com',
-            role: { name: 'Admin' },
-            is_active: true,
-            created_at: '2024-01-01T00:00:00Z'
-          },
-          {
-            id: 2,
-            username: 'user1',
-            full_name: 'User One',
-            email: 'user1@example.com',
-            role: { name: 'User' },
-            is_active: true,
-            created_at: '2024-01-02T00:00:00Z'
-          },
-          {
-            id: 3,
-            username: 'user2',
-            full_name: 'User Two',
-            email: 'user2@example.com',
-            role: null,
-            is_active: false,
-            created_at: '2024-01-03T00:00:00Z'
-          }
-        ];
-        _context.meta.total_page = 1;
-        _context.meta.total_item = 3;
-        _context.is_loading = false;
-      }, 500);
+      // TODO: Implement actual API call
+      _context.items = [];
+      _context.meta.total_page = 0;
+      _context.meta.total_item = 0;
+      _context.is_loading = false;
     },
     formatDate(date) {
       if (!date) return '';

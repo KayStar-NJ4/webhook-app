@@ -217,41 +217,11 @@ export default {
       let _context = this;
       _context.is_loading = true;
 
-      // Mock data for now - replace with actual API call
-      setTimeout(() => {
-        _context.items = [
-          {
-            id: 1,
-            name: 'Main Support',
-            api_url: 'https://app.chatwoot.com',
-            account_id: '12345',
-            api_token: 'token_abcdef1234567890',
-            is_active: true,
-            created_at: '2024-01-01T00:00:00Z'
-          },
-          {
-            id: 2,
-            name: 'Sales Team',
-            api_url: 'https://app.chatwoot.com',
-            account_id: '67890',
-            api_token: 'token_xyz9876543210',
-            is_active: true,
-            created_at: '2024-01-02T00:00:00Z'
-          },
-          {
-            id: 3,
-            name: 'Marketing',
-            api_url: 'https://app.chatwoot.com',
-            account_id: '11111',
-            api_token: 'token_mno4567890123',
-            is_active: false,
-            created_at: '2024-01-03T00:00:00Z'
-          }
-        ];
-        _context.meta.total_page = 1;
-        _context.meta.total_item = 3;
-        _context.is_loading = false;
-      }, 500);
+      // TODO: Implement actual API call
+      _context.items = [];
+      _context.meta.total_page = 0;
+      _context.meta.total_item = 0;
+      _context.is_loading = false;
     },
     formatDate(date) {
       if (!date) return '';
