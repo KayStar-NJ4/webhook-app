@@ -221,19 +221,7 @@ export default {
           { key: 'is_active', label: 'Status', type: 'badge' },
           { key: 'created_at', label: 'Created', type: 'date' }
         ];
-      } else if (route.includes('roles')) {
-        this.resource = 'role';
-        this.resourceName = 'Role';
-        this.pageTitle = 'Quản lý Vai trò người dùng';
-        this.service = window.RoleService || window.UserService; // Fallback to UserService if RoleService doesn't exist
-        this.columns = [
-          { key: 'name', label: 'Tên vai trò' },
-          { key: 'description', label: 'Mô tả' },
-          { key: 'permissions', label: 'Quyền hạn' },
-          { key: 'is_active', label: 'Trạng thái', type: 'badge' },
-          { key: 'created_at', label: 'Ngày tạo', type: 'date' }
-        ];
-      }
+      } 
     },
     hasPermission(resource, action) {
       if (!this.userPermissions[resource]) return false;
@@ -282,33 +270,39 @@ export default {
         });
     },
     openCreateModal() {
-      console.log('Create modal for', this.resource);
+      // Create modal logic
     },
     openEditModal(item) {
-      console.log('Edit', this.resource, ':', item);
+      // Edit modal logic
     },
     async deleteItem(id) {
-      if (!confirm(`Bạn có chắc muốn xóa ${this.resourceName.toLowerCase()} này?`)) return;
+      const confirmed = await window.ToastService.confirmAsync(
+        `Bạn có chắc muốn xóa ${this.resourceName.toLowerCase()} này?`,
+        'Xác nhận xóa'
+      );
+      
+      if (!confirmed) return;
+      
       try {
         const response = await this.service.delete(id);
         if (response.data.success) {
           this.fetchData();
-          alert(`${this.resourceName} deleted successfully!`);
+          window.ToastService.success(`${this.resourceName} đã được xóa thành công!`);
         }
       } catch (error) {
-        alert(`Failed to delete ${this.resourceName.toLowerCase()}: ` + (error.response?.data?.message || 'Unknown error'));
+        window.ToastService.handleError(error, `Không thể xóa ${this.resourceName.toLowerCase()}`);
       }
     },
     async testConnection(id) {
       try {
         const response = await this.service.testConnection(id);
         if (response.data.success) {
-          alert('Connection test successful!');
+          window.ToastService.success('Kiểm tra kết nối thành công!');
         } else {
-          alert('Connection test failed: ' + response.data.message);
+          window.ToastService.error('Kiểm tra kết nối thất bại: ' + response.data.message);
         }
       } catch (error) {
-        alert('Connection test failed: ' + (error.response?.data?.message || 'Unknown error'));
+        window.ToastService.handleError(error, 'Kiểm tra kết nối thất bại');
       }
     },
     maskToken(token) {

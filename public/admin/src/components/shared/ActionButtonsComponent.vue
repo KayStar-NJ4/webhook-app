@@ -77,8 +77,13 @@ export default {
     handleEdit() {
       this.$emit('edit', this.selectedItem);
     },
-    handleDelete() {
-      if (confirm('Bạn có chắc chắn muốn xóa?')) {
+    async handleDelete() {
+      const confirmed = await window.ToastService.confirmAsync(
+        'Bạn có chắc chắn muốn xóa?',
+        'Xác nhận xóa'
+      );
+      
+      if (confirmed) {
         this.$emit('delete', this.selectedItem);
       }
     },

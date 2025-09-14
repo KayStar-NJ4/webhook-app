@@ -51,8 +51,6 @@ class ChatwootService extends BaseService {
 }
 
 // Export to global window object
-if (window.ChatwootService) {
-    console.warn('⚠️ ChatwootService already exists, skipping...');
-} else {
+if (!window.ChatwootService) {
     window.ChatwootService = new ChatwootService();
 }

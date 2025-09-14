@@ -106,10 +106,10 @@ export default {
             } catch (error) {
                 console.error('Error saving app:', error);
                 if (error.response?.status === 401) {
-                    alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                    window.ToastService.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
                     this.$router.push('/admin/login');
                 } else {
-                    alert('Có lỗi xảy ra khi lưu app: ' + (error.response?.data?.message || error.message));
+                    window.ToastService.handleError(error, 'Có lỗi xảy ra khi lưu app');
                 }
             } finally {
                 this.saving = false;

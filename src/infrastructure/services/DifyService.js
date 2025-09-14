@@ -26,7 +26,7 @@ class DifyService {
       this.timeout = await this.configurationService.get('dify.timeout', 30000)
       
       if (!this.apiUrl || !this.apiKey || !this.appId) {
-        this.logger.info('Dify configuration not complete, service will be disabled')
+        // Dify configuration not complete, service will be disabled
         this.apiUrl = null
         this.apiKey = null
         this.appId = null
@@ -288,7 +288,7 @@ class DifyService {
   async testConnection() {
     try {
       if (!this.apiUrl || !this.apiKey || !this.appId) {
-        this.logger.info('Dify configuration not complete, skipping connection test')
+        // Dify configuration not complete, skipping connection test
         return false
       }
 

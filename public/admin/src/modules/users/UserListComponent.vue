@@ -12,6 +12,7 @@
             <div class="card-header d-flex align-items-center">
               <h3 class="card-title flex-grow-1">Quản lý người dùng</h3>
               <button 
+                v-if="hasPermission('users', 'create')"
                 class="btn btn-success float-right"
                 @click="handleAdd"
                 data-toggle="modal"
@@ -23,30 +24,22 @@
 
             <div class="card-body">
               <!-- Search and filters -->
-              <div class="row col-12 form border-bottom mb-3">
-                <div class="col-md-10 col-sm-6 row">
-                  <div class="col-md-4 col-sm-6 pl-md-0">
-                    <div class="form-group">
-                      <label>Tìm kiếm</label>
-                      <input 
-                        type="text"
-                        placeholder="Tìm kiếm..."
-                        v-model="params.keyword"
-                        class="form-control"
-                        @input="debouncedSearch"
-                      >
-                    </div>
-                  </div>
-                  <div class="col-md-2 col-sm-6">
-                    <div class="form-group">
-                      <label>Trạng thái</label>
-                      <select v-model="params.is_active" class="form-control" @change="debouncedSearch">
-                        <option value="">Tất cả</option>
-                        <option value="true">Hoạt động</option>
-                        <option value="false">Không hoạt động</option>
-                      </select>
-                    </div>
-                  </div>
+              <div class="row form border-bottom mb-3">
+                <div class="col-md-4 col-sm-6">
+                  <form-input-text-component
+                    v-model="params.search"
+                    label="Tìm kiếm"
+                    placeholder="Tìm kiếm..."
+                    @update:modelValue="debouncedSearch"
+                  />
+                </div>
+                <div class="col-md-3 col-sm-6">
+                  <form-select-component
+                    v-model="params.is_active"
+                    label="Trạng thái"
+                    :options="statusOptions"
+                    @update:modelValue="handleStatusChange"
+                  />
                 </div>
               </div>
 
@@ -55,7 +48,7 @@
                 <table class="table table-bordered table-hover">
                   <thead class="table-header">
                   <tr>
-                    <th style="width: 120px;">Hành động</th>
+                    <th style="width: 80px;"></th>
                     <th class="text-center text-nowrap">Tên đăng nhập</th>
                     <th class="text-center text-nowrap">Họ tên</th>
                     <th class="text-center text-nowrap">Email</th>
@@ -71,6 +64,7 @@
                     <td class="text-center">
                       <div class="btn-group" role="group">
                         <button 
+                          v-if="hasPermission('users', 'update')"
                           class="btn btn-sm btn-warning"
                           @click="handleEdit(item)"
                           data-toggle="modal"
@@ -80,6 +74,7 @@
                           <i class="fa fa-pencil-alt"></i>
                         </button>
                         <button 
+                          v-if="hasPermission('users', 'update')"
                           class="btn btn-sm btn-info"
                           @click="handleChangePassword(item)"
                           data-toggle="modal"
@@ -87,14 +82,6 @@
                           title="Đổi mật khẩu"
                         >
                           <i class="fa fa-key"></i>
-                        </button>
-                        <button 
-                          class="btn btn-sm btn-danger"
-                          @click="handleDelete(item)"
-                          title="Xóa"
-                          :disabled="item.username === 'admin'"
-                        >
-                          <i class="fa fa-trash"></i>
                         </button>
                       </div>
                     </td>
@@ -217,8 +204,14 @@
 
 export default {
   name: 'UserListComponent',
+  props: {
+    userPermissions: {
+      type: Object,
+      default: () => ({})
+    }
+  },
   components: {
-    // Components will be registered globally
+    // All components are registered globally
   },
   computed: {
     visiblePages() {
@@ -255,7 +248,7 @@ export default {
       selected_id: 0,
       selected_item: {},
       params: {
-        keyword: '',
+        search: '',
         sort_by: 'created_at.desc',
         limit: 10,
         page: 1,
@@ -300,6 +293,11 @@ export default {
         { id: 'female', text: 'Nữ' },
         { id: 'other', text: 'Khác' }
       ],
+      statusOptions: [
+        { value: '', label: 'Tất cả' },
+        { value: 'true', label: 'Hoạt động' },
+        { value: 'false', label: 'Không hoạt động' }
+      ],
       items: [],
       meta: {
         total_item: 0,
@@ -310,6 +308,24 @@ export default {
   watch: {
     'params.limit': function(newLimit, oldLimit) {
       if (newLimit !== oldLimit) {
+        this.params.page = 1;
+        this.debouncedFetchData();
+      }
+    },
+    'params.sort_by': function(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.params.page = 1;
+        this.debouncedFetchData();
+      }
+    },
+    'params.is_active': function(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.params.page = 1;
+        this.debouncedFetchData();
+      }
+    },
+    'params.search': function(newVal, oldVal) {
+      if (newVal !== oldVal) {
         this.params.page = 1;
         this.debouncedFetchData();
       }
@@ -324,6 +340,12 @@ export default {
       this.params.page = 1;
       this.debouncedFetchData();
     },
+    
+    handleStatusChange(value) {
+      this.params.is_active = value;
+      this.params.page = 1;
+      this.debouncedFetchData();
+    },
     updateLimit(newLimit) {
       this.params.limit = parseInt(newLimit);
       this.params.page = 1;
@@ -331,15 +353,6 @@ export default {
     },
     updateSortBy(newSortBy) {
       this.params.sort_by = newSortBy;
-      this.params.page = 1;
-      this.debouncedFetchData();
-    },
-    updateSortOrder(newSortOrder) {
-      this.params.sort_order = newSortOrder;
-      this.params.page = 1;
-      this.debouncedFetchData();
-    },
-    submitSearch() {
       this.params.page = 1;
       this.debouncedFetchData();
     },
@@ -355,11 +368,17 @@ export default {
 
       // Prepare params for API call
       const apiParams = Object.assign({}, this.params);
-      if (!apiParams.keyword) {
-        delete apiParams.keyword;
+      
+      // Clean up empty search
+      if (!apiParams.search || apiParams.search.trim() === '') {
+        delete apiParams.search;
       }
-      if (!apiParams.is_active) {
+      
+      // Clean up empty is_active and convert to boolean
+      if (apiParams.is_active === '') {
         delete apiParams.is_active;
+      } else if (apiParams.is_active !== undefined) {
+        apiParams.is_active = apiParams.is_active === 'true';
       }
 
       window.UserService.getList(apiParams)
@@ -390,6 +409,10 @@ export default {
           _context.is_loading = false;
         });
     },
+    hasPermission(resource, action) {
+      if (!this.userPermissions[resource]) return false
+      return this.userPermissions[resource].some(p => p.action === action)
+    },
     formatDate(date) {
       if (!date) return '';
       return new Date(date).toLocaleDateString('vi-VN');
@@ -406,65 +429,191 @@ export default {
       this.selected_id = item.id;
       this.selected_item = Object.assign({}, item);
     },
-    handleDelete(item) {
-      if (confirm('Bạn có chắc chắn muốn xóa người dùng "' + item.username + '"?')) {
-        this.is_loading = true;
+    showConfirmDialog(title, message, confirmText = 'Xác nhận', cancelText = 'Hủy') {
+      return new Promise((resolve) => {
+        // Create modal backdrop
+        const backdrop = document.createElement('div');
+        backdrop.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        `;
         
-        window.UserService.delete(item.id)
-          .then(function(response) {
-            if (response.data.success) {
-              this.showSuccess('Xóa người dùng thành công');
-              this.debouncedFetchData();
-            } else {
-              this.showError(response.data.message || 'Có lỗi xảy ra khi xóa người dùng');
+        // Create modal
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+          background: white;
+          border-radius: 8px;
+          padding: 24px;
+          max-width: 400px;
+          width: 90%;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+          animation: modalSlideIn 0.3s ease-out;
+        `;
+        
+        modal.innerHTML = `
+          <div style="margin-bottom: 16px;">
+            <h4 style="margin: 0 0 8px 0; color: #333; font-size: 18px;">${title}</h4>
+            <p style="margin: 0; color: #666; line-height: 1.5;">${message}</p>
+          </div>
+          <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button id="cancelBtn" style="
+              padding: 8px 16px;
+              border: 1px solid #ddd;
+              background: white;
+              color: #666;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 14px;
+            ">${cancelText}</button>
+            <button id="confirmBtn" style="
+              padding: 8px 16px;
+              border: none;
+              background: #dc3545;
+              color: white;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 14px;
+            ">${confirmText}</button>
+          </div>
+        `;
+        
+        // Add CSS animation
+        if (!document.getElementById('modal-styles')) {
+          const style = document.createElement('style');
+          style.id = 'modal-styles';
+          style.textContent = `
+            @keyframes modalSlideIn {
+              from { transform: scale(0.9); opacity: 0; }
+              to { transform: scale(1); opacity: 1; }
             }
-          }.bind(this))
-          .catch(function(error) {
-            this.showError((error.response && error.response.data && error.response.data.message) || error.message || 'Có lỗi xảy ra khi xóa người dùng');
-          }.bind(this))
-          .finally(function() {
-            this.is_loading = false;
-          }.bind(this));
-      }
+          `;
+          document.head.appendChild(style);
+        }
+        
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+        
+        // Handle button clicks
+        const cancelBtn = modal.querySelector('#cancelBtn');
+        const confirmBtn = modal.querySelector('#confirmBtn');
+        
+        const cleanup = () => {
+          document.body.removeChild(backdrop);
+        };
+        
+        cancelBtn.addEventListener('click', () => {
+          cleanup();
+          resolve(false);
+        });
+        
+        confirmBtn.addEventListener('click', () => {
+          cleanup();
+          resolve(true);
+        });
+        
+        // Handle backdrop click
+        backdrop.addEventListener('click', (e) => {
+          if (e.target === backdrop) {
+            cleanup();
+            resolve(false);
+          }
+        });
+        
+        // Handle escape key
+        const handleEscape = (e) => {
+          if (e.key === 'Escape') {
+            cleanup();
+            resolve(false);
+            document.removeEventListener('keydown', handleEscape);
+          }
+        };
+        document.addEventListener('keydown', handleEscape);
+      });
     },
     handleFormSuccess() {
-      this.showSuccess('Lưu thông tin người dùng thành công');
       this.debouncedFetchData();
       this.closeModal('form-modal');
     },
     handlePasswordSuccess() {
-      this.showSuccess('Đổi mật khẩu thành công');
       this.closeModal('password-modal');
     },
     closeModal(modalId) {
       const modal = document.getElementById(modalId);
       if (modal) {
-        const modalInstance = bootstrap.Modal.getInstance(modal);
-        if (modalInstance) {
-          modalInstance.hide();
-        }
+        // Bootstrap 4 syntax - use jQuery
+        $(modal).modal('hide');
       }
     },
     showSuccess(message) {
-      // You can implement toast notification here
-      alert(message);
+      if (window.toast) {
+        window.toast.success(message);
+      } else {
+        // Enhanced fallback with better styling
+        this.showFallbackToast(message, 'success');
+      }
     },
     showError(message) {
-      // You can implement toast notification here
-      alert(message);
+      if (window.toast) {
+        window.toast.error(message);
+      } else {
+        // Enhanced fallback with better styling
+        this.showFallbackToast(message, 'error');
+      }
+    },
+    showFallbackToast(message, type) {
+      const colors = {
+        success: '#28a745',
+        error: '#dc3545',
+        warning: '#ffc107',
+        info: '#17a2b8'
+      };
+      const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+      };
+      
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${colors[type]};
+        color: white;
+        padding: 12px 16px;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 9999;
+        max-width: 400px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        animation: slideIn 0.3s ease-out;
+      `;
+      
+      toast.innerHTML = `
+        <span style="margin-right: 8px;">${icons[type]}</span>
+        <span>${message}</span>
+      `;
+      
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.style.animation = 'slideIn 0.3s ease-out reverse';
+          setTimeout(() => toast.remove(), 300);
+        }
+      }, 5000);
     }
   },
-  watch: {
-    'params.limit': function (newVal, oldVal) {
-      this.submitSearch();
-    },
-    'params.sort_by': function (newVal, oldVal) {
-      this.submitSearch();
-    },
-    'params.is_active': function (newVal, oldVal) {
-      this.submitSearch();
-    }
-  }
 }
 </script>
 

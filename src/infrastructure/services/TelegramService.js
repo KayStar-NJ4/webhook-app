@@ -22,7 +22,7 @@ class TelegramService {
       const botToken = await this.configurationService.get('telegram.botToken')
       
       if (!botToken) {
-        this.logger.info('Telegram bot token not configured, service will be disabled')
+        // Telegram bot token not configured, service will be disabled
         this.apiUrl = null
         this.botToken = null
         return
@@ -156,7 +156,7 @@ class TelegramService {
     try {
       // Skip if no token configured
       if (!this.token || this.token === 'your-telegram-bot-token') {
-        this.logger.info('Telegram bot token not configured, skipping bot info check')
+        // Telegram bot token not configured, skipping bot info check
         return null
       }
 

@@ -225,7 +225,12 @@ export default {
     },
 
     async deleteBot(id) {
-      if (!confirm('Are you sure you want to delete this bot?')) return
+      const confirmed = await window.ToastService.confirmAsync(
+        'Bạn có chắc chắn muốn xóa bot này?',
+        'Xác nhận xóa bot'
+      );
+      
+      if (!confirmed) return
       
       try {
         const response = await TelegramService.delete(id)

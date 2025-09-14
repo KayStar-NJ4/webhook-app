@@ -1,376 +1,754 @@
 /* ========================================
-   GLOBAL THEME VARIABLES
+   SIMPLIFIED THEME VARIABLES
    ======================================== */
 
 :root {
-  /* Primary Colors */
+  /* Main Colors */
   --primary-color: #007bff;
   --primary-hover: #0056b3;
   --primary-light: #e3f2fd;
-  --primary-dark: #004085;
 
-  /* Success Colors */
   --success-color: #28a745;
-  --success-hover: #1e7e34;
-  --success-light: #d4edda;
-  --success-dark: #155724;
-
-  /* Warning Colors */
   --warning-color: #ffc107;
-  --warning-hover: #e0a800;
-  --warning-light: #fff3cd;
-  --warning-dark: #856404;
-
-  /* Danger Colors */
   --danger-color: #dc3545;
-  --danger-hover: #c82333;
-  --danger-light: #f8d7da;
-  --danger-dark: #721c24;
-
-  /* Info Colors */
   --info-color: #17a2b8;
-  --info-hover: #138496;
-  --info-light: #d1ecf1;
-  --info-dark: #0c5460;
 
   /* Neutral Colors */
-  --light-color: #f8f9fa;
-  --dark-color: #343a40;
-  --muted-color: #6c757d;
-  --white-color: #ffffff;
-  --black-color: #000000;
+  --white: #ffffff;
+  --black: #000000;
+  --dark: #343a40;
+  --light: #f8f9fa;
+  --muted: #6c757d;
+  
+  /* Common UI Colors - SAME COLOR FOR ALL */
+  --ui-dark: #343a40;        /* Menu, Add buttons, Table headers, Modal headers */
+  --ui-dark-hover: #007bff;  /* Hover color for dark elements */
+  --ui-dark-text: #ffffff;   /* Text color on dark background */
+  
+  /* Text Colors */
+  --text-dark: #212529;      /* Dark text on light background */
+  --text-light: #ffffff;     /* Light text on dark background */
+  
+  /* Background Colors */
+  --bg-white: #ffffff;
+  --bg-light: #f8f9fa;
 
   /* Border Colors */
-  --border-color: #dee2e6;
-  --border-light: #e9ecef;
-  --border-dark: #adb5bd;
-
-  /* Background Colors */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8f9fa;
-  --bg-light: #ffffff;
-  --bg-dark: #343a40;
-
-  /* Text Colors */
-  --text-primary: #212529;
-  --text-secondary: #6c757d;
-  --text-muted: #6c757d;
-  --text-light: #ffffff;
-
-  /* Shadow Colors */
-  --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  --border: #dee2e6;
+  
+  /* Shadows */
   --shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-  --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
-
-  /* Border Radius */
-  --border-radius-sm: 0.25rem;
-  --border-radius: 0.375rem;
-  --border-radius-lg: 0.5rem;
-  --border-radius-xl: 0.75rem;
-
-  /* Spacing */
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 3rem;
-
-  /* Font Sizes */
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.25rem;
-  --font-size-xxl: 1.5rem;
-
-  /* Font Weights */
-  --font-weight-light: 300;
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-
+  --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  
   /* Transitions */
-  --transition-fast: 0.15s ease-in-out;
-  --transition-base: 0.3s ease-in-out;
-  --transition-slow: 0.5s ease-in-out;
+  --transition: 0.3s ease-in-out;
 }
 
 /* ========================================
-   GLOBAL COMPONENT STYLES
+   GLOBAL RESETS
    ======================================== */
 
-/* Buttons */
+* {
+  box-sizing: border-box;
+}
+
+/* Force all text in card headers to be dark */
+.card-header,
+.card-header h1,
+.card-header h2,
+.card-header h3,
+.card-header h4,
+.card-header h5,
+.card-header h6,
+.card-header span,
+.card-header div,
+.card-header p {
+  color: var(--text-dark) !important;
+}
+
+/* Force all buttons in card headers to have white text */
+.card-header .btn,
+.card-header .btn *,
+.card-header .btn i,
+.card-header .btn span {
+  color: var(--ui-dark-text) !important;
+}
+
+/* ========================================
+   HEADER STYLES
+   ======================================== */
+
+/* Force ALL header text to be BLACK */
+.navbar,
+.navbar *,
+.navbar span,
+.navbar div,
+.navbar a,
+.navbar i,
+.navbar h1,
+.navbar h2,
+.navbar h3,
+.navbar h4,
+.navbar h5,
+.navbar h6,
+.navbar p,
+.navbar strong,
+.navbar b,
+.navbar em,
+.navbar small,
+.navbar .navbar-text,
+.navbar .navbar-nav,
+.navbar .navbar-nav *,
+.navbar .nav-link,
+.navbar .nav-link *,
+.navbar .breadcrumb,
+.navbar .breadcrumb *,
+.navbar .breadcrumb-item,
+.navbar .breadcrumb-item *,
+.navbar .dropdown-menu,
+.navbar .dropdown-menu *,
+.navbar .dropdown-item,
+.navbar .dropdown-item * {
+  color: var(--black) !important;
+}
+
+/* Header background */
+.navbar,
+.navbar.navbar-white,
+.navbar.navbar-light {
+  background-color: var(--bg-white) !important;
+  color: var(--black) !important;
+}
+
+/* Dropdown menu */
+.dropdown-menu,
+.dropdown-menu-lg,
+.dropdown-menu-right {
+  background-color: var(--bg-white) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--black) !important;
+}
+
+.dropdown-menu *,
+.dropdown-item,
+.dropdown-item * {
+  color: var(--black) !important;
+  background-color: transparent !important;
+}
+
+.dropdown-item:hover {
+  background-color: var(--primary-light) !important;
+  color: var(--primary-color) !important;
+}
+
+.dropdown-item:hover * {
+  color: var(--primary-color) !important;
+}
+
+/* Breadcrumb */
+.breadcrumb-item a {
+  color: var(--muted) !important;
+}
+
+.breadcrumb-item.active {
+  color: var(--primary-color) !important;
+}
+
+/* Icons */
+.navbar i,
+.navbar .fas,
+.navbar .far,
+.navbar .fab,
+.navbar .fa {
+  color: var(--black) !important;
+}
+
+.navbar .nav-link:hover i {
+  color: var(--primary-color) !important;
+}
+
+/* ========================================
+   SIDEBAR STYLES
+   ======================================== */
+
+.sidebar {
+  background-color: var(--ui-dark) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+.sidebar .nav-link {
+  color: var(--ui-dark-text) !important;
+  transition: var(--transition) !important;
+  padding: 0.75rem 1rem !important;
+  border-radius: 0.375rem !important;
+  margin: 0.125rem 0.5rem !important;
+}
+
+.sidebar .nav-link:hover {
+  background-color: var(--ui-dark-hover) !important;
+  color: var(--ui-dark-text) !important;
+  transform: translateX(4px) !important;
+}
+
+.sidebar .nav-link.active {
+  background-color: var(--ui-dark-hover) !important;
+  color: var(--ui-dark-text) !important;
+}
+
+.sidebar .nav-link i {
+  margin-right: 0.5rem !important;
+  width: 1.25rem !important;
+  text-align: center !important;
+}
+
+/* ========================================
+   BUTTONS STYLES
+   ======================================== */
+
+/* Add/New/Create buttons - SAME COLOR AS MENU */
+.btn-add,
+.btn-new,
+.btn-create,
+.btn-success[data-target="#form-modal"],
+.btn-success[data-toggle="modal"],
+.btn-success.float-right,
+.card-header .btn-success,
+.btn-success {
+  background-color: var(--ui-dark) !important;
+  border-color: var(--ui-dark) !important;
+  color: var(--ui-dark-text) !important;
+  transition: var(--transition) !important;
+}
+
+.btn-add:hover,
+.btn-new:hover,
+.btn-create:hover,
+.btn-success[data-target="#form-modal"]:hover,
+.btn-success[data-toggle="modal"]:hover,
+.btn-success.float-right:hover,
+.card-header .btn-success:hover,
+.btn-success:hover {
+  background-color: var(--ui-dark-hover) !important;
+  border-color: var(--ui-dark-hover) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+/* ========================================
+   ULTRA STRONG BUTTON OVERRIDES - IGNORE BOOTSTRAP
+   ======================================== */
+
+/* Force ALL buttons to have custom colors - ULTRA STRONG */
+button.btn,
+button.btn-sm,
+button.btn-lg,
+button.btn-xs,
+.btn,
+.btn-sm,
+.btn-lg,
+.btn-xs {
+  border: 1px solid transparent !important;
+  border-radius: 0.25rem !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+  text-align: center !important;
+  text-decoration: none !important;
+  vertical-align: middle !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+/* Edit button - TEAL color only, no border, no background */
+button.btn-warning,
+button.btn-sm.btn-warning,
+.btn-warning,
+.btn-sm.btn-warning,
+.table button.btn-warning,
+.table .btn-warning,
+button[title*="Sửa"],
+button[title*="sửa"],
+button[title*="Edit"],
+button[title*="edit"] {
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  color: #17a2b8 !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+button.btn-warning:hover,
+button.btn-sm.btn-warning:hover,
+.btn-warning:hover,
+.btn-sm.btn-warning:hover,
+.table button.btn-warning:hover,
+.table .btn-warning:hover,
+button[title*="Sửa"]:hover,
+button[title*="sửa"]:hover,
+button[title*="Edit"]:hover,
+button[title*="edit"]:hover {
+  background-color: transparent !important;
+  border: none !important;
+  color: #20c997 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: none !important;
+}
+
+button.btn-warning:hover i,
+button.btn-sm.btn-warning:hover i,
+.btn-warning:hover i,
+.btn-sm.btn-warning:hover i,
+.table button.btn-warning:hover i,
+.table .btn-warning:hover i,
+button[title*="Sửa"]:hover i,
+button[title*="sửa"]:hover i,
+button[title*="Edit"]:hover i,
+button[title*="edit"]:hover i {
+  text-shadow: none !important;
+}
+
+/* Password change button - YELLOW color only, no border, no background */
+button.btn-info,
+button.btn-sm.btn-info,
+.btn-info,
+.btn-sm.btn-info,
+.table button.btn-info,
+.table .btn-info,
+button[title*="mật khẩu"],
+button[title*="Mật khẩu"],
+button[title*="password"],
+button[title*="Password"] {
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  color: #ffc107 !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+button.btn-info:hover,
+button.btn-sm.btn-info:hover,
+.btn-info:hover,
+.btn-sm.btn-info:hover,
+.table button.btn-info:hover,
+.table .btn-info:hover,
+button[title*="mật khẩu"]:hover,
+button[title*="Mật khẩu"]:hover,
+button[title*="password"]:hover,
+button[title*="Password"]:hover {
+  background-color: transparent !important;
+  border: none !important;
+  color: #ffed4e !important;
+  transform: translateY(-1px) !important;
+  box-shadow: none !important;
+}
+
+button.btn-info:hover i,
+button.btn-sm.btn-info:hover i,
+.btn-info:hover i,
+.btn-sm.btn-info:hover i,
+.table button.btn-info:hover i,
+.table .btn-info:hover i,
+button[title*="mật khẩu"]:hover i,
+button[title*="Mật khẩu"]:hover i,
+button[title*="password"]:hover i,
+button[title*="Password"]:hover i {
+  text-shadow: none !important;
+}
+
+/* Delete button - RED color only, no border, no background */
+button.btn-danger,
+button.btn-sm.btn-danger,
+.btn-danger,
+.btn-sm.btn-danger,
+.table button.btn-danger,
+.table .btn-danger,
+button[title*="Xóa"],
+button[title*="xóa"],
+button[title*="Delete"],
+button[title*="delete"] {
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  color: #dc3545 !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+button.btn-danger:hover,
+button.btn-sm.btn-danger:hover,
+.btn-danger:hover,
+.btn-sm.btn-danger:hover,
+.table button.btn-danger:hover,
+.table .btn-danger:hover,
+button[title*="Xóa"]:hover,
+button[title*="xóa"]:hover,
+button[title*="Delete"]:hover,
+button[title*="delete"]:hover {
+  background-color: transparent !important;
+  border: none !important;
+  color: #ff6b6b !important;
+  transform: translateY(-1px) !important;
+  box-shadow: none !important;
+}
+
+button.btn-danger:hover i,
+button.btn-sm.btn-danger:hover i,
+.btn-danger:hover i,
+.btn-sm.btn-danger:hover i,
+.table button.btn-danger:hover i,
+.table .btn-danger:hover i,
+button[title*="Xóa"]:hover i,
+button[title*="xóa"]:hover i,
+button[title*="Delete"]:hover i,
+button[title*="delete"]:hover i {
+  text-shadow: none !important;
+}
+
+/* Override any Bootstrap focus states - REMOVE ALL OUTLINES */
+button.btn-warning:focus,
+button.btn-info:focus,
+button.btn-danger:focus,
+.btn-warning:focus,
+.btn-info:focus,
+.btn-danger:focus,
+button.btn-warning:active,
+button.btn-info:active,
+button.btn-danger:active,
+.btn-warning:active,
+.btn-info:active,
+.btn-danger:active {
+  box-shadow: none !important;
+  outline: none !important;
+  border: none !important;
+  background-color: transparent !important;
+}
+
+/* Remove all outlines from all buttons */
+button:focus,
+button:active,
+.btn:focus,
+.btn:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Override any Bootstrap active states */
+button.btn-warning:active,
+button.btn-info:active,
+button.btn-danger:active,
+.btn-warning:active,
+.btn-info:active,
+.btn-danger:active {
+  background-color: inherit !important;
+  border-color: inherit !important;
+  color: inherit !important;
+}
+
+/* Save/Submit/Update buttons - SAME COLOR AS MENU */
+.btn-save,
+.btn-submit,
+.btn-update,
+.btn-primary[type="submit"],
+.modal-footer .btn-primary {
+  background-color: var(--ui-dark) !important;
+  border-color: var(--ui-dark) !important;
+  color: var(--ui-dark-text) !important;
+  transition: var(--transition) !important;
+}
+
+.btn-save:hover,
+.btn-submit:hover,
+.btn-update:hover,
+.btn-primary[type="submit"]:hover,
+.modal-footer .btn-primary:hover {
+  background-color: var(--ui-dark-hover) !important;
+  border-color: var(--ui-dark-hover) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+/* Other button types */
 .btn-primary {
   background-color: var(--primary-color) !important;
   border-color: var(--primary-color) !important;
-  color: var(--white-color) !important;
-  transition: var(--transition-base) !important;
+  color: var(--text-light) !important;
 }
 
 .btn-primary:hover {
   background-color: var(--primary-hover) !important;
   border-color: var(--primary-hover) !important;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow) !important;
-}
-
-.btn-success {
-  background-color: var(--success-color) !important;
-  border-color: var(--success-color) !important;
-  color: var(--white-color) !important;
-}
-
-.btn-success:hover {
-  background-color: var(--success-hover) !important;
-  border-color: var(--success-hover) !important;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow) !important;
 }
 
 .btn-warning {
   background-color: var(--warning-color) !important;
   border-color: var(--warning-color) !important;
-  color: var(--dark-color) !important;
-}
-
-.btn-warning:hover {
-  background-color: var(--warning-hover) !important;
-  border-color: var(--warning-hover) !important;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow) !important;
+  color: var(--dark) !important;
 }
 
 .btn-danger {
   background-color: var(--danger-color) !important;
   border-color: var(--danger-color) !important;
-  color: var(--white-color) !important;
+  color: var(--text-light) !important;
 }
 
-.btn-danger:hover {
-  background-color: var(--danger-hover) !important;
-  border-color: var(--danger-hover) !important;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow) !important;
-}
+/* ========================================
+   TABLE STYLES
+   ======================================== */
 
-/* Cards */
-.card {
-  border: 1px solid var(--border-color) !important;
-  border-radius: var(--border-radius-lg) !important;
-  box-shadow: var(--shadow-sm) !important;
-  transition: var(--transition-base) !important;
-}
-
-.card:hover {
-  box-shadow: var(--shadow) !important;
-  transform: translateY(-2px);
-}
-
-.card-header {
-  background-color: var(--primary-color) !important;
-  color: var(--white-color) !important;
-  border-bottom: 1px solid var(--border-color) !important;
-  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0 !important;
-  font-weight: var(--font-weight-bold) !important;
-}
-
-.card-header.bg-light {
-  background-color: var(--light-color) !important;
-  color: var(--text-primary) !important;
-}
-
-.card-header.bg-warning {
-  background-color: var(--warning-color) !important;
-  color: var(--dark-color) !important;
-}
-
-/* Tables */
+/* Table headers - SAME COLOR AS MENU */
 .table thead th {
-  background-color: var(--primary-color) !important;
-  color: var(--white-color) !important;
-  border-color: var(--primary-dark) !important;
-  font-weight: var(--font-weight-bold) !important;
-  text-transform: uppercase;
-  font-size: var(--font-size-sm);
-  letter-spacing: 0.5px;
+  background-color: var(--ui-dark) !important;
+  color: var(--ui-dark-text) !important;
+  border-color: var(--border) !important;
+  font-weight: 400 !important;
+  text-transform: none !important;
+  font-size: 1rem !important;
+  letter-spacing: normal !important;
+  padding: 1rem 0.75rem !important;
 }
 
-.table-striped tbody tr:nth-of-type(odd) {
-  background-color: var(--light-color) !important;
+.table tbody td {
+  color: var(--text-dark) !important;
+  background-color: var(--white) !important;
 }
 
-.table-hover tbody tr:hover {
+.table-striped tbody tr:nth-of-type(odd) td {
+  background-color: var(--light) !important;
+  color: var(--text-dark) !important;
+}
+
+.table-hover tbody tr:hover td {
   background-color: var(--primary-light) !important;
+  color: var(--text-dark) !important;
 }
 
-/* Modals */
+.table td,
+.table th {
+  border-color: var(--border) !important;
+  vertical-align: middle !important;
+}
+
+/* ========================================
+   CARD STYLES
+   ======================================== */
+
+.card {
+  border: 1px solid var(--border) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: var(--transition) !important;
+}
+
+/* Card headers - WHITE BACKGROUND WITH BLACK TEXT */
+.card-header {
+  background-color: var(--bg-white) !important;
+  color: var(--text-dark) !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-radius: 0.5rem 0.5rem 0 0 !important;
+  font-weight: 400 !important;
+  padding: 1rem 1.5rem !important;
+}
+
+.card-header h3,
+.card-header h4,
+.card-header h5,
+.card-header h6 {
+  margin: 0 !important;
+  color: var(--text-dark) !important;
+  font-weight: 400 !important;
+}
+
+.card-header .btn {
+  color: var(--ui-dark-text) !important;
+  border-color: var(--ui-dark) !important;
+}
+
+.card-header .btn:hover {
+  background-color: var(--ui-dark-hover) !important;
+  color: var(--ui-dark-text) !important;
+  border-color: var(--ui-dark-hover) !important;
+}
+
+/* ========================================
+   MODAL STYLES
+   ======================================== */
+
+/* Modal headers - SAME COLOR AS MENU */
 .modal-header {
-  background-color: var(--primary-color) !important;
-  color: var(--white-color) !important;
-  border-bottom: 1px solid var(--border-color) !important;
-  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0 !important;
+  background-color: var(--ui-dark) !important;
+  color: var(--ui-dark-text) !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-radius: 0.5rem 0.5rem 0 0 !important;
+  padding: 1rem 1.5rem !important;
 }
 
 .modal-header .modal-title {
-  font-weight: var(--font-weight-bold) !important;
-  font-size: var(--font-size-lg) !important;
+  font-weight: 700 !important;
+  font-size: 1.125rem !important;
+  margin: 0 !important;
+  color: var(--ui-dark-text) !important;
+}
+
+.modal-header .btn-close {
+  color: var(--ui-dark-text) !important;
+  opacity: 0.8 !important;
+}
+
+.modal-header .btn-close:hover {
+  opacity: 1 !important;
+}
+
+/* Force all text in modal headers to be white */
+.modal-header,
+.modal-header *,
+.modal-header h1,
+.modal-header h2,
+.modal-header h3,
+.modal-header h4,
+.modal-header h5,
+.modal-header h6,
+.modal-header span,
+.modal-header div,
+.modal-header p,
+.modal-title,
+.modal-title * {
+  color: var(--ui-dark-text) !important;
+}
+
+/* Ultra strong rule for modal header text */
+.modal-header h1,
+.modal-header h2,
+.modal-header h3,
+.modal-header h4,
+.modal-header h5,
+.modal-header h6,
+.modal-title {
+  color: var(--ui-dark-text) !important;
+  font-weight: 700 !important;
+}
+
+/* Force ALL modal headers to be dark with white text - ULTRA STRONG */
+.modal-header,
+.modal-header *,
+.modal-header h1,
+.modal-header h2,
+.modal-header h3,
+.modal-header h4,
+.modal-header h5,
+.modal-header h6,
+.modal-header span,
+.modal-header div,
+.modal-header p,
+.modal-title,
+.modal-title *,
+.modal-title span,
+.modal-title div {
+  background-color: var(--ui-dark) !important;
+  color: var(--ui-dark-text) !important;
+}
+
+/* Override any Bootstrap or AdminLTE modal header styles */
+.modal-header.bg-primary,
+.modal-header.bg-info,
+.modal-header.bg-light,
+.modal-header.bg-white {
+  background-color: var(--ui-dark) !important;
+  color: var(--ui-dark-text) !important;
+}
+
+.modal-header.bg-primary *,
+.modal-header.bg-info *,
+.modal-header.bg-light *,
+.modal-header.bg-white * {
+  color: var(--ui-dark-text) !important;
 }
 
 .modal-content {
   border: none !important;
-  border-radius: var(--border-radius-lg) !important;
-  box-shadow: var(--shadow-lg) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: var(--shadow) !important;
 }
 
-/* Form Controls */
+.modal-footer {
+  border-top: 1px solid var(--border) !important;
+  padding: 1rem 1.5rem !important;
+  background-color: var(--bg-light) !important;
+}
+
+/* Force all buttons in modal footer to have dark background with white text */
+.modal-footer .btn-primary,
+.modal-footer .btn-success,
+.modal-footer .btn-save,
+.modal-footer .btn-submit {
+  background-color: var(--ui-dark) !important;
+  border-color: var(--ui-dark) !important;
+  color: var(--ui-dark-text) !important;
+}
+
+.modal-footer .btn-primary:hover,
+.modal-footer .btn-success:hover,
+.modal-footer .btn-save:hover,
+.modal-footer .btn-submit:hover {
+  background-color: var(--ui-dark-hover) !important;
+  border-color: var(--ui-dark-hover) !important;
+  color: var(--ui-dark-text) !important;
+}
+
+/* Cancel/Close buttons - LIGHT GRAY COLOR (visible) */
+.modal-footer .btn-secondary,
+.modal-footer .btn-cancel,
+.modal-footer .btn-close,
+.modal-footer .btn[data-dismiss="modal"],
+.modal-footer .btn[data-bs-dismiss="modal"] {
+  background-color: #f8f9fa !important;
+  border-color: #dee2e6 !important;
+  color: #495057 !important;
+}
+
+.modal-footer .btn-secondary:hover,
+.modal-footer .btn-cancel:hover,
+.modal-footer .btn-close:hover,
+.modal-footer .btn[data-dismiss="modal"]:hover,
+.modal-footer .btn[data-bs-dismiss="modal"]:hover {
+  background-color: #e9ecef !important;
+  border-color: #adb5bd !important;
+  color: #212529 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+/* ========================================
+   FORM STYLES
+   ======================================== */
+
 .form-control:focus {
   border-color: var(--primary-color) !important;
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
 }
 
-.form-control-lg {
-  border: 2px solid var(--border-color) !important;
-  border-radius: var(--border-radius-lg) !important;
-  font-size: var(--font-size-base) !important;
-  padding: 0.75rem 1rem !important;
-  transition: var(--transition-base) !important;
+.form-group label {
+  font-weight: 500 !important;
+  color: var(--text-dark) !important;
+  margin-bottom: 0.5rem !important;
 }
 
-.form-control-lg:focus {
-  border-color: var(--primary-color) !important;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
-}
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
 
-/* Custom Checkbox */
-.icheck-success label:before {
-  border-color: var(--border-color) !important;
-  background-color: var(--white-color) !important;
-}
-
-.icheck-success input[type="checkbox"]:checked + label:before {
-  background-color: var(--success-color) !important;
-  border-color: var(--success-color) !important;
-}
-
-.icheck-success input[type="checkbox"]:focus + label:before {
-  border-color: var(--success-color) !important;
-  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2) !important;
-}
-
-.icheck-success label:hover:not(:disabled) {
-  color: var(--success-color) !important;
-}
-
-.icheck-success label:hover:not(:disabled):before {
-  border-color: var(--success-color) !important;
-}
-
-/* Navigation */
-.navbar {
-  background-color: var(--primary-color) !important;
-  box-shadow: var(--shadow) !important;
-}
-
-.navbar-brand,
-.navbar-nav .nav-link {
-  color: var(--white-color) !important;
-  font-weight: var(--font-weight-medium) !important;
-}
-
-.navbar-nav .nav-link:hover {
-  color: var(--primary-light) !important;
-}
-
-/* Sidebar */
-.sidebar {
-  background-color: var(--dark-color) !important;
-  box-shadow: var(--shadow) !important;
-}
-
-.sidebar .nav-link {
-  color: var(--text-light) !important;
-  transition: var(--transition-base) !important;
-}
-
-.sidebar .nav-link:hover {
-  background-color: var(--primary-color) !important;
-  color: var(--white-color) !important;
-}
-
-.sidebar .nav-link.active {
-  background-color: var(--primary-color) !important;
-  color: var(--white-color) !important;
-}
-
-/* Alerts */
-.alert-primary {
-  background-color: var(--primary-light) !important;
-  border-color: var(--primary-color) !important;
-  color: var(--primary-dark) !important;
-}
-
-.alert-success {
-  background-color: var(--success-light) !important;
-  border-color: var(--success-color) !important;
-  color: var(--success-dark) !important;
-}
-
-.alert-warning {
-  background-color: var(--warning-light) !important;
-  border-color: var(--warning-color) !important;
-  color: var(--warning-dark) !important;
-}
-
-.alert-danger {
-  background-color: var(--danger-light) !important;
-  border-color: var(--danger-color) !important;
-  color: var(--danger-dark) !important;
-}
-
-/* Badges */
-.badge-primary {
-  background-color: var(--primary-color) !important;
-  color: var(--white-color) !important;
-}
-
-.badge-success {
-  background-color: var(--success-color) !important;
-  color: var(--white-color) !important;
-}
-
-.badge-warning {
-  background-color: var(--warning-color) !important;
-  color: var(--dark-color) !important;
-}
-
-.badge-danger {
-  background-color: var(--danger-color) !important;
-  color: var(--white-color) !important;
-}
-
-/* Progress Bars */
-.progress {
-  background-color: var(--light-color) !important;
-  border-radius: var(--border-radius) !important;
-}
-
-.progress-bar {
-  background-color: var(--primary-color) !important;
-  transition: var(--transition-base) !important;
-}
-
-/* Utilities */
 .text-primary { color: var(--primary-color) !important; }
 .text-success { color: var(--success-color) !important; }
 .text-warning { color: var(--warning-color) !important; }
 .text-danger { color: var(--danger-color) !important; }
-.text-muted { color: var(--muted-color) !important; }
+.text-muted { color: var(--muted) !important; }
 
 .bg-primary { background-color: var(--primary-color) !important; }
 .bg-success { background-color: var(--success-color) !important; }
 .bg-warning { background-color: var(--warning-color) !important; }
 .bg-danger { background-color: var(--danger-color) !important; }
-.bg-light { background-color: var(--light-color) !important; }
+.bg-light { background-color: var(--light) !important; }
 
 /* ========================================
    RESPONSIVE DESIGN
@@ -378,16 +756,17 @@
 
 @media (max-width: 768px) {
   .card {
-    margin-bottom: var(--spacing-md) !important;
+    margin-bottom: 1rem !important;
   }
   
   .btn {
     width: 100% !important;
-    margin-bottom: var(--spacing-sm) !important;
+    margin-bottom: 0.5rem !important;
   }
   
-  .table-responsive {
-    border-radius: var(--border-radius) !important;
+  .modal-header,
+  .modal-footer {
+    padding: 0.75rem 1rem !important;
   }
 }
 
@@ -406,24 +785,9 @@
 }
 
 .fade-in {
-  animation: fadeIn var(--transition-base) ease-in-out;
+  animation: fadeIn var(--transition) ease-in-out;
 }
 
 .slide-in {
-  animation: slideIn var(--transition-base) ease-in-out;
-}
-
-/* ========================================
-   DARK MODE SUPPORT (Optional)
-   ======================================== */
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #2d2d2d;
-    --text-primary: #ffffff;
-    --text-secondary: #cccccc;
-    --border-color: #404040;
-    --light-color: #2d2d2d;
-  }
+  animation: slideIn var(--transition) ease-in-out;
 }

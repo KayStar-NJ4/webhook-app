@@ -17,8 +17,8 @@ class Logger {
    * @returns {winston.Logger}
    */
   createLogger() {
-    const logLevel = process.env.LOG_LEVEL || 'info'
-    const logFormat = process.env.LOG_FORMAT || 'json'
+    const logLevel = process.env.LOG_LEVEL || 'silent'
+    const logFormat = process.env.LOG_FORMAT || 'simple'
 
     const format = logFormat === 'json' 
       ? winston.format.combine(
@@ -36,12 +36,15 @@ class Logger {
           })
         )
 
-    const transports = [
-      new winston.transports.Console({
+    const transports = []
+    
+    // Only add console transport if not silent
+    if (logLevel !== 'silent') {
+      transports.push(new winston.transports.Console({
         level: logLevel,
         format
-      })
-    ]
+      }))
+    }
 
     return winston.createLogger({
       level: logLevel,

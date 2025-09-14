@@ -61,10 +61,10 @@ export default {
       try {
         const response = await window.ConfigurationService.updateConfig(this.config);
         if (response.data.success) {
-          alert('Cấu hình đã được lưu!');
+          window.ToastService.success('Cấu hình đã được lưu!');
         }
       } catch (error) {
-        alert('Lỗi khi lưu cấu hình: ' + (error.response?.data?.message || 'Unknown error'));
+        window.ToastService.handleError(error, 'Lỗi khi lưu cấu hình');
       }
     }
   }

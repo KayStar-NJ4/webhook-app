@@ -54,8 +54,6 @@ class TelegramService extends BaseService {
 }
 
 // Export to global window object
-if (window.TelegramService) {
-    console.warn('⚠️ TelegramService already exists, skipping...');
-} else {
+if (!window.TelegramService) {
     window.TelegramService = new TelegramService();
 }

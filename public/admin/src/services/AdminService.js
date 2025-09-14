@@ -96,8 +96,6 @@ class AdminService extends BaseService {
 }
 
 // Export to global window object
-if (window.AdminService) {
-    console.warn('⚠️ AdminService already exists, skipping...');
-} else {
+if (!window.AdminService) {
     window.AdminService = new AdminService();
 }

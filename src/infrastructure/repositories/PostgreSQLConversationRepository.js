@@ -40,7 +40,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
       await client.query('SELECT NOW()')
       client.release()
 
-      this.logger.info('PostgreSQL connected successfully')
+      // PostgreSQL connected successfully
       
       // Create table if not exists
       await this.createTable()
@@ -119,7 +119,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
 
     try {
       await this.pool.query(createTableQuery)
-      this.logger.info('Conversations table created/verified successfully')
+      // Conversations table created/verified successfully
     } catch (error) {
       this.logger.error('Failed to create conversations table', { error: error.message })
       throw error

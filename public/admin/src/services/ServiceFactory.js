@@ -14,6 +14,7 @@ class ServiceFactory {
       auth: window.AuthService,
       admin: window.AdminService,
       user: window.UserService,
+      role: window.RoleService,
       telegram: window.TelegramService,
       chatwoot: window.ChatwootService,
       dify: window.DifyService,
@@ -43,6 +44,10 @@ class ServiceFactory {
     return this.get('user')
   }
 
+  get role() {
+    return this.get('role')
+  }
+
   get telegram() {
     return this.get('telegram')
   }
@@ -65,8 +70,6 @@ class ServiceFactory {
 }
 
 // Export to global window object
-if (window.ServiceFactory) {
-    console.warn('⚠️ ServiceFactory already exists, skipping...');
-} else {
+if (!window.ServiceFactory) {
     window.ServiceFactory = new ServiceFactory();
 }

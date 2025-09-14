@@ -51,8 +51,6 @@ class DifyService extends BaseService {
 }
 
 // Export to global window object
-if (window.DifyService) {
-    console.warn('⚠️ DifyService already exists, skipping...');
-} else {
+if (!window.DifyService) {
     window.DifyService = new DifyService();
 }

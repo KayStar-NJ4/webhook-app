@@ -27,7 +27,7 @@ class ChatwootService {
       
       // Validate configuration
       if (!this.baseUrl || !this.accessToken || !this.accountId) {
-        this.logger.info('Chatwoot configuration not complete, service will be disabled')
+        // Chatwoot configuration not complete, service will be disabled
         this.baseUrl = null
         this.accessToken = null
         this.accountId = null

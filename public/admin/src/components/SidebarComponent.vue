@@ -10,7 +10,7 @@
       <nav class="mt-2">
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
           <!-- Dashboard -->
-          <li class="nav-item">
+          <li class="nav-item" v-if="hasPermission('system', 'dashboard')">
             <a href="#" 
                class="nav-link" 
                :class="{ active: activeRoute === '/admin/dashboard' }"
@@ -20,8 +20,11 @@
             </a>
           </li>
 
+
           <!-- Dữ liệu nguồn -->
-          <li class="nav-item has-treeview" :class="{ 'menu-open': isMenuOpen('data-source') }">
+          <li class="nav-item has-treeview" 
+              v-if="hasAnyDataSourcePermission()"
+              :class="{ 'menu-open': isMenuOpen('data-source') }">
             <a href="#" class="nav-link" :class="{ 'active': isMenuActive('data-source') }" @click="toggleMenu('data-source')">
               <i class="nav-icon fas fa-database"></i>
               <p>
@@ -30,7 +33,7 @@
               </p>
             </a>
             <ul class="nav nav-treeview" :style="{ display: isMenuOpen('data-source') ? 'block' : 'none' }">
-              <li class="nav-item">
+              <li class="nav-item" v-if="hasPermission('chatwoot', 'read')">
                 <a href="#" 
                    class="nav-link" 
                    :class="{ active: activeRoute === '/admin/chatwoot-accounts' }"
@@ -39,7 +42,7 @@
                   <p>Chatwoot</p>
                 </a>
               </li>
-              <li class="nav-item">
+              <li class="nav-item" v-if="hasPermission('dify', 'read')">
                 <a href="#" 
                    class="nav-link" 
                    :class="{ active: activeRoute === '/admin/dify-apps' }"
@@ -52,7 +55,9 @@
           </li>
 
           <!-- Mạng xã hội -->
-          <li class="nav-item has-treeview" :class="{ 'menu-open': isMenuOpen('social-network') }">
+          <li class="nav-item has-treeview" 
+              v-if="hasPermission('telegram', 'read')"
+              :class="{ 'menu-open': isMenuOpen('social-network') }">
             <a href="#" class="nav-link" :class="{ 'active': isMenuActive('social-network') }" @click="toggleMenu('social-network')">
               <i class="nav-icon fas fa-share-alt"></i>
               <p>
@@ -74,7 +79,9 @@
           </li>
 
           <!-- Cài đặt hệ thống -->
-          <li class="nav-item has-treeview" :class="{ 'menu-open': isMenuOpen('system-settings') }">
+          <li class="nav-item has-treeview" 
+              v-if="hasAnySystemSettingsPermission()"
+              :class="{ 'menu-open': isMenuOpen('system-settings') }">
             <a href="#" class="nav-link" :class="{ 'active': isMenuActive('system-settings') }" @click="toggleMenu('system-settings')">
               <i class="nav-icon fas fa-cogs"></i>
               <p>
@@ -83,7 +90,7 @@
               </p>
             </a>
             <ul class="nav nav-treeview" :style="{ display: isMenuOpen('system-settings') ? 'block' : 'none' }">
-              <li class="nav-item">
+              <li class="nav-item" v-if="hasPermission('users', 'read')">
                 <a href="#" 
                    class="nav-link" 
                    :class="{ active: activeRoute === '/admin/users' }"
@@ -92,7 +99,7 @@
                   <p>Người dùng</p>
                 </a>
               </li>
-              <li class="nav-item">
+              <li class="nav-item" v-if="hasPermission('roles', 'read')">
                 <a href="#" 
                    class="nav-link" 
                    :class="{ active: activeRoute === '/admin/roles' }"
@@ -101,7 +108,7 @@
                   <p>Vai trò người dùng</p>
                 </a>
               </li>
-              <li class="nav-item">
+              <li class="nav-item" v-if="hasPermission('config', 'read')">
                 <a href="#" 
                    class="nav-link" 
                    :class="{ active: activeRoute === '/admin/configurations' }"
@@ -110,7 +117,7 @@
                   <p>Cấu hình</p>
                 </a>
               </li>
-              <li class="nav-item">
+              <li class="nav-item" v-if="hasPermission('system', 'logs')">
                 <a href="#" 
                    class="nav-link" 
                    :class="{ active: activeRoute === '/admin/logs' }"
@@ -134,6 +141,10 @@ export default {
     activeRoute: {
       type: String,
       default: '/admin/dashboard'
+    },
+    userPermissions: {
+      type: Object,
+      default: () => ({})
     }
   },
   data() {
@@ -171,6 +182,23 @@ export default {
         return this.activeRoute.includes('/admin/users') || this.activeRoute.includes('/admin/roles') || this.activeRoute.includes('/admin/configurations') || this.activeRoute.includes('/admin/logs');
       }
       return false;
+    },
+    hasPermission(resource, action) {
+      if (!this.userPermissions[resource]) return false
+      return this.userPermissions[resource].some(p => p.action === action)
+    },
+    hasAnyPermission(permissions) {
+      return permissions.some(({ resource, action }) => this.hasPermission(resource, action))
+    },
+    hasAnyDataSourcePermission() {
+      return this.hasPermission('chatwoot', 'read') || 
+             this.hasPermission('dify', 'read')
+    },
+    hasAnySystemSettingsPermission() {
+      return this.hasPermission('users', 'read') || 
+             this.hasPermission('roles', 'read') || 
+             this.hasPermission('config', 'read') || 
+             this.hasPermission('system', 'logs')
     }
   },
   mounted() {

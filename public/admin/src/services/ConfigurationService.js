@@ -46,8 +46,6 @@ class ConfigurationService extends BaseService {
 }
 
 // Export to global window object
-if (window.ConfigurationService) {
-    console.warn('⚠️ ConfigurationService already exists, skipping...');
-} else {
+if (!window.ConfigurationService) {
     window.ConfigurationService = new ConfigurationService();
 }

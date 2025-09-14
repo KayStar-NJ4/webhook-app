@@ -18,13 +18,13 @@ class AuthController {
     // JWT secret priority: ENV > Database > Default
     if (process.env.JWT_SECRET) {
       this.jwtSecret = process.env.JWT_SECRET
-      this.logger.info('JWT secret loaded from environment')
+      // JWT secret loaded from environment
     } else {
       try {
         const dbSecret = await this.configurationService.get('security.jwtSecret')
         if (dbSecret) {
           this.jwtSecret = dbSecret
-          this.logger.info('JWT secret loaded from database')
+          // JWT secret loaded from database
         } else {
           this.logger.warn('No JWT secret found, using default')
         }
@@ -36,13 +36,13 @@ class AuthController {
     // JWT expiry priority: ENV > Database > Default
     if (process.env.JWT_EXPIRY) {
       this.jwtExpiry = process.env.JWT_EXPIRY
-      this.logger.info('JWT expiry loaded from environment')
+      // JWT expiry loaded from environment
     } else {
       try {
         const dbExpiry = await this.configurationService.get('security.jwtExpiry')
         if (dbExpiry) {
           this.jwtExpiry = dbExpiry
-          this.logger.info('JWT expiry loaded from database')
+          // JWT expiry loaded from database
         } else {
           this.logger.warn('No JWT expiry found, using default')
         }
@@ -50,6 +50,27 @@ class AuthController {
         this.logger.warn('Failed to load JWT expiry from database, using default', { error: error.message })
       }
     }
+  }
+
+  /**
+   * Transform permissions from backend format to frontend format
+   * @param {Array} permissions - Array of permission objects
+   * @returns {Object} - Transformed permissions grouped by resource
+   */
+  transformPermissions(permissions) {
+    const transformed = {}
+    
+    permissions.forEach(permission => {
+      const { resource, action } = permission
+      
+      if (!transformed[resource]) {
+        transformed[resource] = []
+      }
+      
+      transformed[resource].push({ action })
+    })
+    
+    return transformed
   }
 
   /**
@@ -110,6 +131,9 @@ class AuthController {
 
       this.logger.info('User logged in', { userId: user.id, username })
 
+      // Transform permissions to frontend format
+      const transformedPermissions = this.transformPermissions(userWithRoles.permissions)
+
       res.json({
         success: true,
         message: 'Login successful',
@@ -121,7 +145,7 @@ class AuthController {
             email: user.email,
             fullName: user.full_name,
             roles: userWithRoles.roles,
-            permissions: userWithRoles.permissions
+            permissions: transformedPermissions
           }
         }
       })
@@ -152,6 +176,9 @@ class AuthController {
         })
       }
 
+      // Transform permissions to frontend format
+      const transformedPermissions = this.transformPermissions(user.permissions)
+
       res.json({
         success: true,
         data: {
@@ -160,7 +187,7 @@ class AuthController {
           email: user.email,
           fullName: user.full_name,
           roles: user.roles,
-          permissions: user.permissions
+          permissions: transformedPermissions
         }
       })
 
@@ -252,3 +279,4 @@ class AuthController {
 }
 
 module.exports = AuthController
+

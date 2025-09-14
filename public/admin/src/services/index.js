@@ -8,6 +8,7 @@ window.Services = {
   ChatwootService: window.ChatwootService,
   DifyService: window.DifyService,
   UserService: window.UserService,
+  RoleService: window.RoleService,
   ConfigurationService: window.ConfigurationService,
   LogsService: window.LogsService,
   BaseService: window.BaseService,

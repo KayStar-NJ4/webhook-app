@@ -18,13 +18,13 @@ class AuthMiddleware {
     // JWT secret priority: ENV > Database > Default
     if (process.env.JWT_SECRET) {
       this.jwtSecret = process.env.JWT_SECRET
-      this.logger.info('JWT secret loaded from environment')
+      // JWT secret loaded from environment
     } else {
       try {
         const dbSecret = await this.configurationService.get('security.jwtSecret')
         if (dbSecret) {
           this.jwtSecret = dbSecret
-          this.logger.info('JWT secret loaded from database')
+          // JWT secret loaded from database
         } else {
           this.logger.warn('No JWT secret found, using default')
         }

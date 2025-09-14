@@ -121,8 +121,13 @@ export default {
       return this.userPermissions[resource].some(p => p.action === action)
     },
 
-    handleDelete(account) {
-      if (confirm(this.$t('chatwoot.messages.deleteConfirm'))) {
+    async handleDelete(account) {
+      const confirmed = await window.ToastService.confirmAsync(
+        this.$t('chatwoot.messages.deleteConfirm'),
+        'Xác nhận xóa'
+      );
+      
+      if (confirmed) {
         this.$emit('delete', account.id)
       }
     },

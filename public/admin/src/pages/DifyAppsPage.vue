@@ -317,7 +317,12 @@ export default {
     },
 
     async deleteApp(id) {
-      if (!confirm('Are you sure you want to delete this app?')) return
+      const confirmed = await window.ToastService.confirmAsync(
+        'Bạn có chắc chắn muốn xóa app này?',
+        'Xác nhận xóa app'
+      );
+      
+      if (!confirmed) return
       
       try {
         const response = await DifyService.delete(id)

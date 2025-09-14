@@ -6,7 +6,6 @@
       :userPermissions="userPermissions"
       @create="openCreateModal"
       @edit="openEditModal"
-      @delete="deleteUser"
     />
 
     <!-- Modal for User Form -->
@@ -167,22 +166,6 @@ export default {
       }
     },
 
-    async deleteUser(id) {
-      try {
-        const response = await window.UserService.delete(id)
-        
-        if (response.data.success) {
-          this.loadUsers()
-          if (this.$toast && this.$toast.success) {
-            this.$toast.success(this.$t('users.messages.deleted'))
-          }
-        }
-      } catch (error) {
-        if (this.$toast && this.$toast.error) {
-          this.$toast.error(this.$t('errors.networkError'))
-        }
-      }
-    }
   }
 }
 </script>

@@ -114,6 +114,9 @@ class Server {
 
     // Serve static files
     this.app.use(express.static('public'))
+    
+    // Serve node_modules for admin panel
+    this.app.use('/node_modules', express.static('node_modules'))
 
     // Metrics routes (protected)
     if (this.metricsRoutes) {
@@ -172,7 +175,7 @@ class Server {
   startMetricsCollection() {
     if (this.metrics) {
       this.metrics.startSystemMetricsCollection()
-      this.logger.info('Metrics collection started')
+      // Metrics collection started
     }
   }
 
@@ -183,19 +186,10 @@ class Server {
   async start() {
     try {
       // Ensure logs directory exists
-      const fs = require('fs')
-      if (!fs.existsSync('logs')) {
-        fs.mkdirSync('logs')
-      }
+      // No need to create logs directory - using database logging
 
       this.server = this.app.listen(this.port, this.host, () => {
-        this.logger.info('Server started successfully', {
-          port: this.port,
-          host: this.host,
-          environment: this.config.get('server.nodeEnv'),
-          timestamp: new Date().toISOString()
-        })
-
+        // Server started successfully
         this.printStartupInfo()
       })
 

@@ -3,6 +3,7 @@
     <!-- Sidebar -->
     <SidebarComponent 
       :activeRoute="currentRoute"
+      :userPermissions="currentUser?.permissions || {}"
       @navigate="handleNavigation"
     />
     
@@ -20,6 +21,7 @@
         <router-view></router-view>
       </div>
     </div>
+    
     
     <!-- Footer -->
     <footer class="main-footer">

@@ -52,8 +52,6 @@ class Application {
       const config = this.serviceRegistry.get('config')
       const logger = this.serviceRegistry.get('logger')
 
-      logger.info('Initializing application...')
-
       // Initialize external services with database configuration
       const telegramService = this.serviceRegistry.get('telegramService')
       const chatwootService = this.serviceRegistry.get('chatwootService')
@@ -64,8 +62,6 @@ class Application {
         chatwootService.initialize(),
         difyService.initialize()
       ])
-
-      logger.info('External services initialized successfully')
 
       // Initialize metrics
       const metrics = new Metrics({
@@ -177,7 +173,7 @@ class Application {
         metricsMiddleware
       })
 
-      logger.info('Application initialized successfully')
+      // Application initialized successfully
 
     } catch (error) {
       console.error('Failed to initialize application:', error)

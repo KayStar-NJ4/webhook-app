@@ -384,7 +384,12 @@ export default {
     },
     
     async deleteConfiguration(id) {
-      if (!confirm('Are you sure you want to delete this configuration?')) return
+      const confirmed = await window.ToastService.confirmAsync(
+        'Bạn có chắc chắn muốn xóa cấu hình này?',
+        'Xác nhận xóa cấu hình'
+      );
+      
+      if (!confirmed) return
       
       try {
         const response = await ConfigurationService.delete(id)
@@ -402,12 +407,12 @@ export default {
         const response = await ConfigurationService.testConnection(type, id)
         
         if (response.data.success) {
-          alert('Connection test successful!')
+          window.ToastService.success('Kiểm tra kết nối thành công!')
         } else {
-          alert('Connection test failed: ' + response.data.message)
+          window.ToastService.error('Kiểm tra kết nối thất bại: ' + response.data.message)
         }
       } catch (error) {
-        alert('Connection test failed: ' + (error.response?.data?.message || 'Unknown error'))
+        window.ToastService.handleError(error, 'Kiểm tra kết nối thất bại')
       }
     },
     

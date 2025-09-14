@@ -9,20 +9,88 @@ class RoleRepository {
   }
 
   /**
-   * Find all roles
-   * @returns {Promise<Array>} - Array of roles
+   * Find all roles with pagination, search, sorting and filtering
+   * @param {Object} options - Query options
+   * @returns {Promise<Object>} - Object with roles and pagination info
    */
-  async findAll() {
+  async findAll(options = {}) {
     try {
-      const query = 'SELECT * FROM roles ORDER BY name'
-      const result = await this.db.query(query)
+      const { 
+        page = 1, 
+        limit = 10, 
+        search = '', 
+        sort_by = 'created_at.desc'
+      } = options
+      const offset = (page - 1) * limit
       
-      return result.rows.map(role => ({
+      let whereConditions = []
+      let params = []
+      let paramIndex = 1
+      
+      // Search functionality
+      if (search) {
+        whereConditions.push(`(name ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`)
+        params.push(`%${search}%`)
+        paramIndex++
+      }
+      
+      // No additional filters for now
+      
+      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
+      
+      // Parse sort_by parameter
+      let orderBy = 'ORDER BY created_at DESC'
+      if (sort_by) {
+        const [field, direction] = sort_by.split('.')
+        const validFields = ['id', 'name', 'created_at', 'updated_at']
+        const validDirections = ['asc', 'desc']
+        
+        if (validFields.includes(field) && validDirections.includes(direction)) {
+          orderBy = `ORDER BY ${field} ${direction.toUpperCase()}`
+        }
+      }
+      
+      // Get total count
+      const countQuery = `SELECT COUNT(*) as total FROM roles ${whereClause}`
+      const countResult = await this.db.query(countQuery, params)
+      const total = parseInt(countResult.rows[0].total)
+      
+      // Get roles with pagination and additional info
+      const query = `
+        SELECT 
+          r.id, r.name, r.description, r.created_at, r.updated_at,
+          COUNT(DISTINCT rp.permission_id) as permission_count,
+          COUNT(DISTINCT ur.user_id) as user_count
+        FROM roles r
+        LEFT JOIN role_permissions rp ON r.id = rp.role_id
+        LEFT JOIN user_roles ur ON r.id = ur.role_id
+        ${whereClause}
+        GROUP BY r.id, r.name, r.description, r.created_at, r.updated_at
+        ${orderBy}
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `
+      
+      const result = await this.db.query(query, [...params, limit, offset])
+      
+      const roles = result.rows.map(role => ({
         id: role.id,
         name: role.name,
         description: role.description,
-        createdAt: role.created_at
+        created_at: role.created_at,
+        updated_at: role.updated_at,
+        permission_count: parseInt(role.permission_count) || 0,
+        user_count: parseInt(role.user_count) || 0
       }))
+      
+      return {
+        roles,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      }
       
     } catch (error) {
       this.logger.error('Failed to find all roles', { error: error.message })
@@ -49,7 +117,8 @@ class RoleRepository {
         id: role.id,
         name: role.name,
         description: role.description,
-        createdAt: role.created_at
+        createdAt: role.created_at,
+        updatedAt: role.updated_at
       }
       
     } catch (error) {
@@ -77,7 +146,8 @@ class RoleRepository {
         id: role.id,
         name: role.name,
         description: role.description,
-        createdAt: role.created_at
+        createdAt: role.created_at,
+        updatedAt: role.updated_at
       }
       
     } catch (error) {
@@ -98,7 +168,7 @@ class RoleRepository {
       const query = `
         INSERT INTO roles (name, description)
         VALUES ($1, $2)
-        RETURNING id, name, description, created_at
+        RETURNING id, name, description, created_at, updated_at
       `
       
       const result = await this.db.query(query, [name, description])
@@ -125,9 +195,10 @@ class RoleRepository {
       const query = `
         UPDATE roles 
         SET name = COALESCE($1, name),
-            description = COALESCE($2, description)
+            description = COALESCE($2, description),
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = $3
-        RETURNING id, name, description, created_at
+        RETURNING id, name, description, created_at, updated_at
       `
       
       const result = await this.db.query(query, [name, description, id])
@@ -173,7 +244,7 @@ class RoleRepository {
    * @param {number} roleId - Role ID
    * @returns {Promise<Array>} - Array of permissions
    */
-  async getPermissions(roleId) {
+  async getRolePermissions(roleId) {
     try {
       const query = `
         SELECT p.id, p.name, p.description, p.resource, p.action
@@ -195,6 +266,79 @@ class RoleRepository {
       
     } catch (error) {
       this.logger.error('Failed to get role permissions', { roleId, error: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * Update role permissions
+   * @param {number} roleId - Role ID
+   * @param {Array} permissionNames - Array of permission names
+   * @returns {Promise<void>}
+   */
+  async updatePermissions(roleId, permissionNames) {
+    try {
+      // Start transaction
+      await this.db.query('BEGIN')
+      
+      // Remove all existing permissions
+      await this.db.query('DELETE FROM role_permissions WHERE role_id = $1', [roleId])
+      
+      // Add new permissions
+      if (permissionNames && permissionNames.length > 0) {
+        // Get permission IDs by names
+        const placeholders = permissionNames.map((_, index) => `$${index + 1}`).join(',')
+        const permissionQuery = `SELECT id FROM permissions WHERE name IN (${placeholders})`
+        const permissionResult = await this.db.query(permissionQuery, permissionNames)
+        
+        // Insert role permissions
+        for (const permission of permissionResult.rows) {
+          await this.db.query(
+            'INSERT INTO role_permissions (role_id, permission_id) VALUES ($1, $2)',
+            [roleId, permission.id]
+          )
+        }
+      }
+      
+      await this.db.query('COMMIT')
+      this.logger.info('Role permissions updated', { roleId, permissionCount: permissionNames.length })
+      
+    } catch (error) {
+      await this.db.query('ROLLBACK')
+      this.logger.error('Failed to update role permissions', { roleId, error: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * Assign permissions to role
+   * @param {number} roleId - Role ID
+   * @param {Array} permissionNames - Array of permission names
+   * @returns {Promise<void>}
+   */
+  async assignPermissions(roleId, permissionNames) {
+    try {
+      if (!permissionNames || permissionNames.length === 0) {
+        return
+      }
+
+      // Get permission IDs by names
+      const placeholders = permissionNames.map((_, index) => `$${index + 1}`).join(',')
+      const permissionQuery = `SELECT id FROM permissions WHERE name IN (${placeholders})`
+      const permissionResult = await this.db.query(permissionQuery, permissionNames)
+      
+      // Insert role permissions (ignore duplicates)
+      for (const permission of permissionResult.rows) {
+        await this.db.query(
+          'INSERT INTO role_permissions (role_id, permission_id) VALUES ($1, $2) ON CONFLICT (role_id, permission_id) DO NOTHING',
+          [roleId, permission.id]
+        )
+      }
+      
+      this.logger.info('Permissions assigned to role', { roleId, permissionCount: permissionResult.rows.length })
+      
+    } catch (error) {
+      this.logger.error('Failed to assign permissions to role', { roleId, error: error.message })
       throw error
     }
   }

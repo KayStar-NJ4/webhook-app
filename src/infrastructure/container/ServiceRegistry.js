@@ -201,35 +201,28 @@ class ServiceRegistry {
    */
   async initialize() {
     const logger = this.get('logger')
-    logger.info('Initializing services...')
 
     try {
       // Initialize log repository first
       const logRepository = this.get('logRepository')
       await logRepository.initialize()
-      logger.info('Log repository initialized successfully')
       
       // Initialize conversation repository
       const conversationRepository = this.get('conversationRepository')
       if (conversationRepository.initialize) {
         await conversationRepository.initialize()
-        logger.info('Repository initialized successfully')
       }
 
       // Test external service connections
       const telegramService = this.get('telegramService')
       const botInfo = await telegramService.getBotInfo()
-      if (botInfo) {
-        logger.info('Telegram service connected', { botUsername: botInfo.username })
-      } else {
-        logger.info('Telegram service not configured, continuing without it')
+      if (!botInfo) {
+        logger.warn('Telegram service not configured, continuing without it')
       }
 
       const difyService = this.get('difyService')
       const difyConnected = await difyService.testConnection()
-      if (difyConnected) {
-        logger.info('Dify service connected successfully')
-      } else {
+      if (!difyConnected) {
         logger.warn('Dify service connection test failed')
       }
 
@@ -237,8 +230,6 @@ class ServiceRegistry {
       logger.error('Service initialization failed', { error: error.message })
       throw error
     }
-
-    logger.info('All services initialized successfully')
   }
 }
 

@@ -42,8 +42,6 @@ class AuthService extends BaseService {
 }
 
 // Export to global window object
-if (window.AuthService) {
-    console.warn('⚠️ AuthService already exists, skipping...');
-} else {
+if (!window.AuthService) {
     window.AuthService = new AuthService();
 }

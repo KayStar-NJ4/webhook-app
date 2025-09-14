@@ -25,7 +25,7 @@ class LogRepository {
   async initialize() {
     try {
       await this.pool.query('SELECT 1')
-      this.logger.info('Log repository connected successfully')
+      // Log repository connected successfully
     } catch (error) {
       this.logger.error('Failed to connect to log repository', { error: error.message })
       throw error
@@ -56,7 +56,7 @@ class LogRepository {
     } catch (error) {
       console.error('Failed to log message:', error.message)
       // Fallback to console if database logging fails
-      console.log(`[${level.toUpperCase()}] ${message}`, metadata)
+      // Log entry created
     }
   }
 

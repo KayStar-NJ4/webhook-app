@@ -12,7 +12,7 @@
             <div class="card-header d-flex align-items-center">
               <h3 class="card-title flex-grow-1">Quản lý Dify Apps</h3>
               <div class="form-group">
-                <a v-if="!! permission?.create"
+                <a v-if="hasPermission('dify', 'create')"
                    class="btn btn-success float-right pt-md-1 pb-md-1"
                    href="javascript:void(0);"
                    data-toggle="modal"
@@ -40,11 +40,19 @@
                     <tbody>
                     <tr v-for="item in items" :key="item.id">
                       <td class="text-right align-middle pr-2 text-nowrap pl-2" style="width: 66px">
-                        <a href="javascript:void(0);" data-toggle="modal" data-target="#form-modal"
+                        <a v-if="hasPermission('dify', 'update')" 
+                           href="javascript:void(0);" 
+                           data-toggle="modal" 
+                           data-target="#form-modal"
                            @click="selected_id = item.id; selected_item = {...item}">
-                          <i class="fa text-primary"
-                             :class="!!permission?.update ? 'fa-pencil-alt' : 'fa-eye'"
-                          ></i>
+                          <i class="fa text-primary fa-pencil-alt"></i>
+                        </a>
+                        <a v-else-if="hasPermission('dify', 'read')" 
+                           href="javascript:void(0);" 
+                           data-toggle="modal" 
+                           data-target="#form-modal"
+                           @click="selected_id = item.id; selected_item = {...item}">
+                          <i class="fa text-primary fa-eye"></i>
                         </a>
                       </td>
                       <td class="align-middle">{{ item.name || '' }}</td>
@@ -121,9 +129,12 @@ export default {
   components: {
     DifyAppFormComponent: window.DifyAppFormComponent
   },
-  props: [
-    'permission',
-  ],
+  props: {
+    userPermissions: {
+      type: Object,
+      default: () => ({})
+    }
+  },
   data() {
     return {
       controller_key: 'dify_app',
@@ -222,6 +233,10 @@ export default {
       _context.meta.total_page = 0;
       _context.meta.total_item = 0;
       _context.is_loading = false;
+    },
+    hasPermission(resource, action) {
+      if (!this.userPermissions[resource]) return false
+      return this.userPermissions[resource].some(p => p.action === action)
     },
     formatDate(date) {
       if (!date) return '';

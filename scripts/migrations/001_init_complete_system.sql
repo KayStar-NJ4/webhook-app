@@ -36,6 +36,10 @@ CREATE TABLE users (
     email VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(100),
+    phone_number VARCHAR(20),
+    avatar VARCHAR(500),
+    gender VARCHAR(10) CHECK (gender IN ('male', 'female', 'other')),
+    date_of_birth DATE,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -46,7 +50,8 @@ CREATE TABLE roles (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Permissions table
@@ -265,8 +270,7 @@ CREATE TABLE audit_logs (
 -- Migrations tracking table
 CREATE TABLE migrations (
     id SERIAL PRIMARY KEY,
-    version VARCHAR(50) UNIQUE NOT NULL,
-    description TEXT,
+    filename VARCHAR(255) NOT NULL UNIQUE,
     executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -278,6 +282,9 @@ CREATE TABLE migrations (
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_is_active ON users(is_active);
+CREATE INDEX idx_users_phone_number ON users(phone_number);
+CREATE INDEX idx_users_gender ON users(gender);
+CREATE INDEX idx_users_date_of_birth ON users(date_of_birth);
 
 -- Roles and permissions indexes
 CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
@@ -375,20 +382,32 @@ CREATE TRIGGER audit_dify_apps AFTER INSERT OR UPDATE OR DELETE ON dify_apps FOR
 -- =====================================================
 
 -- Insert default roles
-INSERT INTO roles (name, description) VALUES
-('super_admin', 'Super Administrator with full system access'),
-('admin', 'Administrator with management access'),
-('operator', 'Operator with limited management access'),
-('viewer', 'View-only access to system data');
+INSERT INTO roles (id, name, description) VALUES
+(1, 'super_admin', 'Super Administrator with full system access');
 
 -- Insert detailed permissions
 INSERT INTO permissions (name, description, resource, action) VALUES
+-- System Management (Core permissions first)
+('system.dashboard', 'Access system dashboard', 'system', 'dashboard'),
+('system.logs', 'View system logs', 'system', 'logs'),
+('system.metrics', 'View system metrics', 'system', 'metrics'),
+
 -- User Management
 ('users.create', 'Create new users', 'users', 'create'),
 ('users.read', 'View user information', 'users', 'read'),
 ('users.update', 'Update user information', 'users', 'update'),
 ('users.delete', 'Delete users', 'users', 'delete'),
 ('users.manage_roles', 'Assign roles to users', 'users', 'manage_roles'),
+
+-- Configuration Management
+('config.read', 'View system configuration', 'config', 'read'),
+('config.update', 'Update system configuration', 'config', 'update'),
+
+-- Chatwoot Account Management
+('chatwoot.create', 'Create chatwoot accounts', 'chatwoot', 'create'),
+('chatwoot.read', 'View chatwoot accounts', 'chatwoot', 'read'),
+('chatwoot.update', 'Update chatwoot accounts', 'chatwoot', 'update'),
+('chatwoot.delete', 'Delete chatwoot accounts', 'chatwoot', 'delete'),
 
 -- Telegram Bot Management
 ('telegram.create', 'Create telegram bots', 'telegram', 'create'),
@@ -397,32 +416,17 @@ INSERT INTO permissions (name, description, resource, action) VALUES
 ('telegram.delete', 'Delete telegram bots', 'telegram', 'delete'),
 ('telegram.manage_webhooks', 'Manage telegram webhooks', 'telegram', 'manage_webhooks'),
 
--- Chatwoot Account Management
-('chatwoot.create', 'Create chatwoot accounts', 'chatwoot', 'create'),
-('chatwoot.read', 'View chatwoot accounts', 'chatwoot', 'read'),
-('chatwoot.update', 'Update chatwoot accounts', 'chatwoot', 'update'),
-('chatwoot.delete', 'Delete chatwoot accounts', 'chatwoot', 'delete'),
-
 -- Dify App Management
 ('dify.create', 'Create dify apps', 'dify', 'create'),
 ('dify.read', 'View dify apps', 'dify', 'read'),
 ('dify.update', 'Update dify apps', 'dify', 'update'),
 ('dify.delete', 'Delete dify apps', 'dify', 'delete'),
 
--- Configuration Management
-('config.read', 'View system configuration', 'config', 'read'),
-('config.update', 'Update system configuration', 'config', 'update'),
-
 -- Mapping Management
 ('mappings.create', 'Create bot-account mappings', 'mappings', 'create'),
 ('mappings.read', 'View mappings', 'mappings', 'read'),
 ('mappings.update', 'Update mappings', 'mappings', 'update'),
-('mappings.delete', 'Delete mappings', 'mappings', 'delete'),
-
--- System Management
-('system.dashboard', 'Access system dashboard', 'system', 'dashboard'),
-('system.logs', 'View system logs', 'system', 'logs'),
-('system.metrics', 'View system metrics', 'system', 'metrics');
+('mappings.delete', 'Delete mappings', 'mappings', 'delete');
 
 -- Assign permissions to roles
 -- Super Admin gets all permissions
@@ -431,54 +435,12 @@ SELECT r.id, p.id
 FROM roles r, permissions p
 WHERE r.name = 'super_admin';
 
--- Admin gets most permissions except user role management
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id
-FROM roles r, permissions p
-WHERE r.name = 'admin' 
-AND p.name != 'users.manage_roles';
-
--- Operator gets limited permissions
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id
-FROM roles r, permissions p
-WHERE r.name = 'operator' 
-AND p.name IN (
-    'users.read', 'telegram.read', 'telegram.update', 'chatwoot.read', 
-    'chatwoot.update', 'dify.read', 'dify.update', 'mappings.read', 
-    'mappings.update', 'config.read', 'system.dashboard'
-);
-
--- Viewer gets read-only permissions
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id
-FROM roles r, permissions p
-WHERE r.name = 'viewer' 
-AND p.action = 'read';
-
 -- Insert default system configurations
 INSERT INTO configurations (key, value, type, description) VALUES
 -- Server Configuration
 ('server.port', '3000', 'number', 'Server port number'),
 ('server.host', '0.0.0.0', 'string', 'Server host'),
 ('server.nodeEnv', 'development', 'string', 'Node.js environment'),
-
--- Telegram Configuration
-('telegram.maxMessageLength', '4096', 'number', 'Maximum length for Telegram messages'),
-('telegram.parseMode', 'HTML', 'string', 'Parse mode for Telegram messages'),
-('telegram.webhookTimeout', '30', 'number', 'Webhook timeout in seconds'),
-
--- Chatwoot Configuration
-('chatwoot.maxMessageLength', '10000', 'number', 'Maximum length for Chatwoot messages'),
-('chatwoot.messageType', 'outgoing', 'string', 'Default message type for Chatwoot'),
-('chatwoot.timeout', '30000', 'number', 'Timeout for Chatwoot API requests'),
-
--- Dify AI Configuration
-('dify.timeout', '30000', 'number', 'Timeout for Dify API requests'),
-('dify.maxResponseLength', '1000', 'number', 'Maximum length for Dify responses'),
-('dify.simpleGreetingMaxLength', '200', 'number', 'Maximum length for simple greeting responses'),
-('dify.cooldownPeriod', '5000', 'number', 'Cooldown period between responses'),
-('dify.enableConversationHistory', 'false', 'boolean', 'Enable conversation history in Dify'),
 
 -- Security Configuration
 ('security.jwtSecret', 'your-super-secret-jwt-key-change-this-in-production', 'string', 'JWT secret key'),
@@ -495,7 +457,7 @@ INSERT INTO configurations (key, value, type, description) VALUES
 
 -- Create default super admin user
 INSERT INTO users (username, email, password_hash, full_name, is_active) VALUES
-('superadmin', 'admin@system.local', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Super Administrator', true);
+('superadmin', 'thuanpt182@gmail.com', '$2b$10$GL1z.pEHFeFgmL1LDfjGU.fu8GMOi4xXnnMZptP6zT1kmnOyZsvSG', 'Super Administrator', true);
 
 -- Assign super admin role to the default user
 INSERT INTO user_roles (user_id, role_id)
@@ -503,11 +465,13 @@ SELECT u.id, r.id
 FROM users u, roles r
 WHERE u.username = 'superadmin' AND r.name = 'super_admin';
 
--- Record this migration
-INSERT INTO migrations (version, description) VALUES
-('001_init_complete_system', 'Complete system initialization with all features');
+-- Add column comments
+COMMENT ON COLUMN users.phone_number IS 'Số điện thoại của người dùng';
+COMMENT ON COLUMN users.avatar IS 'Đường dẫn ảnh đại diện';
+COMMENT ON COLUMN users.gender IS 'Giới tính: male, female, other';
+COMMENT ON COLUMN users.date_of_birth IS 'Ngày sinh';
 
 -- =====================================================
 -- MIGRATION COMPLETION
 -- =====================================================
-COMMIT;
+-- Migration will be recorded by migrate.js script

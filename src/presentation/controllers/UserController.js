@@ -148,8 +148,8 @@ class UserController {
         avatar,
         gender,
         dateOfBirth: date_of_birth,
-        isActive: is_active,
-        role_id
+        isActive: is_active
+        // Note: role_id is handled separately through user_roles table
       }
 
       const user = await this.userRepository.create(userData)

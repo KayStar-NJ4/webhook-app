@@ -12,13 +12,13 @@
           <i class="fas fa-user-edit mr-2"></i>
           {{ title || (id == 0 ? 'Thêm người dùng mới' : 'Chỉnh sửa thông tin người dùng') }}
         </h4>
-        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" @click="resetForm">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
 
       <!-- Body -->
-      <div class="modal-body p-4" :class="{ 'overlay-wrapper': is_loading }">
+      <div class="modal-body p-6" :class="{ 'overlay-wrapper': is_loading }">
         <div class="row">
           <!-- Left Column - Basic Info -->
           <div class="col-md-6">
@@ -160,18 +160,19 @@
 
       <!-- Footer -->
       <div class="modal-footer bg-light">
-        <button type="button" class="btn btn-secondary btn-lg" data-dismiss="modal">
-          <i class="fas fa-times mr-2"></i>
-          Hủy bỏ
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" @click="resetForm">
+          <i class="fas fa-times mr-1"></i>
+          Hủy
         </button>
         <button 
           type="button" 
-          class="btn btn-primary btn-lg" 
-          @click="handleSave" 
+          class="btn btn-primary" 
+          @click="handleSave"
           :disabled="is_loading || !isFormValid"
         >
-          <i class="fas fa-save mr-2"></i>
-          {{ is_loading ? 'Đang lưu...' : 'Lưu thông tin' }}
+          <i class="fas fa-save mr-1" v-if="!is_loading"></i>
+          <i class="fas fa-spinner fa-spin mr-1" v-if="is_loading"></i>
+          {{ is_loading ? 'Đang xử lý...' : (id == 0 ? 'Thêm mới' : 'Cập nhật') }}
         </button>
       </div>
     </div>
@@ -207,6 +208,15 @@ export default {
       }
     }
   },
+  mounted() {
+    this.clearFormData();
+    this.setupModalEvents();
+  },
+  watch: {
+    id: function(newVal, oldVal) {
+      this.clearFormData();
+    }
+  },
   computed: {
     isFormValid() {
       // Check required fields
@@ -222,19 +232,11 @@ export default {
       }
       
       // Check if there are any validation errors
-      return Object.keys(this.errors).length === 0;
+      const hasErrors = Object.keys(this.errors).length > 0;
+      
+      return !hasErrors;
     }
   },
-  // validations() {
-  //   return {
-  //     form_data: {
-  //       username: {required: window.required || (() => true)},
-  //       email: {email: window.email || (() => true), required: window.required || (() => true)},
-  //       full_name: {required: window.required || (() => true)},
-  //       password: this.id == 0 ? {required: window.required || (() => true), minLength: window.minLength ? window.minLength(8) : (() => true)} : {}
-  //     },
-  //   };
-  // },
   methods: {
     validateField(fieldName) {
       this.errors[fieldName] = '';
@@ -247,6 +249,9 @@ export default {
             this.errors.username = 'Tên đăng nhập phải có ít nhất 3 ký tự';
           } else if (!/^[a-zA-Z0-9_]+$/.test(this.form_data.username)) {
             this.errors.username = 'Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới';
+          } else {
+            // Field is valid, ensure no error
+            delete this.errors.username;
           }
           break;
           
@@ -255,6 +260,9 @@ export default {
             this.errors.email = 'Email không được để trống';
           } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.form_data.email)) {
             this.errors.email = 'Email không đúng định dạng';
+          } else {
+            // Field is valid, ensure no error
+            delete this.errors.email;
           }
           break;
           
@@ -263,12 +271,18 @@ export default {
             this.errors.full_name = 'Họ và tên không được để trống';
           } else if (this.form_data.full_name.length < 2) {
             this.errors.full_name = 'Họ và tên phải có ít nhất 2 ký tự';
+          } else {
+            // Field is valid, ensure no error
+            delete this.errors.full_name;
           }
           break;
           
         case 'phone_number':
           if (this.form_data.phone_number && !/^[0-9+\-\s()]+$/.test(this.form_data.phone_number)) {
             this.errors.phone_number = 'Số điện thoại không đúng định dạng';
+          } else {
+            // Field is valid, ensure no error
+            delete this.errors.phone_number;
           }
           break;
           
@@ -276,11 +290,17 @@ export default {
           if (this.id == 0) {
             if (!this.form_data.password || this.form_data.password.trim() === '') {
               this.errors.password = 'Mật khẩu không được để trống';
-            } else if (this.form_data.password.length < 8) {
-              this.errors.password = 'Mật khẩu phải có ít nhất 8 ký tự';
+            } else if (this.form_data.password.length < 6) {
+              this.errors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
             } else if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(this.form_data.password)) {
               this.errors.password = 'Mật khẩu phải chứa ít nhất 1 chữ cái và 1 số';
+            } else {
+              // Field is valid, ensure no error
+              delete this.errors.password;
             }
+          } else {
+            // For existing users, password is not required, ensure no error
+            delete this.errors.password;
           }
           break;
       }
@@ -322,6 +342,41 @@ export default {
           is_active: this.object_info.is_active !== false,
           password: ''
         }
+      }
+    },
+    
+    resetForm() {
+      // Always reset to empty form
+      this.errors = {};
+      this.form_data = {
+        id: '',
+        username: '',
+        email: '',
+        full_name: '',
+        phone_number: '',
+        avatar: '',
+        gender: '',
+        date_of_birth: '',
+        is_active: true,
+        password: ''
+      }
+      // Force update the component
+      this.$forceUpdate();
+    },
+    
+    setupModalEvents() {
+      // Listen for modal close events
+      const modal = document.getElementById('userFormModal');
+      if (modal) {
+        modal.addEventListener('hidden.bs.modal', () => {
+          // Reset form to empty state when modal is closed
+          this.resetForm();
+        });
+        
+        // Also listen for modal show to reset form when opening
+        modal.addEventListener('show.bs.modal', () => {
+          this.resetForm();
+        });
       }
     },
     handleSave: async function() {
@@ -367,12 +422,63 @@ export default {
           }.bind(this));
     },
     showError(message) {
-      // You can implement toast notification here
-      alert(message);
+      if (window.toast) {
+        window.toast.error(message);
+      } else {
+        this.showFallbackToast(message, 'error');
+      }
     },
     showSuccess(message) {
-      // You can implement toast notification here
-      alert(message);
+      if (window.toast) {
+        window.toast.success(message);
+      } else {
+        this.showFallbackToast(message, 'success');
+      }
+    },
+    showFallbackToast(message, type) {
+      const colors = {
+        success: '#28a745',
+        error: '#dc3545',
+        warning: '#ffc107',
+        info: '#17a2b8'
+      };
+      const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+      };
+      
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${colors[type]};
+        color: white;
+        padding: 12px 16px;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 9999;
+        max-width: 400px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        animation: slideIn 0.3s ease-out;
+      `;
+      
+      toast.innerHTML = `
+        <span style="margin-right: 8px;">${icons[type]}</span>
+        <span>${message}</span>
+      `;
+      
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.style.animation = 'slideIn 0.3s ease-out reverse';
+          setTimeout(() => toast.remove(), 300);
+        }
+      }, 5000);
     }
   },
   watch: {

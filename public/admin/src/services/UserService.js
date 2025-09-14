@@ -65,8 +65,6 @@ class UserService extends BaseService {
 }
 
 // Export to global window object
-if (window.UserService) {
-    console.warn('⚠️ UserService already exists, skipping...');
-} else {
+if (!window.UserService) {
     window.UserService = new UserService();
 }

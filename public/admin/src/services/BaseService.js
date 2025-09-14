@@ -71,8 +71,6 @@ class BaseService {
 }
 
 // Export to global window object
-if (window.BaseService) {
-    console.warn('⚠️ BaseService already exists, skipping...');
-} else {
+if (!window.BaseService) {
     window.BaseService = BaseService;
 }

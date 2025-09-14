@@ -31,14 +31,14 @@
 
         <div class="alert alert-info">
           <i class="fas fa-info-circle"></i>
-          <strong>Lưu ý:</strong> Mật khẩu phải có ít nhất 8 ký tự và chứa ít nhất một chữ cái và một số.
+          <strong>Lưu ý:</strong> Mật khẩu phải có ít nhất 6 ký tự và chứa ít nhất một chữ cái và một số.
         </div>
 
       </div>
       <div class="modal-footer justify-content-between">
         <button type="button" class="btn btn-danger" data-dismiss="modal">Đóng</button>
         <button type="button" class="btn btn-primary" @click="handleSave" :disabled="is_loading">
-          {{ is_loading ? 'Đang lưu...' : 'Lưu mật khẩu' }}
+          {{ is_loading ? 'Đang lưu...' : 'Lưu' }}
         </button>
       </div>
     </div>
@@ -117,7 +117,7 @@ export default {
 
       // Validate password strength
       if (!this.validatePasswordStrength(this.form_data.password)) {
-        this.showError('Mật khẩu phải có ít nhất 8 ký tự và chứa ít nhất một chữ cái và một số');
+        this.showError('Mật khẩu phải có ít nhất 6 ký tự và chứa ít nhất một chữ cái và một số');
         return
       }
 
@@ -140,8 +140,8 @@ export default {
         }.bind(this));
     },
     validatePasswordStrength(password) {
-      // At least 8 characters
-      if (password.length < 8) return false;
+      // At least 6 characters
+      if (password.length < 6) return false;
       
       // At least one letter
       if (!/[a-zA-Z]/.test(password)) return false;
@@ -152,8 +152,56 @@ export default {
       return true;
     },
     showError(message) {
-      // You can implement toast notification here
-      alert(message);
+      if (window.toast) {
+        window.toast.error(message);
+      } else {
+        this.showFallbackToast(message, 'error');
+      }
+    },
+    showFallbackToast(message, type) {
+      const colors = {
+        success: '#28a745',
+        error: '#dc3545',
+        warning: '#ffc107',
+        info: '#17a2b8'
+      };
+      const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+      };
+      
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${colors[type]};
+        color: white;
+        padding: 12px 16px;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 9999;
+        max-width: 400px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        animation: slideIn 0.3s ease-out;
+      `;
+      
+      toast.innerHTML = `
+        <span style="margin-right: 8px;">${icons[type]}</span>
+        <span>${message}</span>
+      `;
+      
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.style.animation = 'slideIn 0.3s ease-out reverse';
+          setTimeout(() => toast.remove(), 300);
+        }
+      }, 5000);
     }
   },
   watch: {
