@@ -25,7 +25,7 @@
               <!-- Search and filters -->
               <div class="row col-12 form border-bottom mb-3">
                 <div class="col-md-10 col-sm-6 row">
-                  <div class="col-md-3 col-sm-6 pl-md-0">
+                  <div class="col-md-4 col-sm-6 pl-md-0">
                     <div class="form-group">
                       <label>Tìm kiếm</label>
                       <input 

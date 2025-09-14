@@ -17,18 +17,18 @@ class UserRepository {
    */
   async create(userData) {
     try {
-      const { username, email, password, fullName } = userData
+      const { username, email, password, fullName, phoneNumber, avatar, gender, dateOfBirth } = userData
       
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10)
       
       const query = `
-        INSERT INTO users (username, email, password_hash, full_name)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, username, email, full_name, is_active, created_at
+        INSERT INTO users (username, email, password_hash, full_name, phone_number, avatar, gender, date_of_birth)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id, username, email, full_name, phone_number, avatar, gender, date_of_birth, is_active, created_at
       `
       
-      const result = await this.db.query(query, [username, email, passwordHash, fullName])
+      const result = await this.db.query(query, [username, email, passwordHash, fullName, phoneNumber, avatar, gender, dateOfBirth])
       
       this.logger.info('User created', { userId: result.rows[0].id, username })
       return result.rows[0]
@@ -116,7 +116,7 @@ class UserRepository {
       const total = parseInt(countResult.rows[0].total)
       
       const query = `
-        SELECT id, username, email, full_name, is_active, created_at, updated_at
+        SELECT id, username, email, full_name, phone_number, avatar, gender, date_of_birth, is_active, created_at, updated_at
         FROM users 
         ${whereClause}
         ORDER BY created_at DESC
@@ -149,20 +149,24 @@ class UserRepository {
    */
   async update(id, updateData) {
     try {
-      const { username, email, fullName, isActive } = updateData
+      const { username, email, fullName, phoneNumber, avatar, gender, dateOfBirth, isActive } = updateData
       
       const query = `
         UPDATE users 
         SET username = COALESCE($1, username),
             email = COALESCE($2, email),
             full_name = COALESCE($3, full_name),
-            is_active = COALESCE($4, is_active),
+            phone_number = COALESCE($4, phone_number),
+            avatar = COALESCE($5, avatar),
+            gender = COALESCE($6, gender),
+            date_of_birth = COALESCE($7, date_of_birth),
+            is_active = COALESCE($8, is_active),
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = $5
-        RETURNING id, username, email, full_name, is_active, created_at, updated_at
+        WHERE id = $9
+        RETURNING id, username, email, full_name, phone_number, avatar, gender, date_of_birth, is_active, created_at, updated_at
       `
       
-      const result = await this.db.query(query, [username, email, fullName, isActive, id])
+      const result = await this.db.query(query, [username, email, fullName, phoneNumber, avatar, gender, dateOfBirth, isActive, id])
       
       if (result.rows.length === 0) {
         throw new Error('User not found')

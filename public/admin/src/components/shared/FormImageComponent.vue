@@ -234,43 +234,103 @@ export default {
 
 <style scoped>
 .image-upload-container {
-  border: 1px solid #dee2e6;
-  border-radius: 0.25rem;
-  padding: 1rem;
-  background-color: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  background-color: #fff;
+  transition: all 0.3s ease;
+}
+
+.image-upload-container:hover {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
 .upload-area {
   border: 2px dashed #ced4da;
-  border-radius: 0.25rem;
+  border-radius: 0.5rem;
   padding: 2rem;
   text-align: center;
   transition: all 0.3s ease;
   cursor: pointer;
+  background-color: #f8f9fa;
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .upload-area:hover {
   border-color: #007bff;
-  background-color: #f8f9fa;
+  background-color: #e3f2fd;
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 
 .upload-area.is-dragover {
   border-color: #007bff;
   background-color: #e3f2fd;
+  transform: scale(1.02);
+  box-shadow: 0 0.5rem 1rem rgba(0, 123, 255, 0.25);
 }
 
 .upload-placeholder {
-  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.upload-placeholder i {
+  color: #6c757d;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+}
+
+.upload-area:hover .upload-placeholder i {
+  color: #007bff;
+  transform: scale(1.1);
+}
+
+.upload-placeholder p {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.upload-placeholder .text-primary {
+  color: #007bff !important;
+  text-decoration: underline;
+  transition: all 0.3s ease;
+}
+
+.upload-placeholder .text-primary:hover {
+  color: #0056b3 !important;
+}
+
+.upload-placeholder small {
+  font-size: 0.8rem;
+  color: #6c757d;
 }
 
 .current-image-preview {
   text-align: center;
+  margin-bottom: 1rem;
 }
 
 .img-thumbnail {
-  border: 1px solid #dee2e6;
-  border-radius: 0.25rem;
-  padding: 0.25rem;
+  border: 2px solid #e9ecef;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.img-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.2);
 }
 
 .upload-progress {
@@ -278,15 +338,22 @@ export default {
 }
 
 .progress {
-  height: 1rem;
+  height: 1.5rem;
   background-color: #e9ecef;
-  border-radius: 0.25rem;
+  border-radius: 0.5rem;
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .progress-bar {
-  background-color: #007bff;
+  background: linear-gradient(45deg, #007bff, #0056b3);
   transition: width 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
 }
 
 .text-danger {

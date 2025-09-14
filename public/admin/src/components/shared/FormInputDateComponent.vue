@@ -7,7 +7,7 @@
     <div :class="{'col-sm-10' : is_row }">
       <input
           type="date"
-          :class="'form-control ' + input_class + ' ' + (is_error ? 'is-invalid' : '')"
+          :class="'form-control form-control-lg ' + input_class + ' ' + (is_error ? 'is-invalid' : '')"
           :id="id"
           :name="name"
           :disabled="is_disabled"
@@ -54,7 +54,7 @@ export default {
     },
     is_row: {
       type: Boolean,
-      default: true
+      default: false
     },
     is_error: {
       type: Boolean,

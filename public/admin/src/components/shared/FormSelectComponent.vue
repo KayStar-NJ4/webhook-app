@@ -1,19 +1,22 @@
 <template>
-  <div class="form-group">
-    <label v-if="label" :for="id" class="form-label">
-      {{ label }}
-      <span v-if="required" class="required">*</span>
+  <div class="form-group" :class="{ 'row' : is_row , 'mb-0' : is_table_edit }">
+    <label :class="{'col-sm-2 col-form-label' : is_row }"
+           v-if="!is_table_edit && label">{{ label }}
+      <span class="text-danger" v-if="required">(*)</span>
     </label>
-    <select
-      :id="id"
-      :value="modelValue"
-      :required="required"
-      :disabled="disabled"
-      :class="selectClasses"
-      @change="handleChange"
-      @blur="handleBlur"
-      @focus="handleFocus"
-    >
+    <div :class="{'col-sm-10' : is_row }">
+      <div class="select-wrapper">
+      <select
+        :id="id"
+        :value="modelValue"
+        :required="required"
+        :disabled="disabled"
+        :class="'form-control form-control-lg ' + input_class + ' ' + (error ? 'is-invalid' : '')"
+        @change="handleChange"
+        @blur="handleBlur"
+        @focus="handleFocus"
+        v-bind="$attrs"
+      >
       <option v-if="placeholder" value="" disabled>
         {{ placeholder }}
       </option>
@@ -24,13 +27,10 @@
       >
         {{ getOptionLabel(option) }}
       </option>
-    </select>
-    <div v-if="error" class="error-message">
-      <i class="fas fa-exclamation-circle"></i>
-      {{ error }}
-    </div>
-    <div v-if="helpText" class="help-text">
-      {{ helpText }}
+      </select>
+      </div>
+      <span v-if="error" class="text-danger mt-2"><small>{{ error }}</small></span>
+      <span v-if="helpText" class="form-text text-muted"><small>{{ helpText }}</small></span>
     </div>
   </div>
 </template>
@@ -71,10 +71,17 @@ export default {
       type: String,
       default: ''
     },
-    size: {
+    input_class: {
       type: String,
-      default: 'medium',
-      validator: (value) => ['small', 'medium', 'large'].includes(value)
+      default: ''
+    },
+    is_row: {
+      type: Boolean,
+      default: false
+    },
+    is_table_edit: {
+      type: Boolean,
+      default: false
     },
     valueKey: {
       type: String,
@@ -89,16 +96,6 @@ export default {
   computed: {
     id() {
       return `select-${Math.random().toString(36).substr(2, 9)}`
-    },
-    selectClasses() {
-      return [
-        'form-select',
-        `form-select--${this.size}`,
-        {
-          'form-select--error': this.error,
-          'form-select--disabled': this.disabled
-        }
-      ]
     }
   },
   methods: {
@@ -128,86 +125,80 @@ export default {
 </script>
 
 <style scoped>
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 8px;
-  color: #333;
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.required {
-  color: #e74c3c;
-  margin-left: 4px;
-}
-
-.form-select {
-  width: 100%;
-  padding: 12px 15px;
-  border: 2px solid #e1e5e9;
-  border-radius: 6px;
-  font-size: 14px;
+/* Bootstrap form-control-lg styling for consistency */
+.form-control-lg {
+  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  padding-right: 2.5rem;
+  border-radius: 0.5rem;
+  border: 2px solid #e9ecef;
   transition: all 0.3s ease;
-  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   background: white;
   cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 16px;
-  padding-right: 40px;
+  height: calc(1.5em + 1.5rem + 4px);
 }
 
-.form-select:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+.form-control-lg:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
-.form-select--error {
-  border-color: #e74c3c;
+.form-control-lg.is-invalid {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
 }
 
-.form-select--error:focus {
-  border-color: #e74c3c;
-  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
-}
-
-.form-select--disabled {
-  background-color: #f8f9fa;
-  color: #6c757d;
-  cursor: not-allowed;
-}
-
-.form-select--small {
-  padding: 8px 12px;
-  font-size: 12px;
-  padding-right: 32px;
-}
-
-.form-select--large {
-  padding: 16px 20px;
-  font-size: 16px;
-  padding-right: 48px;
-}
-
-.error-message {
-  color: #e74c3c;
-  font-size: 12px;
-  margin-top: 5px;
+.select-wrapper {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 5px;
+  width: 100%;
 }
 
-.help-text {
+.select-arrow {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
   color: #6c757d;
-  font-size: 12px;
-  margin-top: 5px;
+  pointer-events: none;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+}
+
+.form-control-lg:focus + .select-arrow {
+  color: #007bff;
+}
+
+/* Form text styling */
+.form-text {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+}
+
+.text-muted {
+  color: #6c757d !important;
+}
+
+/* Hover effects */
+.form-control-lg:hover:not(:disabled) {
+  border-color: #007bff;
+}
+
+/* Animation for error state */
+.form-control-lg.is-invalid {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 </style>

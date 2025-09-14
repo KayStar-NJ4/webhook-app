@@ -109,10 +109,7 @@ class UserController {
         avatar,
         gender,
         date_of_birth,
-        presenter_phone_number,
         is_active = true,
-        phone_number_verified = false,
-        email_verified = false,
         role_id
       } = req.body
 
@@ -146,15 +143,12 @@ class UserController {
         username,
         email,
         password,
-        full_name,
-        phone_number,
+        fullName: full_name,
+        phoneNumber: phone_number,
         avatar,
         gender,
-        date_of_birth,
-        presenter_phone_number,
-        is_active,
-        phone_number_verified,
-        email_verified,
+        dateOfBirth: date_of_birth,
+        isActive: is_active,
         role_id
       }
 
@@ -193,10 +187,7 @@ class UserController {
         avatar,
         gender,
         date_of_birth,
-        presenter_phone_number,
         is_active,
-        phone_number_verified,
-        email_verified,
         role_id
       } = req.body
 
@@ -234,15 +225,12 @@ class UserController {
       const updateData = {
         username,
         email,
-        full_name,
-        phone_number,
+        fullName: full_name,
+        phoneNumber: phone_number,
         avatar,
         gender,
-        date_of_birth,
-        presenter_phone_number,
-        is_active,
-        phone_number_verified,
-        email_verified,
+        dateOfBirth: date_of_birth,
+        isActive: is_active,
         role_id
       }
 
