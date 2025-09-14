@@ -134,6 +134,21 @@ class AdminRoutes {
       this.permissionMiddleware.requirePermission('users', 'read'),
       (req, res) => this.userController.getUserRoles(req, res)
     )
+    this.router.post('/api/admin/users/:id/roles', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'manage_roles'),
+      (req, res) => this.userController.addUserRole(req, res)
+    )
+    this.router.delete('/api/admin/users/:id/roles/:roleId', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'manage_roles'),
+      (req, res) => this.userController.removeUserRole(req, res)
+    )
+    this.router.put('/api/admin/users/:id/roles', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'manage_roles'),
+      (req, res) => this.userController.updateUserRoles(req, res)
+    )
     
     // Role management API
     this.router.get('/api/admin/roles', 
@@ -160,6 +175,16 @@ class AdminRoutes {
       this.authMiddleware.verifyToken, 
       this.permissionMiddleware.requirePermission('roles', 'read'),
       (req, res) => this.roleController.getRoleUsers(req, res)
+    )
+    this.router.post('/api/admin/roles/:id/users', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'manage_permissions'),
+      (req, res) => this.roleController.assignRoleToUser(req, res)
+    )
+    this.router.delete('/api/admin/roles/:roleId/users/:userId', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'manage_roles'),
+      (req, res) => this.roleController.removeRoleFromUser(req, res)
     )
     
     // Telegram bot management API
@@ -206,7 +231,7 @@ class AdminRoutes {
     )
     this.router.get('/api/admin/permissions/grouped', 
       this.authMiddleware.verifyToken, 
-      this.permissionMiddleware.requireSuperAdmin(),
+      this.permissionMiddleware.requirePermission('permissions', 'read'),
       (req, res) => this.permissionController.getPermissionsGrouped(req, res)
     )
     this.router.get('/api/admin/user-permissions', 
@@ -238,6 +263,23 @@ class AdminRoutes {
       this.authMiddleware.verifyToken, 
       this.permissionMiddleware.requirePermission('roles', 'manage_permissions'),
       (req, res) => this.permissionController.updateRolePermissions(req, res)
+    )
+
+    // User permissions management API routes
+    this.router.get('/api/admin/users/:id/roles', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'read'),
+      (req, res) => this.userController.getUserRoles(req, res)
+    )
+    this.router.get('/api/admin/users/:id/permissions', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'read'),
+      (req, res) => this.userController.getUserPermissions(req, res)
+    )
+    this.router.put('/api/admin/users/:id/permissions', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('users', 'manage_permissions'),
+      (req, res) => this.userController.updateUserPermissions(req, res)
     )
 
     // Configuration management API routes

@@ -82,6 +82,15 @@ CREATE TABLE role_permissions (
     UNIQUE(role_id, permission_id)
 );
 
+-- User permissions junction table
+CREATE TABLE user_permissions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    permission_id INTEGER REFERENCES permissions(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, permission_id)
+);
+
 -- Chatwoot accounts table
 CREATE TABLE chatwoot_accounts (
     id SERIAL PRIMARY KEY,

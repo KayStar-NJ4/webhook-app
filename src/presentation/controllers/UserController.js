@@ -438,6 +438,211 @@ class UserController {
       })
     }
   }
+
+  /**
+   * Get user permissions
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async getUserPermissions(req, res) {
+    try {
+      const { id } = req.params
+      const user = await this.userRepository.findWithRolesAndPermissions(parseInt(id))
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        })
+      }
+
+      res.json({
+        success: true,
+        data: user.permissions || []
+      })
+
+    } catch (error) {
+      this.logger.error('Get user permissions failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Update user permissions
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async updateUserPermissions(req, res) {
+    try {
+      const { id } = req.params
+      const { permissions = [] } = req.body
+
+      // Check if user exists
+      const user = await this.userRepository.findById(parseInt(id))
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        })
+      }
+
+      // Update user permissions
+      await this.userRepository.updatePermissions(parseInt(id), permissions)
+
+      this.logger.info('User permissions updated', { 
+        userId: id, 
+        permissions, 
+        updatedBy: req.user?.userId 
+      })
+
+      res.json({
+        success: true,
+        message: 'User permissions updated successfully'
+      })
+
+    } catch (error) {
+      this.logger.error('Update user permissions failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Add role to user
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async addUserRole(req, res) {
+    try {
+      const { id } = req.params
+      const { role_id } = req.body
+
+      if (!role_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Role ID is required'
+        })
+      }
+
+      // Check if user exists
+      const user = await this.userRepository.findById(parseInt(id))
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        })
+      }
+
+      // Add role to user
+      await this.userRepository.addUserRole(parseInt(id), parseInt(role_id))
+
+      this.logger.info('User role added', { 
+        userId: id, 
+        roleId: role_id, 
+        addedBy: req.user?.userId 
+      })
+
+      res.json({
+        success: true,
+        message: 'Role added successfully'
+      })
+
+    } catch (error) {
+      this.logger.error('Add user role failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Remove role from user
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async removeUserRole(req, res) {
+    try {
+      const { id, roleId } = req.params
+
+      // Check if user exists
+      const user = await this.userRepository.findById(parseInt(id))
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        })
+      }
+
+      // Remove role from user
+      await this.userRepository.removeUserRole(parseInt(id), parseInt(roleId))
+
+      this.logger.info('User role removed', { 
+        userId: id, 
+        roleId: roleId, 
+        removedBy: req.user?.userId 
+      })
+
+      res.json({
+        success: true,
+        message: 'Role removed successfully'
+      })
+
+    } catch (error) {
+      this.logger.error('Remove user role failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Update all user roles
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async updateUserRoles(req, res) {
+    try {
+      const { id } = req.params
+      const { role_ids = [] } = req.body
+
+      // Check if user exists
+      const user = await this.userRepository.findById(parseInt(id))
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        })
+      }
+
+      // Update user roles (replace all existing roles)
+      await this.userRepository.updateUserRoles(parseInt(id), role_ids)
+
+      this.logger.info('User roles updated', { 
+        userId: id, 
+        roleIds: role_ids, 
+        updatedBy: req.user?.userId 
+      })
+
+      res.json({
+        success: true,
+        message: 'User roles updated successfully'
+      })
+
+    } catch (error) {
+      this.logger.error('Update user roles failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
 }
 
 module.exports = UserController

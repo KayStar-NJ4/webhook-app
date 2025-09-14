@@ -242,7 +242,7 @@
         
         // Load Vue components
         let SidebarComponent, HeaderComponent, AdminLayoutComponent, ListComponent, PageComponent;
-        let DashboardPageComponent, UsersPageComponent, UserListComponent, UserFormComponent, UserPasswordFormComponent, ConfigurationsPageComponent, LogsPageComponent;
+        let DashboardPageComponent, UsersPageComponent, UserListComponent, UserFormComponent, UserPasswordFormComponent, UserPermissionsComponent, UserRolesComponent, ConfigurationsPageComponent, LogsPageComponent;
         let RolePageComponent, RoleListComponent, RoleFormComponent, RolePermissionsComponent;
         let ChatwootAccountsListComponent, DifyAppsListComponent, TelegramBotsListComponent;
         let FormListingSortComponent, FormTableFiltersComponent, FormCheckBoxComponent, PaginateComponent, ActionButtonsComponent;
@@ -277,6 +277,14 @@
             // Load UserPasswordFormComponent
             UserPasswordFormComponent = await loadVueComponent('/admin/src/modules/users/UserPasswordFormComponent.vue');
             window.UserPasswordFormComponent = UserPasswordFormComponent;
+            
+            // Load UserPermissionsComponent
+            UserPermissionsComponent = await loadVueComponent('/admin/src/modules/users/UserPermissionsComponent.vue');
+            window.UserPermissionsComponent = UserPermissionsComponent;
+            
+            // Load UserRolesComponent
+            UserRolesComponent = await loadVueComponent('/admin/src/modules/users/UserRolesComponent.vue');
+            window.UserRolesComponent = UserRolesComponent;
             
             // Load role sub-components FIRST (before RolePageComponent)
             RoleListComponent = await loadVueComponent('/admin/src/modules/roles/RoleListComponent.vue');
@@ -612,6 +620,14 @@
             if (window.UserListComponent) app.component('UserListComponent', window.UserListComponent);
             if (window.UserFormComponent) app.component('UserFormComponent', window.UserFormComponent);
             if (window.UserPasswordFormComponent) app.component('UserPasswordFormComponent', window.UserPasswordFormComponent);
+            if (window.UserRolesComponent) {
+                app.component('UserRolesComponent', window.UserRolesComponent);
+                app.component('user-roles-component', window.UserRolesComponent);
+            }
+            if (window.UserPermissionsComponent) {
+                app.component('UserPermissionsComponent', window.UserPermissionsComponent);
+                app.component('user-permissions-component', window.UserPermissionsComponent);
+            }
             if (window.RolePageComponent) app.component('RolePageComponent', window.RolePageComponent);
             if (window.RoleListComponent) app.component('RoleListComponent', window.RoleListComponent);
             if (window.RoleFormComponent) app.component('RoleFormComponent', window.RoleFormComponent);

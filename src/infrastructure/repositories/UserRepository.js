@@ -327,66 +327,252 @@ class UserRepository {
    */
   async findWithRolesAndPermissions(id) {
     try {
-      const query = `
-        SELECT 
-          u.id, u.username, u.email, u.full_name, u.is_active, u.created_at, u.updated_at,
-          r.id as role_id, r.name as role_name, r.description as role_description,
-          p.id as permission_id, p.name as permission_name, p.resource, p.action
-        FROM users u
-        LEFT JOIN user_roles ur ON u.id = ur.user_id
-        LEFT JOIN roles r ON ur.role_id = r.id
-        LEFT JOIN role_permissions rp ON r.id = rp.role_id
-        LEFT JOIN permissions p ON rp.permission_id = p.id
-        WHERE u.id = $1
+      // Get user basic info
+      const userQuery = `
+        SELECT id, username, email, full_name, is_active, created_at, updated_at
+        FROM users WHERE id = $1
       `
+      const userResult = await this.db.query(userQuery, [id])
       
-      const result = await this.db.query(query, [id])
-      
-      if (result.rows.length === 0) {
+      if (userResult.rows.length === 0) {
         return null
       }
       
       const user = {
-        id: result.rows[0].id,
-        username: result.rows[0].username,
-        email: result.rows[0].email,
-        fullName: result.rows[0].full_name,
-        isActive: result.rows[0].is_active,
-        createdAt: result.rows[0].created_at,
-        updatedAt: result.rows[0].updated_at,
+        id: userResult.rows[0].id,
+        username: userResult.rows[0].username,
+        email: userResult.rows[0].email,
+        fullName: userResult.rows[0].full_name,
+        isActive: userResult.rows[0].is_active,
+        createdAt: userResult.rows[0].created_at,
+        updatedAt: userResult.rows[0].updated_at,
         roles: [],
         permissions: []
       }
       
-      const roleMap = new Map()
+      // Get user roles
+      const rolesQuery = `
+        SELECT r.id, r.name, r.description
+        FROM user_roles ur
+        JOIN roles r ON ur.role_id = r.id
+        WHERE ur.user_id = $1
+      `
+      const rolesResult = await this.db.query(rolesQuery, [id])
+      user.roles = rolesResult.rows
+      
+      // Get permissions from roles
+      const rolePermissionsQuery = `
+        SELECT DISTINCT p.id, p.name, p.resource, p.action
+        FROM user_roles ur
+        JOIN role_permissions rp ON ur.role_id = rp.role_id
+        JOIN permissions p ON rp.permission_id = p.id
+        WHERE ur.user_id = $1
+      `
+      const rolePermissionsResult = await this.db.query(rolePermissionsQuery, [id])
+      
+      // Get direct user permissions
+      let userPermissionsResult = { rows: [] }
+      try {
+        const userPermissionsQuery = `
+          SELECT DISTINCT p.id, p.name, p.resource, p.action
+          FROM user_permissions up
+          JOIN permissions p ON up.permission_id = p.id
+          WHERE up.user_id = $1
+        `
+        userPermissionsResult = await this.db.query(userPermissionsQuery, [id])
+      } catch (error) {
+        // If user_permissions table doesn't exist, log warning and continue with empty permissions
+        if (error.message.includes('relation "user_permissions" does not exist') || 
+            error.message.includes('missing FROM-clause entry for table "up"')) {
+          this.logger.warn('user_permissions table not found, skipping direct user permissions', { id, error: error.message })
+        } else {
+          throw error
+        }
+      }
+      
+      // Combine permissions (remove duplicates)
       const permissionMap = new Map()
       
-      result.rows.forEach(row => {
-        if (row.role_id && !roleMap.has(row.role_id)) {
-          roleMap.set(row.role_id, {
-            id: row.role_id,
-            name: row.role_name,
-            description: row.role_description
-          })
-        }
-        
-        if (row.permission_id && !permissionMap.has(row.permission_id)) {
-          permissionMap.set(row.permission_id, {
-            id: row.permission_id,
-            name: row.permission_name,
-            resource: row.resource,
-            action: row.action
-          })
-        }
+      rolePermissionsResult.rows.forEach(permission => {
+        permissionMap.set(permission.id, permission)
       })
       
-      user.roles = Array.from(roleMap.values())
+      userPermissionsResult.rows.forEach(permission => {
+        permissionMap.set(permission.id, permission)
+      })
+      
       user.permissions = Array.from(permissionMap.values())
       
       return user
       
     } catch (error) {
       this.logger.error('Failed to find user with roles and permissions', { id, error: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * Add role to user
+   * @param {number} userId - User ID
+   * @param {number} roleId - Role ID
+   * @returns {Promise<void>}
+   */
+  async addUserRole(userId, roleId) {
+    try {
+      // Check if user-role relationship already exists
+      const checkQuery = `
+        SELECT id FROM user_roles 
+        WHERE user_id = $1 AND role_id = $2
+      `
+      const checkResult = await this.db.query(checkQuery, [userId, roleId])
+      
+      if (checkResult.rows.length > 0) {
+        this.logger.warn('User role relationship already exists', { userId, roleId })
+        return
+      }
+
+      // Add user-role relationship
+      const insertQuery = `
+        INSERT INTO user_roles (user_id, role_id)
+        VALUES ($1, $2)
+      `
+      await this.db.query(insertQuery, [userId, roleId])
+      
+      this.logger.info('User role added', { userId, roleId })
+      
+    } catch (error) {
+      this.logger.error('Failed to add user role', { userId, roleId, error: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * Remove role from user
+   * @param {number} userId - User ID
+   * @param {number} roleId - Role ID
+   * @returns {Promise<void>}
+   */
+  async removeUserRole(userId, roleId) {
+    try {
+      const query = `
+        DELETE FROM user_roles 
+        WHERE user_id = $1 AND role_id = $2
+      `
+      const result = await this.db.query(query, [userId, roleId])
+      
+      if (result.rowCount === 0) {
+        this.logger.warn('User role relationship not found', { userId, roleId })
+        return
+      }
+      
+      this.logger.info('User role removed', { userId, roleId })
+      
+    } catch (error) {
+      this.logger.error('Failed to remove user role', { userId, roleId, error: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * Update all user roles (replace existing roles)
+   * @param {number} userId - User ID
+   * @param {Array<number>} roleIds - Array of role IDs
+   * @returns {Promise<void>}
+   */
+  async updateUserRoles(userId, roleIds) {
+    try {
+      // Start transaction
+      await this.db.query('BEGIN')
+      
+      // Remove all existing roles for this user
+      await this.db.query('DELETE FROM user_roles WHERE user_id = $1', [userId])
+      
+      // Add new roles
+      if (roleIds && roleIds.length > 0) {
+        const values = roleIds.map((roleId, index) => `($1, $${index + 2})`).join(', ')
+        const params = [userId, ...roleIds]
+        
+        const insertQuery = `
+          INSERT INTO user_roles (user_id, role_id)
+          VALUES ${values}
+        `
+        await this.db.query(insertQuery, params)
+      }
+      
+      // Commit transaction
+      await this.db.query('COMMIT')
+      
+      this.logger.info('User roles updated', { userId, roleIds })
+      
+    } catch (error) {
+      // Rollback transaction on error
+      await this.db.query('ROLLBACK')
+      this.logger.error('Failed to update user roles', { userId, roleIds, error: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * Update user permissions (replace existing permissions)
+   * @param {number} userId - User ID
+   * @param {Array<string>} permissions - Array of permission names
+   * @returns {Promise<void>}
+   */
+  async updatePermissions(userId, permissions) {
+    try {
+      // Check if user_permissions table exists first
+      const tableExistsQuery = `
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'user_permissions'
+        )
+      `
+      const tableExistsResult = await this.db.query(tableExistsQuery)
+      
+      if (!tableExistsResult.rows[0].exists) {
+        this.logger.warn('user_permissions table does not exist, skipping permission update', { userId })
+        return
+      }
+      
+      // Start transaction
+      await this.db.query('BEGIN')
+      
+      // Remove all existing permissions for this user
+      await this.db.query('DELETE FROM user_permissions WHERE user_id = $1', [userId])
+      
+      // Add new permissions
+      if (permissions && permissions.length > 0) {
+        // Get permission IDs for the given permission names
+        const permissionNames = permissions.map(p => `'${p}'`).join(', ')
+        const permissionQuery = `
+          SELECT id FROM permissions 
+          WHERE name IN (${permissionNames})
+        `
+        const permissionResult = await this.db.query(permissionQuery)
+        
+        if (permissionResult.rows.length > 0) {
+          const permissionIds = permissionResult.rows.map(row => row.id)
+          const values = permissionIds.map((permissionId, index) => `($1, $${index + 2})`).join(', ')
+          const params = [userId, ...permissionIds]
+          
+          const insertQuery = `
+            INSERT INTO user_permissions (user_id, permission_id)
+            VALUES ${values}
+          `
+          await this.db.query(insertQuery, params)
+        }
+      }
+      
+      // Commit transaction
+      await this.db.query('COMMIT')
+      
+      this.logger.info('User permissions updated', { userId, permissions })
+      
+    } catch (error) {
+      // Rollback transaction on error
+      await this.db.query('ROLLBACK')
+      this.logger.error('Failed to update user permissions', { userId, permissions, error: error.message })
       throw error
     }
   }

@@ -83,6 +83,16 @@
                         >
                           <i class="fa fa-key"></i>
                         </button>
+                        <button 
+                          v-if="hasPermission('users', 'manage_roles') || hasPermission('users', 'manage_permissions')"
+                          class="btn btn-sm btn-primary"
+                          @click="handleManagePermissions(item)"
+                          data-toggle="modal"
+                          data-target="#permissions-modal"
+                          title="Quản lý vai trò & phân quyền"
+                        >
+                          <i class="fa fa-user-shield"></i>
+                        </button>
                       </div>
                     </td>
                     <td class="align-middle">{{ item.username || '' }}</td>
@@ -194,6 +204,24 @@
         :id="selected_id"
         :object_info="selected_item"
         @success="handlePasswordSuccess"
+      />
+    </div>
+
+    <!-- User Roles Modal -->
+    <div class="modal fade" id="roles-modal" data-backdrop="static">
+      <user-roles-component
+        :id="selected_id"
+        :object_info="selected_item"
+        @success="handleRolesSuccess"
+      />
+    </div>
+
+    <!-- User Permissions Modal -->
+    <div class="modal fade" id="permissions-modal" data-backdrop="static">
+      <user-permissions-component
+        :id="selected_id"
+        :object_info="selected_item"
+        @success="handlePermissionsSuccess"
       />
     </div>
   </div>
@@ -429,6 +457,10 @@ export default {
       this.selected_id = item.id;
       this.selected_item = Object.assign({}, item);
     },
+    handleManagePermissions(item) {
+      this.selected_id = item.id;
+      this.selected_item = Object.assign({}, item);
+    },
     showConfirmDialog(title, message, confirmText = 'Xác nhận', cancelText = 'Hủy') {
       return new Promise((resolve) => {
         // Create modal backdrop
@@ -544,6 +576,12 @@ export default {
     },
     handlePasswordSuccess() {
       this.closeModal('password-modal');
+    },
+    handleRolesSuccess() {
+      this.closeModal('roles-modal');
+    },
+    handlePermissionsSuccess() {
+      this.closeModal('permissions-modal');
     },
     closeModal(modalId) {
       const modal = document.getElementById(modalId);

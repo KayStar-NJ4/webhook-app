@@ -18,6 +18,7 @@ INSERT INTO permissions (name, description, resource, action) VALUES
 ('users.read', 'View user information', 'users', 'read'),
 ('users.update', 'Update user information', 'users', 'update'),
 ('users.delete', 'Delete users', 'users', 'delete'),
+('users.manage_permissions', 'Assign permissions to users', 'users', 'manage_permissions'),
 ('users.manage_roles', 'Assign roles to users', 'users', 'manage_roles'),
 
 -- Role Management
@@ -26,6 +27,12 @@ INSERT INTO permissions (name, description, resource, action) VALUES
 ('roles.update', 'Update role information', 'roles', 'update'),
 ('roles.delete', 'Delete roles', 'roles', 'delete'),
 ('roles.manage_permissions', 'Manage role permissions', 'roles', 'manage_permissions'),
+
+-- Permission Management
+('permissions.create', 'Create new permissions', 'permissions', 'create'),
+('permissions.read', 'View permission information', 'permissions', 'read'),
+('permissions.update', 'Update permission information', 'permissions', 'update'),
+('permissions.delete', 'Delete permissions', 'permissions', 'delete'),
 
 -- Configuration Management
 ('config.read', 'View system configuration', 'config', 'read'),

@@ -44,14 +44,49 @@ class UserService extends BaseService {
     return this.get(`${this.endpoint}/${id}/roles`)
   }
 
-  // Lấy permissions của user (deprecated - use getRoles instead)
+  // Lấy roles của user (alias)
+  getUserRoles(id) {
+    return this.get(`${this.endpoint}/${id}/roles`)
+  }
+
+  // Lấy permissions của user
+  getUserPermissions(id) {
+    return this.get(`${this.endpoint}/${id}/permissions`)
+  }
+
+  // Cập nhật permissions của user
+  updateUserPermissions(id, permissions) {
+    return this.put(`${this.endpoint}/${id}/permissions`, { permissions })
+  }
+
+  // Lấy permissions của user (deprecated - use getUserPermissions instead)
   getPermissions(id) {
     return this.get(`${this.endpoint}/${id}/permissions`)
   }
 
-  // Cập nhật permissions (deprecated - use role management instead)
+  // Cập nhật permissions (deprecated - use updateUserPermissions instead)
   updatePermissions(id, data) {
     return this.put(`${this.endpoint}/${id}/permissions`, data)
+  }
+
+  // Lấy roles của user
+  getUserRoles(id) {
+    return this.get(`${this.endpoint}/${id}/roles`)
+  }
+
+  // Thêm role cho user
+  addUserRole(userId, roleId) {
+    return this.post(`${this.endpoint}/${userId}/roles`, { role_id: roleId })
+  }
+
+  // Xóa role khỏi user
+  removeUserRole(userId, roleId) {
+    return this.delete(`${this.endpoint}/${userId}/roles/${roleId}`)
+  }
+
+  // Cập nhật tất cả roles của user
+  updateUserRoles(userId, roleIds) {
+    return this.put(`${this.endpoint}/${userId}/roles`, { role_ids: roleIds })
   }
 
   // Helper method để tạo hoặc cập nhật user (compatible với code cũ)

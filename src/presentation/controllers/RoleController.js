@@ -478,6 +478,106 @@ class RoleController {
     }
   }
 
+  /**
+   * Assign role to user
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async assignRoleToUser(req, res) {
+    try {
+      const { id: roleId } = req.params
+      const { user_id: userId } = req.body
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID is required'
+        })
+      }
+
+      // Check if role exists
+      const role = await this.roleRepository.findById(roleId)
+      if (!role) {
+        return res.status(404).json({
+          success: false,
+          message: 'Role not found'
+        })
+      }
+
+      // Check if user exists
+      const user = await this.userRepository.findById(userId)
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        })
+      }
+
+      // Assign role to user
+      await this.roleRepository.assignRoleToUser(roleId, userId)
+
+      this.logger.info('Role assigned to user', { roleId, userId, assignedBy: req.user?.userId })
+
+      res.json({
+        success: true,
+        message: 'Role assigned to user successfully'
+      })
+
+    } catch (error) {
+      this.logger.error('Assign role to user failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Remove role from user
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async removeRoleFromUser(req, res) {
+    try {
+      const { roleId, userId } = req.params
+
+      // Check if role exists
+      const role = await this.roleRepository.findById(roleId)
+      if (!role) {
+        return res.status(404).json({
+          success: false,
+          message: 'Role not found'
+        })
+      }
+
+      // Check if user exists
+      const user = await this.userRepository.findById(userId)
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        })
+      }
+
+      // Remove role from user
+      await this.roleRepository.removeRoleFromUser(roleId, userId)
+
+      this.logger.info('Role removed from user', { roleId, userId, removedBy: req.user?.userId })
+
+      res.json({
+        success: true,
+        message: 'Role removed from user successfully'
+      })
+
+    } catch (error) {
+      this.logger.error('Remove role from user failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
 }
 
 module.exports = RoleController
