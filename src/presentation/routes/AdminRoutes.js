@@ -141,40 +141,20 @@ class AdminRoutes {
       this.permissionMiddleware.requirePermission('roles', 'read'),
       (req, res) => this.roleController.getRoles(req, res)
     )
-    this.router.get('/api/admin/roles/:id', 
-      this.authMiddleware.verifyToken, 
-      this.permissionMiddleware.requirePermission('roles', 'read'),
-      (req, res) => this.roleController.getRoleById(req, res)
-    )
     this.router.post('/api/admin/roles', 
       this.authMiddleware.verifyToken, 
       this.permissionMiddleware.requirePermission('roles', 'create'),
       (req, res) => this.roleController.createRole(req, res)
     )
-    this.router.put('/api/admin/roles/:id', 
+    this.router.put('/api/admin/roles', 
       this.authMiddleware.verifyToken, 
       this.permissionMiddleware.requirePermission('roles', 'update'),
       (req, res) => this.roleController.updateRole(req, res)
     )
-    this.router.delete('/api/admin/roles/:id', 
+    this.router.delete('/api/admin/roles', 
       this.authMiddleware.verifyToken, 
       this.permissionMiddleware.requirePermission('roles', 'delete'),
       (req, res) => this.roleController.deleteRole(req, res)
-    )
-    this.router.get('/api/admin/roles/permissions', 
-      this.authMiddleware.verifyToken, 
-      this.permissionMiddleware.requirePermission('roles', 'read'),
-      (req, res) => this.roleController.getPermissions(req, res)
-    )
-    this.router.get('/api/admin/roles/:id/permissions', 
-      this.authMiddleware.verifyToken, 
-      this.permissionMiddleware.requirePermission('roles', 'read'),
-      (req, res) => this.roleController.getRolePermissions(req, res)
-    )
-    this.router.put('/api/admin/roles/:id/permissions', 
-      this.authMiddleware.verifyToken, 
-      this.permissionMiddleware.requirePermission('roles', 'update'),
-      (req, res) => this.roleController.updateRolePermissions(req, res)
     )
     this.router.get('/api/admin/roles/:id/users', 
       this.authMiddleware.verifyToken, 
@@ -218,10 +198,10 @@ class AdminRoutes {
       (req, res) => this.adminController.createDifyApp(req, res)
     )
 
-    // Permission management API routes - removed duplicate roles route
+    // Permission management API routes
     this.router.get('/api/admin/permissions', 
       this.authMiddleware.verifyToken, 
-      this.permissionMiddleware.requireSuperAdmin(),
+      this.permissionMiddleware.requirePermission('roles', 'manage_permissions'),
       (req, res) => this.permissionController.getPermissions(req, res)
     )
     this.router.get('/api/admin/permissions/grouped', 
@@ -253,6 +233,11 @@ class AdminRoutes {
     this.router.get('/api/admin/check-permission', 
       this.authMiddleware.verifyToken, 
       (req, res) => this.permissionController.checkPermission(req, res)
+    )
+    this.router.put('/api/admin/permissions/update-by-role/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('roles', 'manage_permissions'),
+      (req, res) => this.permissionController.updateRolePermissions(req, res)
     )
 
     // Configuration management API routes

@@ -44,10 +44,23 @@ class PermissionController {
   async getPermissions(req, res) {
     try {
       const permissions = await this.permissionService.getAllPermissions()
+      
+      // Group permissions by feature
+      const groupedPermissions = {}
+      permissions.forEach(permission => {
+        const [feature, action] = permission.name.split('.')
+        
+        if (!groupedPermissions[feature]) {
+          groupedPermissions[feature] = []
+        }
+        groupedPermissions[feature].push(action)
+      })
 
       res.json({
         success: true,
-        data: permissions
+        data: {
+          permissions: groupedPermissions
+        }
       })
 
     } catch (error) {
@@ -420,6 +433,84 @@ class PermissionController {
 
     } catch (error) {
       this.logger.error('Check permission failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Update role permissions
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async updateRolePermissions(req, res) {
+    try {
+      const { roleId } = req.params
+      const { permissions = [] } = req.body
+
+      // Check if role exists
+      const role = await this.permissionService.getRoleById(parseInt(roleId))
+      if (!role) {
+        return res.status(404).json({
+          success: false,
+          message: 'Role not found'
+        })
+      }
+
+      await this.permissionService.updateRolePermissions(parseInt(roleId), permissions)
+
+      this.logger.info('Role permissions updated', { roleId, permissions, updatedBy: req.user?.userId })
+
+      res.json({
+        success: true,
+        message: 'Role permissions updated successfully'
+      })
+
+    } catch (error) {
+      this.logger.error('Update role permissions failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Update role permissions (for PermissionService)
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async updateRolePermissions(req, res) {
+    try {
+      const { id } = req.params
+      const { permissions = [] } = req.body
+
+      // Check if role exists - gọi qua roleRepository
+      const role = await this.permissionService.roleRepository.findById(id)
+      if (!role) {
+        return res.status(404).json({
+          success: false,
+          message: 'Role not found'
+        })
+      }
+
+      await this.permissionService.roleRepository.updatePermissions(id, permissions)
+
+      this.logger.info('Role permissions updated via PermissionService', { 
+        roleId: id, 
+        permissions, 
+        updatedBy: req.user?.userId 
+      })
+
+      res.json({
+        success: true,
+        message: 'Role permissions updated successfully'
+      })
+
+    } catch (error) {
+      this.logger.error('Update role permissions failed', { error: error.message })
       res.status(500).json({
         success: false,
         message: 'Internal server error'

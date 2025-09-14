@@ -34,9 +34,20 @@ class RoleController {
 
       const { roles, pagination } = await this.roleRepository.findAll(params)
 
+      // Get permissions for each role
+      const rolesWithPermissions = await Promise.all(
+        roles.map(async (role) => {
+          const permissions = await this.roleRepository.getRolePermissions(role.id)
+          return {
+            ...role,
+            permissions: permissions.map(p => p.name)
+          }
+        })
+      )
+
       res.json({
         success: true,
-        data: roles,
+        data: rolesWithPermissions,
         meta: {
           total_item: pagination.total,
           total_page: pagination.totalPages,
@@ -118,7 +129,8 @@ class RoleController {
       }
 
       const roleData = {
-        name: name.trim()
+        name: name.trim(),
+        description: req.body.description || ''
       }
 
       const role = await this.roleRepository.create(roleData)
@@ -263,8 +275,6 @@ class RoleController {
       
       // Group permissions by feature
       const groupedPermissions = {}
-      const featureTranslations = {}
-      const actionTranslations = {}
 
       permissions.forEach(permission => {
         const [feature, action] = permission.name.split('.')
@@ -273,22 +283,12 @@ class RoleController {
           groupedPermissions[feature] = []
         }
         groupedPermissions[feature].push(action)
-
-        // Add translations if available
-        if (permission.feature_translation) {
-          featureTranslations[feature] = permission.feature_translation
-        }
-        if (permission.action_translation) {
-          actionTranslations[action] = permission.action_translation
-        }
       })
 
       res.json({
         success: true,
         data: {
-          permissions: groupedPermissions,
-          feature_translations: featureTranslations,
-          action_translations: actionTranslations
+          permissions: groupedPermissions
         }
       })
 
@@ -390,6 +390,87 @@ class RoleController {
 
     } catch (error) {
       this.logger.error('Get role users failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Update role
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async updateRole(req, res) {
+    try {
+      const { id, name, description } = req.body
+      
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Role ID is required'
+        })
+      }
+
+      const role = await this.roleRepository.findById(id)
+      if (!role) {
+        return res.status(404).json({
+          success: false,
+          message: 'Role not found'
+        })
+      }
+
+      const updatedRole = await this.roleRepository.update(id, { name, description })
+
+      res.json({
+        success: true,
+        data: updatedRole,
+        message: 'Role updated successfully'
+      })
+
+    } catch (error) {
+      this.logger.error('Update role failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Delete role
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async deleteRole(req, res) {
+    try {
+      const { id } = req.body
+      
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Role ID is required'
+        })
+      }
+
+      const role = await this.roleRepository.findById(id)
+      if (!role) {
+        return res.status(404).json({
+          success: false,
+          message: 'Role not found'
+        })
+      }
+
+      await this.roleRepository.delete(id)
+
+      res.json({
+        success: true,
+        message: 'Role deleted successfully'
+      })
+
+    } catch (error) {
+      this.logger.error('Delete role failed', { error: error.message })
       res.status(500).json({
         success: false,
         message: 'Internal server error'

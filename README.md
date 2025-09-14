@@ -20,11 +20,11 @@ yarn install
 cp .env.example .env
 # Chỉnh sửa .env với thông tin database
 
-# 3. Chạy migration
+# 3. Chạy migration (tạo bảng)
 yarn migrate
 
-# 4. Tạo super admin
-yarn create-super-admin
+# 4. Chạy seed (tạo dữ liệu mặc định)
+yarn seed
 
 # 5. Khởi động
 yarn dev

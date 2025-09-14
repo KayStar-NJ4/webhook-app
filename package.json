@@ -18,7 +18,8 @@
     "docker:prod": "docker-compose up --build -d",
     "setup": "node scripts/setup/database.js",
     "migrate": "node scripts/migrate.js",
-    "migrate:status": "node scripts/migrate.js status"
+    "migrate:status": "node scripts/migrate.js status",
+    "seed": "node scripts/seed.js"
   },
   "packageManager": "yarn@1.22.19",
   "keywords": [
