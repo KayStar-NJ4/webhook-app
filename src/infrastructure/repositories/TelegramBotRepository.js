@@ -77,7 +77,7 @@ class TelegramBotRepository {
    */
   async findAll(options = {}) {
     try {
-      const { page = 1, limit = 10, search = '', isActive = null } = options
+      const { page = 1, limit = 10, search = '', isActive = null, sortBy = 'created_at.desc' } = options
       const offset = (page - 1) * limit
       
       let whereClause = 'WHERE 1=1'
@@ -96,6 +96,18 @@ class TelegramBotRepository {
         params.push(isActive)
       }
       
+      // Handle sorting
+      let orderBy = 'ORDER BY created_at DESC'
+      if (sortBy) {
+        const [field, direction] = sortBy.split('.')
+        const validFields = ['name', 'created_at', 'is_active']
+        const validDirections = ['asc', 'desc']
+        
+        if (validFields.includes(field) && validDirections.includes(direction)) {
+          orderBy = `ORDER BY ${field} ${direction.toUpperCase()}`
+        }
+      }
+      
       const countQuery = `SELECT COUNT(*) as total FROM telegram_bots ${whereClause}`
       const countResult = await this.db.query(countQuery, params)
       const total = parseInt(countResult.rows[0].total)
@@ -104,7 +116,7 @@ class TelegramBotRepository {
         SELECT id, name, bot_token, webhook_url, api_url, is_active, created_at, updated_at
         FROM telegram_bots 
         ${whereClause}
-        ORDER BY created_at DESC
+        ${orderBy}
         LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
       `
       

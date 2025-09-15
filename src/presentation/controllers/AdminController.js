@@ -132,12 +132,13 @@ class AdminController {
    */
   async getTelegramBots(req, res) {
     try {
-      const { page = 1, limit = 10, search = '', isActive } = req.query
+      const { page = 1, limit = 10, search = '', isActive, sort_by = 'created_at.desc' } = req.query
       const result = await this.telegramBotRepository.findAll({ 
         page: parseInt(page), 
         limit: parseInt(limit), 
         search,
-        isActive: isActive ? isActive === 'true' : null
+        isActive: isActive ? isActive === 'true' : null,
+        sortBy: sort_by
       })
 
       res.json({
@@ -161,7 +162,7 @@ class AdminController {
    */
   async createTelegramBot(req, res) {
     try {
-      const { name, botToken, webhookUrl, apiUrl } = req.body
+      const { name, botToken, webhookUrl, apiUrl, isActive = true } = req.body
 
       if (!name || !botToken) {
         return res.status(400).json({
@@ -175,7 +176,7 @@ class AdminController {
         botToken,
         webhookUrl,
         apiUrl: apiUrl || 'https://api.telegram.org',
-        isActive: true,
+        isActive: isActive,
         createdBy: req.user.userId
       })
 
@@ -187,6 +188,130 @@ class AdminController {
 
     } catch (error) {
       this.logger.error('Create telegram bot failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Get telegram bot by ID
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async getTelegramBotById(req, res) {
+    try {
+      const { id } = req.params
+      const bot = await this.telegramBotRepository.findById(id)
+
+      if (!bot) {
+        return res.status(404).json({
+          success: false,
+          message: 'Telegram bot not found'
+        })
+      }
+
+      // Get mappings with Chatwoot accounts
+      const mappings = await this.telegramBotRepository.getMappings(id)
+
+      res.json({
+        success: true,
+        data: {
+          ...bot,
+          mappings
+        }
+      })
+
+    } catch (error) {
+      this.logger.error('Get telegram bot by ID failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Update telegram bot
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async updateTelegramBot(req, res) {
+    try {
+      const { id } = req.params
+      const { name, botToken, webhookUrl, apiUrl, isActive } = req.body
+
+      const bot = await this.telegramBotRepository.update(id, {
+        name,
+        botToken,
+        webhookUrl,
+        apiUrl,
+        isActive
+      })
+
+      res.json({
+        success: true,
+        message: 'Telegram bot updated successfully',
+        data: bot
+      })
+
+    } catch (error) {
+      this.logger.error('Update telegram bot failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Delete telegram bot
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async deleteTelegramBot(req, res) {
+    try {
+      const { id } = req.params
+      const deleted = await this.telegramBotRepository.delete(id)
+
+      if (!deleted) {
+        return res.status(404).json({
+          success: false,
+          message: 'Telegram bot not found'
+        })
+      }
+
+      res.json({
+        success: true,
+        message: 'Telegram bot deleted successfully'
+      })
+
+    } catch (error) {
+      this.logger.error('Delete telegram bot failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Get active telegram bots
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async getActiveTelegramBots(req, res) {
+    try {
+      const bots = await this.telegramBotRepository.findActive()
+
+      res.json({
+        success: true,
+        data: bots
+      })
+
+    } catch (error) {
+      this.logger.error('Get active telegram bots failed', { error: error.message })
       res.status(500).json({
         success: false,
         message: 'Internal server error'

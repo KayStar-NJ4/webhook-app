@@ -193,10 +193,30 @@ class AdminRoutes {
       this.permissionMiddleware.requirePermission('telegram', 'read'),
       (req, res) => this.adminController.getTelegramBots(req, res)
     )
+    this.router.get('/api/admin/telegram-bots/active', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('telegram', 'read'),
+      (req, res) => this.adminController.getActiveTelegramBots(req, res)
+    )
+    this.router.get('/api/admin/telegram-bots/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('telegram', 'read'),
+      (req, res) => this.adminController.getTelegramBotById(req, res)
+    )
     this.router.post('/api/admin/telegram-bots', 
       this.authMiddleware.verifyToken, 
       this.permissionMiddleware.requirePermission('telegram', 'create'),
       (req, res) => this.adminController.createTelegramBot(req, res)
+    )
+    this.router.put('/api/admin/telegram-bots/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('telegram', 'update'),
+      (req, res) => this.adminController.updateTelegramBot(req, res)
+    )
+    this.router.delete('/api/admin/telegram-bots/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('telegram', 'delete'),
+      (req, res) => this.adminController.deleteTelegramBot(req, res)
     )
     
     // Chatwoot account management API

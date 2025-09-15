@@ -1,156 +1,221 @@
 <template>
-  <FormModalComponent
-    :isVisible="isVisible"
-    :title="isEdit ? 'Edit Telegram Bot' : 'Create Telegram Bot'"
-    size="medium"
-    :loading="isSaving"
-    @close="$emit('close')"
-    @confirm="handleSave"
-  >
-    <div class="telegram-form">
-      <FormInputTextComponent
-        v-model="form.name"
-        label="Bot Name"
-        placeholder="Enter bot name"
-        :required="true"
-        :error="errors.name"
-      />
-
-      <FormInputTextComponent
-        v-model="form.bot_token"
-        label="Bot Token"
-        type="password"
-        placeholder="Enter bot token"
-        :required="true"
-        :error="errors.bot_token"
-        helpText="Get this from @BotFather on Telegram"
-      />
-
-      <FormInputTextComponent
-        v-model="form.api_url"
-        label="API URL"
-        placeholder="https://api.telegram.org"
-        :required="true"
-        :error="errors.api_url"
-        helpText="Telegram Bot API URL (usually https://api.telegram.org)"
-      />
-
-      <FormInputTextComponent
-        v-model="form.webhook_url"
-        label="Webhook URL"
-        placeholder="https://yourdomain.com/webhook/telegram"
-        :error="errors.webhook_url"
-        helpText="Optional: Set webhook URL for receiving updates"
-      />
-
-      <FormCheckBoxComponent
-        v-model="form.is_active"
-        label="Active"
-        helpText="Enable this bot for use"
-      />
+    <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+        <div class="modal-content" :class="{'overlay-wrapper' : saving }">
+            <div class="overlay" v-if="saving">
+                <i class="fas fa-3x fa-spinner fa-spin"></i>
+                <div class="text-bold pt-2">Đang xử lý...</div>
+            </div>
+            
+            <div class="modal-header bg-primary text-white">
+                <h4 class="modal-title mb-0">
+                    <i class="fas fa-robot mr-2"></i>
+                    {{ object_info && object_info.id ? 'Sửa Bot' : 'Thêm Bot mới' }}
+                </h4>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" @click="resetForm">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <form @submit.prevent="save">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <form-input-text-component
+                                    v-model="form.name"
+                                    label="Tên Bot"
+                                    placeholder="Nhập tên bot"
+                                    :required="true"
+                                />
+                            </div>
+                            <div class="col-md-6">
+                                <form-input-text-component
+                                    v-model="form.botToken"
+                                    type="password"
+                                    label="Bot Token"
+                                    placeholder="Nhập Bot Token"
+                                    :required="true"
+                                    :show-password-toggle="true"
+                                />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <form-input-text-component
+                                    v-model="form.webhookUrl"
+                                    type="url"
+                                    label="Webhook URL"
+                                    placeholder="https://yourdomain.com/webhook"
+                                    help-text="URL để nhận webhook từ Telegram"
+                                />
+                            </div>
+                            <div class="col-md-6">
+                                <form-input-text-component
+                                    v-model="form.apiUrl"
+                                    type="url"
+                                    label="API URL"
+                                    placeholder="https://api.telegram.org"
+                                    help-text="URL API của Telegram (mặc định: https://api.telegram.org)"
+                                />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mt-4">
+                                    <div class="form-check">
+                                        <input 
+                                            type="checkbox" 
+                                            class="form-check-input" 
+                                            id="isActive"
+                                            v-model="form.isActive"
+                                        >
+                                        <label class="form-check-label" for="isActive">
+                                            Kích hoạt bot
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" @click="resetForm">Hủy</button>
+                <button type="button" class="btn btn-primary" @click="save" :disabled="saving">
+                    <span v-if="saving" class="spinner-border spinner-border-sm mr-2"></span>
+                    {{ saving ? 'Đang lưu...' : (object_info && object_info.id ? 'Cập nhật' : 'Thêm') }}
+                </button>
+            </div>
+        </div>
     </div>
-
-    <template #footer>
-      <FormButtonComponent
-        @click="$emit('close')"
-        variant="secondary"
-        text="Cancel"
-      />
-      <FormButtonComponent
-        @click="handleSave"
-        variant="primary"
-        :loading="isSaving"
-        :text="isSaving ? 'Saving...' : 'Save'"
-      />
-    </template>
-  </FormModalComponent>
 </template>
 
 <script>
-// Form components will be loaded dynamically
-
 export default {
-  name: 'TelegramBotFormComponent',
-  components: {
-    FormModalComponent: window.FormModalComponent,
-    FormInputTextComponent: window.FormInputTextComponent,
-    FormCheckBoxComponent: window.FormCheckBoxComponent,
-    FormButtonComponent: window.FormButtonComponent
-  },
-  props: {
-    isVisible: {
-      type: Boolean,
-      default: false
+    name: 'TelegramBotFormComponent',
+    components: {
+        FormInputTextComponent: window.FormInputTextComponent
     },
-    bot: {
-      type: Object,
-      default: null
-    },
-    isEdit: {
-      type: Boolean,
-      default: false
-    },
-    isSaving: {
-      type: Boolean,
-      default: false
-    },
-    errors: {
-      type: Object,
-      default: () => ({})
-    }
-  },
-  emits: ['close', 'save'],
-  data() {
-    return {
-      form: {
-        name: '',
-        bot_token: '',
-        api_url: 'https://api.telegram.org',
-        webhook_url: '',
-        is_active: true
-      }
-    }
-  },
-  watch: {
-    bot: {
-      handler(newBot) {
-        if (newBot) {
-          this.form = {
-            name: newBot.name || '',
-            bot_token: newBot.bot_token || '',
-            api_url: newBot.api_url || 'https://api.telegram.org',
-            webhook_url: newBot.webhook_url || '',
-            is_active: newBot.is_active !== false
-          }
-        } else {
-          this.resetForm()
+    props: {
+        object_info: {
+            type: Object,
+            default: () => ({})
         }
-      },
-      immediate: true
-    }
-  },
-  methods: {
-    resetForm() {
-      this.form = {
-        name: '',
-        bot_token: '',
-        api_url: 'https://api.telegram.org',
-        webhook_url: '',
-        is_active: true
-      }
     },
+    data() {
+        return {
+            saving: false,
+            form: {
+                name: '',
+                botToken: '',
+                webhookUrl: '',
+                apiUrl: 'https://api.telegram.org',
+                isActive: true
+            }
+        }
+    },
+    mounted() {
+        this.setupModalEvents();
+        this.loadFormData();
+    },
+    watch: {
+        object_info: {
+            handler() {
+                this.loadFormData();
+            },
+            deep: true,
+            immediate: true
+        }
+    },
+    methods: {
+        loadFormData() {
+            if (this.object_info && this.object_info.id) {
+                this.form = {
+                    name: this.object_info.name || '',
+                    botToken: this.object_info.bot_token || '',
+                    webhookUrl: this.object_info.webhook_url || '',
+                    apiUrl: this.object_info.api_url || 'https://api.telegram.org',
+                    isActive: this.object_info.is_active !== undefined ? this.object_info.is_active : true
+                };
+            } else {
+                this.clearFormData();
+            }
+        },
+        async save() {
+            // Validate form
+            if (!this.form.name || !this.form.botToken) {
+                window.ToastService.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+                return;
+            }
 
-    handleSave() {
-      this.$emit('save', { ...this.form })
+            this.saving = true;
+            try {
+                let response;
+                if (this.object_info && this.object_info.id) {
+                    response = await window.TelegramService.update(this.object_info.id, this.form);
+                } else {
+                    response = await window.TelegramService.create(this.form);
+                }
+                
+                if (response.data.success) {
+                    window.ToastService.success(this.object_info && this.object_info.id ? 'Cập nhật bot thành công' : 'Tạo bot thành công');
+                    this.$emit('create:success');
+                    this.resetForm();
+                    this.close();
+                } else {
+                    window.ToastService.error('Có lỗi xảy ra khi lưu bot');
+                }
+            } catch (error) {
+                if (error.response?.status === 401) {
+                    window.ToastService.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                } else {
+                    window.ToastService.handleError(error, 'Có lỗi xảy ra khi lưu bot');
+                }
+            } finally {
+                this.saving = false;
+            }
+        },
+        close() {
+            this.resetForm();
+            $('#form-modal').modal('hide');
+            this.$emit('close');
+        },
+        resetForm() {
+            this.clearFormData();
+        },
+        clearFormData() {
+            this.form = {
+                name: '',
+                botToken: '',
+                webhookUrl: '',
+                apiUrl: 'https://api.telegram.org',
+                isActive: true
+            };
+        },
+        setupModalEvents() {
+            const modal = document.getElementById('form-modal');
+            if (modal) {
+                modal.addEventListener('hidden.bs.modal', () => {
+                    this.resetForm();
+                });
+                modal.addEventListener('show.bs.modal', () => {
+                    this.resetForm();
+                });
+            }
+        }
     }
-  }
 }
 </script>
 
 <style scoped>
-.telegram-form {
+.overlay-wrapper {
+  position: relative;
+}
+.overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 </style>

@@ -11,101 +11,149 @@
           <div class="card">
             <div class="card-header d-flex align-items-center">
               <h3 class="card-title flex-grow-1">Quản lý Telegram Bots</h3>
-              <div class="form-group">
-                <a v-if="hasPermission('telegram', 'create')"
-                   class="btn btn-success float-right pt-md-1 pb-md-1"
-                   href="javascript:void(0);"
-                   data-toggle="modal"
-                   data-target="#form-modal"
-                   @click="selected_id = 0; selected_item = {};"
-                ><i class="fa fa-plus"></i> Thêm mới</a>
-              </div>
+              <button 
+                v-if="hasPermission('telegram', 'create')"
+                class="btn btn-success float-right"
+                @click="handleAdd"
+                data-toggle="modal"
+                data-target="#form-modal"
+              >
+                <i class="fa fa-plus"></i> Thêm mới
+              </button>
             </div>
 
             <div class="card-body">
-              <div class="row col-12 overflow-auto px-0 min-h-35">
-                <div class="w-100">
-                  <table class="table table-bordered table-hover">
-                    <thead class="table-header">
-                    <tr>
-                      <th></th>
-                      <th class="text-center text-nowrap">Tên Bot</th>
-                      <th class="text-center text-nowrap">Bot Token</th>
-                      <th class="text-center text-nowrap">Webhook URL</th>
-                      <th class="text-center text-nowrap">Username</th>
-                      <th class="text-center text-nowrap">Trạng thái</th>
-                      <th class="text-center text-nowrap">Ngày tạo</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr v-for="item in items" :key="item.id">
-                      <td class="text-right align-middle pr-2 text-nowrap pl-2" style="width: 66px">
-                        <a v-if="hasPermission('telegram', 'update')" 
-                           href="javascript:void(0);" 
-                           data-toggle="modal" 
-                           data-target="#form-modal"
-                           @click="selected_id = item.id; selected_item = {...item}">
-                          <i class="fa text-primary fa-pencil-alt"></i>
-                        </a>
-                        <a v-else-if="hasPermission('telegram', 'read')" 
-                           href="javascript:void(0);" 
-                           data-toggle="modal" 
-                           data-target="#form-modal"
-                           @click="selected_id = item.id; selected_item = {...item}">
-                          <i class="fa text-primary fa-eye"></i>
-                        </a>
-                      </td>
-                      <td class="align-middle">{{ item.name || '' }}</td>
-                      <td class="align-middle">{{ item.bot_token ? '***' + item.bot_token.slice(-4) : '' }}</td>
-                      <td class="align-middle">{{ item.webhook_url || '' }}</td>
-                      <td class="align-middle">{{ item.username || '' }}</td>
-                      <td class="align-middle text-center">
-                        <span :class="item.is_active ? 'badge badge-success' : 'badge badge-danger'">
-                          {{ item.is_active ? 'Hoạt động' : 'Không hoạt động' }}
-                        </span>
-                      </td>
-                      <td class="align-middle">{{ formatDate(item.created_at) }}</td>
-                    </tr>
-                    </tbody>
-                  </table>
+              <!-- Search and filters -->
+              <div class="row form border-bottom mb-3">
+                <div class="col-md-4 col-sm-6">
+                  <div class="form-group">
+                    <label>Tìm kiếm</label>
+                    <input 
+                      type="text" 
+                      class="form-control" 
+                      v-model="params.search" 
+                      placeholder="Tìm kiếm theo tên bot..."
+                    />
+                  </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                  <div class="form-group">
+                    <label>Trạng thái</label>
+                    <select class="form-control" v-model="params.is_active">
+                      <option value="">Tất cả</option>
+                      <option value="true">Hoạt động</option>
+                      <option value="false">Không hoạt động</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div class="float-left mt-2" v-if="this.meta.total_item > 0">
-                <div class="form-group d-inline-block mr-3">
-                  <label>Sắp xếp theo:</label>
-                  <select v-model="params.sort_by" class="form-control form-control-sm d-inline-block w-auto ml-2">
-                    <option value="created_at.desc">Ngày tạo (mới nhất)</option>
-                    <option value="created_at.asc">Ngày tạo (cũ nhất)</option>
-                    <option value="name.asc">Tên Bot (A-Z)</option>
-                    <option value="name.desc">Tên Bot (Z-A)</option>
-                  </select>
-                </div>
-                <div class="form-group d-inline-block">
-                  <label>Hiển thị:</label>
-                  <select v-model="params.limit" class="form-control form-control-sm d-inline-block w-auto ml-2">
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                  </select>
-                </div>
+              <!-- Table -->
+              <div class="row col-12 overflow-auto">
+                <table class="table table-bordered table-hover">
+                  <thead class="table-header">
+                  <tr>
+                    <th style="width: 120px;"></th>
+                    <th class="text-center text-nowrap">Tên Bot</th>
+                    <th class="text-center text-nowrap">Bot Token</th>
+                    <th class="text-center text-nowrap">Webhook URL</th>
+                    <th class="text-center text-nowrap">API URL</th>
+                    <th class="text-center text-nowrap">Trạng thái</th>
+                    <th class="text-center text-nowrap">Ngày tạo</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <tr v-for="item in items" :key="item.id">
+                    <td class="text-center">
+                      <div class="btn-group" role="group">
+                        <button 
+                          v-if="hasPermission('telegram', 'update')"
+                          class="btn btn-sm btn-warning"
+                          @click="handleEdit(item)"
+                          data-toggle="modal"
+                          data-target="#form-modal"
+                          title="Sửa"
+                        >
+                          <i class="fa fa-pencil-alt"></i>
+                        </button>
+                        <button 
+                          v-if="hasPermission('telegram', 'delete')"
+                          class="btn btn-sm btn-danger"
+                          @click="showDeleteConfirm(item)"
+                          title="Xóa"
+                        >
+                          <i class="fa fa-trash-alt"></i>
+                        </button>
+                      </div>
+                    </td>
+                    <td class="align-middle">{{ item.name || '' }}</td>
+                    <td class="align-middle">{{ item.bot_token ? '***' + item.bot_token.slice(-4) : '' }}</td>
+                    <td class="align-middle">{{ item.webhook_url || '' }}</td>
+                    <td class="align-middle">{{ item.api_url || '' }}</td>
+                    <td class="align-middle text-center">
+                      <span :class="item.is_active ? 'badge badge-success' : 'badge badge-danger'">
+                        {{ item.is_active ? 'Hoạt động' : 'Không hoạt động' }}
+                      </span>
+                    </td>
+                    <td class="align-middle">{{ formatDate(item.created_at) }}</td>
+                  </tr>
+                  </tbody>
+                </table>
               </div>
 
-              <div class="float-right mt-3">
-                <nav aria-label="Page navigation">
-                  <ul class="pagination">
-                    <li class="page-item" :class="{ disabled: params.page <= 1 }">
-                      <a class="page-link" href="#" @click.prevent="doPaginate(params.page - 1)">«</a>
-                    </li>
-                    <li v-for="page in visiblePages" :key="page" class="page-item" :class="{ active: page === params.page }">
-                      <a class="page-link" href="#" @click.prevent="doPaginate(page)">{{ page }}</a>
-                    </li>
-                    <li class="page-item" :class="{ disabled: params.page >= meta.total_page }">
-                      <a class="page-link" href="#" @click.prevent="doPaginate(params.page + 1)">»</a>
-                    </li>
-                  </ul>
-                </nav>
+              <!-- Pagination and sorting -->
+              <div class="row mt-3">
+                <div class="col-md-6">
+                  <div v-if="meta.total_item > 0" class="d-flex align-items-center">
+                    <div class="mr-3">
+                      <label class="mr-2">Số bản ghi:</label>
+                      <select 
+                        v-model="params.limit" 
+                        @change="updateLimit($event.target.value)"
+                        class="form-control form-control-sm d-inline-block" 
+                        style="width: auto;"
+                      >
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                      </select>
+                    </div>
+                    <div class="mr-3">
+                      <label class="mr-2">Sắp xếp:</label>
+                      <select 
+                        v-model="params.sort_by" 
+                        @change="updateSortBy($event.target.value)"
+                        class="form-control form-control-sm d-inline-block" 
+                        style="width: auto;"
+                      >
+                        <option value="created_at.desc">Mới nhất</option>
+                        <option value="created_at.asc">Cũ nhất</option>
+                        <option value="name.asc">Tên A-Z</option>
+                        <option value="name.desc">Tên Z-A</option>
+                      </select>
+                    </div>
+                    <div>
+                      <span class="text-muted">
+                        Hiển thị {{ meta.total_item }} bản ghi
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="d-flex justify-content-end">
+                    <div class="text-right">
+                      <div class="pagination-wrapper" style="max-width: 300px; overflow: hidden;">
+                        <paginate-component
+                          :totalPages="meta.total_page"
+                          :currentPage="params.page"
+                          @page-change="doPaginate"
+                          class="pagination-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -113,13 +161,14 @@
       </div>
     </div>
 
+    <!-- Modal -->
     <div class="modal fade" id="form-modal" data-backdrop="static">
-      <TelegramBotFormComponent
+      <telegram-bot-form-component
           :object_info="selected_item"
-          :permission="permission"
-          @create:success="this.debouncedFetchData()"
+          @create:success="fetchData"
       />
     </div>
+
   </div>
 </template>
 
@@ -127,7 +176,7 @@
 export default {
   name: 'TelegramBotsListComponent',
   components: {
-    TelegramBotFormComponent: window.TelegramBotFormComponent
+    PaginateComponent: window.PaginateComponent
   },
   props: {
     userPermissions: {
@@ -137,8 +186,6 @@ export default {
   },
   data() {
     return {
-      controller_key: 'telegram_bot',
-      service_factory_key: 'telegram_bot',
       is_loading: false,
       selected_id: 0,
       selected_item: {},
@@ -146,25 +193,9 @@ export default {
         sort_by: 'created_at.desc',
         limit: '10',
         page: 1,
+        search: '',
+        is_active: ''
       },
-      range_sorts: [
-        {
-          id: 'created_at.asc',
-          text: 'Ngày tạo (cũ nhất)'
-        },
-        {
-          id: 'created_at.desc',
-          text: 'Ngày tạo (mới nhất)'
-        },
-        {
-          id: 'name.asc',
-          text: 'Tên Bot (A-Z)'
-        },
-        {
-          id: 'name.desc',
-          text: 'Tên Bot (Z-A)'
-        },
-      ],
       items: [],
       meta: {
         total_item: 0,
@@ -177,30 +208,6 @@ export default {
     this.debouncedFetchData();
   },
   computed: {
-    visiblePages() {
-      const current = this.params.page;
-      const total = this.meta.total_page;
-      const pages = [];
-      
-      // Show max 5 pages
-      let start = Math.max(1, current - 2);
-      let end = Math.min(total, current + 2);
-      
-      // Adjust if we're near the beginning or end
-      if (end - start < 4) {
-        if (start === 1) {
-          end = Math.min(total, start + 4);
-        } else {
-          start = Math.max(1, end - 4);
-        }
-      }
-      
-      for (let i = start; i <= end; i++) {
-        pages.push(i);
-      }
-      
-      return pages;
-    }
   },
   methods: {
     debounce(func, wait) {
@@ -214,25 +221,65 @@ export default {
         timeout = setTimeout(later, wait);
       };
     },
-    submitSearch() {
-      this.params.page = 1;
-      this.debouncedFetchData();
-    },
     doPaginate(pageNum) {
       if (pageNum >= 1 && pageNum <= this.meta.total_page) {
         this.params.page = pageNum;
-        this.debouncedFetchData();
+        this.fetchData();
       }
     },
-    fetchData() {
-      let _context = this;
-      _context.is_loading = true;
+    updateLimit(value) {
+      this.params.limit = value;
+      this.params.page = 1;
+      this.debouncedFetchData();
+    },
+    updateSortBy(value) {
+      this.params.sort_by = value;
+      this.params.page = 1;
+      this.debouncedFetchData();
+    },
+    async fetchData() {
+      this.is_loading = true;
 
-      // TODO: Implement actual API call
-      _context.items = [];
-      _context.meta.total_page = 0;
-      _context.meta.total_item = 0;
-      _context.is_loading = false;
+      try {
+        const apiParams = Object.assign({}, this.params);
+        
+        // Clean up empty search
+        if (!apiParams.search || apiParams.search.trim() === '') {
+          delete apiParams.search;
+        }
+        
+        // Clean up empty is_active and convert to boolean
+        if (apiParams.is_active === '') {
+          delete apiParams.is_active;
+        } else if (apiParams.is_active !== undefined) {
+          apiParams.isActive = apiParams.is_active === 'true';
+          delete apiParams.is_active;
+        }
+        
+        const response = await window.TelegramService.getList(apiParams);
+        
+        if (response.data.success) {
+          this.items = response.data.data.bots || [];
+          this.meta.total_page = response.data.data.pagination?.pages || 0;
+          this.meta.total_item = response.data.data.pagination?.total || 0;
+        } else {
+          this.items = [];
+          this.meta.total_page = 0;
+          this.meta.total_item = 0;
+        }
+      } catch (error) {
+        this.items = [];
+        this.meta.total_page = 0;
+        this.meta.total_item = 0;
+        
+        if (error.response?.status === 401) {
+          window.ToastService.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        } else {
+          window.ToastService.handleError(error, 'Có lỗi xảy ra khi tải danh sách Telegram bots');
+        }
+      } finally {
+        this.is_loading = false;
+      }
     },
     hasPermission(resource, action) {
       if (!this.userPermissions[resource]) return false
@@ -241,15 +288,170 @@ export default {
     formatDate(date) {
       if (!date) return '';
       return new Date(date).toLocaleDateString('vi-VN');
+    },
+    handleAdd() {
+      this.selected_id = 0;
+      this.selected_item = {};
+    },
+    handleEdit(item) {
+      this.selected_id = item.id;
+      this.selected_item = {...item};
+    },
+    showDeleteConfirm(item) {
+      this.showConfirmDialog(
+        'Xác nhận xóa',
+        `Bạn có chắc chắn muốn xóa bot "${item.name}"?`,
+        'Xóa',
+        'Hủy'
+      ).then(confirmed => {
+        if (confirmed) {
+          this.performDelete(item);
+        }
+      });
+    },
+    async performDelete(item) {
+      try {
+        this.is_loading = true;
+        const response = await window.TelegramService.deleteBot(item.id);
+        
+        if (response.data.success) {
+          window.ToastService.success(`Đã xóa bot "${item.name}" thành công`);
+          this.fetchData();
+        } else {
+          window.ToastService.error(`Không thể xóa bot "${item.name}"`);
+        }
+      } catch (error) {
+        window.ToastService.handleError(error, `Có lỗi xảy ra khi xóa bot "${item.name}"`);
+      } finally {
+        this.is_loading = false;
+      }
+    },
+    showConfirmDialog(title, message, confirmText = 'Xác nhận', cancelText = 'Hủy') {
+      return new Promise((resolve) => {
+        // Tạo unique ID để tránh conflict
+        const modalId = `confirm-${Date.now()}`;
+        
+        // Tạo modal HTML đơn giản
+        const modalHTML = `
+          <div id="${modalId}" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          ">
+            <div style="
+              background: white;
+              border-radius: 8px;
+              padding: 24px;
+              max-width: 400px;
+              width: 90%;
+              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            ">
+              <h4 style="margin: 0 0 16px 0; color: #333; font-size: 18px;">${title}</h4>
+              <p style="margin: 0 0 24px 0; color: #666; line-height: 1.5;">${message}</p>
+              <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button id="cancel-${modalId}" style="
+                  padding: 8px 16px;
+                  border: 1px solid #ddd;
+                  background: white;
+                  color: #666;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-size: 14px;
+                ">${cancelText}</button>
+                <button id="confirm-${modalId}" style="
+                  padding: 8px 16px;
+                  border: none;
+                  background: #dc3545;
+                  color: white;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-size: 14px;
+                ">${confirmText}</button>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        // Thêm modal vào DOM
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Lấy elements
+        const modal = document.getElementById(modalId);
+        const cancelBtn = document.getElementById(`cancel-${modalId}`);
+        const confirmBtn = document.getElementById(`confirm-${modalId}`);
+        
+        // Cleanup function
+        const cleanup = () => {
+          if (modal && modal.parentNode) {
+            modal.parentNode.removeChild(modal);
+          }
+        };
+        
+        // Event handlers
+        const handleCancel = () => {
+          cleanup();
+          resolve(false);
+        };
+        
+        const handleConfirm = () => {
+          cleanup();
+          resolve(true);
+        };
+        
+        // Gắn event listeners
+        cancelBtn.addEventListener('click', handleCancel);
+        confirmBtn.addEventListener('click', handleConfirm);
+        
+        // Click outside để đóng
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            handleCancel();
+          }
+        });
+        
+        // ESC để đóng
+        const handleEsc = (e) => {
+          if (e.key === 'Escape') {
+            handleCancel();
+            document.removeEventListener('keydown', handleEsc);
+          }
+        };
+        document.addEventListener('keydown', handleEsc);
+      });
     }
   },
   watch: {
-    'params.limit': function (newVal, oldVal) {
-      this.submitSearch();
+    'params.limit': function(newLimit, oldLimit) {
+      if (newLimit !== oldLimit) {
+        this.params.page = 1;
+        this.debouncedFetchData();
+      }
     },
-    'params.sort_by': function (newVal, oldVal) {
-      this.submitSearch();
+    'params.sort_by': function(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.params.page = 1;
+        this.debouncedFetchData();
+      }
     },
+    'params.is_active': function(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.params.page = 1;
+        this.debouncedFetchData();
+      }
+    },
+    'params.search': function(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.params.page = 1;
+        this.debouncedFetchData();
+      }
+    }
   }
 }
 </script>

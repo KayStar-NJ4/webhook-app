@@ -1,59 +1,45 @@
+/**
+ * Telegram Service - Frontend service layer
+ * Handles Telegram bot API calls
+ */
 class TelegramService extends BaseService {
   constructor() {
     super()
     this.endpoint = '/telegram-bots'
   }
 
-  // Lấy danh sách bots
+  // Get list of telegram bots
   getList(params = {}) {
     return this.get(this.endpoint, params)
   }
 
-  // Lấy chi tiết bot
-  getDetail(id, params = {}) {
-    return this.get(`${this.endpoint}/${id}`, params)
+  // Get telegram bot by ID
+  getById(id) {
+    return this.get(`${this.endpoint}/${id}`)
   }
 
-  // Tạo bot mới
+  // Create new telegram bot
   create(data) {
     return this.post(this.endpoint, data)
   }
 
-  // Cập nhật bot
+  // Update telegram bot
   update(id, data) {
     return this.put(`${this.endpoint}/${id}`, data)
   }
 
-  // Xóa bot
-  delete(id) {
+  // Delete telegram bot
+  deleteBot(id) {
     return this.delete(`${this.endpoint}/${id}`)
   }
 
-  // Test kết nối bot
-  testConnection(id) {
-    return this.get(`/configurations/test/telegram/${id}`)
-  }
-
-  // Quản lý webhook
-  getWebhookInfo(id) {
-    return this.get(`${this.endpoint}/${id}/webhook`)
-  }
-
-  setWebhook(id, data) {
-    return this.post(`${this.endpoint}/${id}/webhook`, data)
-  }
-
-  deleteWebhook(id) {
-    return this.delete(`${this.endpoint}/${id}/webhook`)
-  }
-
-  // Cập nhật trạng thái bot
-  updateStatus(id, isActive) {
-    return this.patch(`${this.endpoint}/${id}/status`, { is_active: isActive })
+  // Get active telegram bots
+  getActive() {
+    return this.get(`${this.endpoint}/active`)
   }
 }
 
-// Export to global window object
+// Initialize service
 if (!window.TelegramService) {
-    window.TelegramService = new TelegramService();
+  window.TelegramService = new TelegramService()
 }
