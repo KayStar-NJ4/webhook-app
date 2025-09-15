@@ -77,7 +77,7 @@ class DifyAppRepository {
    */
   async findAll(options = {}) {
     try {
-      const { page = 1, limit = 10, search = '', isActive = null } = options
+      const { page = 1, limit = 10, search = '', isActive = null, sortBy = 'created_at.desc' } = options
       const offset = (page - 1) * limit
       
       let whereClause = 'WHERE 1=1'
@@ -96,6 +96,18 @@ class DifyAppRepository {
         params.push(isActive)
       }
       
+      // Handle sorting
+      let orderBy = 'ORDER BY created_at DESC'
+      if (sortBy) {
+        const [field, direction] = sortBy.split('.')
+        const validFields = ['name', 'created_at', 'is_active']
+        const validDirections = ['asc', 'desc']
+        
+        if (validFields.includes(field) && validDirections.includes(direction)) {
+          orderBy = `ORDER BY ${field} ${direction.toUpperCase()}`
+        }
+      }
+      
       const countQuery = `SELECT COUNT(*) as total FROM dify_apps ${whereClause}`
       const countResult = await this.db.query(countQuery, params)
       const total = parseInt(countResult.rows[0].total)
@@ -104,7 +116,7 @@ class DifyAppRepository {
         SELECT id, name, api_url, api_key, app_id, timeout, is_active, created_at, updated_at
         FROM dify_apps 
         ${whereClause}
-        ORDER BY created_at DESC
+        ${orderBy}
         LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
       `
       

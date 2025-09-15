@@ -227,10 +227,40 @@ class AdminRoutes {
       this.permissionMiddleware.requirePermission('dify', 'read'),
       (req, res) => this.adminController.getDifyApps(req, res)
     )
+    this.router.get('/api/admin/dify-apps/active', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('dify', 'read'),
+      (req, res) => this.adminController.getActiveDifyApps(req, res)
+    )
+    this.router.get('/api/admin/dify-apps/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('dify', 'read'),
+      (req, res) => this.adminController.getDifyAppById(req, res)
+    )
     this.router.post('/api/admin/dify-apps', 
       this.authMiddleware.verifyToken, 
       this.permissionMiddleware.requirePermission('dify', 'create'),
       (req, res) => this.adminController.createDifyApp(req, res)
+    )
+    this.router.put('/api/admin/dify-apps/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('dify', 'update'),
+      (req, res) => this.adminController.updateDifyApp(req, res)
+    )
+    this.router.delete('/api/admin/dify-apps/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('dify', 'delete'),
+      (req, res) => this.adminController.deleteDifyApp(req, res)
+    )
+    this.router.post('/api/admin/dify-apps/mappings', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('dify', 'create'),
+      (req, res) => this.adminController.createMapping(req, res)
+    )
+    this.router.delete('/api/admin/dify-apps/mappings/:mappingId', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('dify', 'delete'),
+      (req, res) => this.adminController.deleteMapping(req, res)
     )
 
     // Permission management API routes

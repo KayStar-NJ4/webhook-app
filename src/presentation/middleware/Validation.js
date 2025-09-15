@@ -139,8 +139,39 @@ class Validation {
       platform: Joi.string().valid('telegram', 'chatwoot', 'dify').optional(),
       limit: Joi.number().integer().min(1).max(100).default(50),
       offset: Joi.number().integer().min(0).default(0)
+    }),
+
+    difyApp: Joi.object({
+      name: Joi.string().min(1).max(100).required(),
+      apiUrl: Joi.string().uri().required(),
+      apiKey: Joi.string().min(1).max(500).required(),
+      appId: Joi.string().min(1).max(100).required(),
+      timeout: Joi.number().integer().min(1000).max(300000).default(30000),
+      isActive: Joi.boolean().default(true)
+    }),
+
+    difyAppUpdate: Joi.object({
+      name: Joi.string().min(1).max(100).optional(),
+      apiUrl: Joi.string().uri().optional(),
+      apiKey: Joi.string().min(1).max(500).optional(),
+      appId: Joi.string().min(1).max(100).optional(),
+      timeout: Joi.number().integer().min(1000).max(300000).optional(),
+      isActive: Joi.boolean().optional()
+    }),
+
+    difyMapping: Joi.object({
+      difyAppId: Joi.number().integer().positive().required(),
+      chatwootAccountId: Joi.number().integer().positive().required(),
+      isActive: Joi.boolean().default(true)
     })
   }
+
+  /**
+   * Validation middleware methods for Dify
+   */
+  validateDifyApp = this.validate(Validation.schemas.difyApp, 'body')
+  validateDifyAppUpdate = this.validate(Validation.schemas.difyAppUpdate, 'body')
+  validateDifyMapping = this.validate(Validation.schemas.difyMapping, 'body')
 }
 
 module.exports = Validation

@@ -1,3 +1,4 @@
+
 class DifyService extends BaseService {
   constructor() {
     super()
@@ -25,14 +26,10 @@ class DifyService extends BaseService {
   }
 
   // Xóa app
-  delete(id) {
+  deleteApp(id) {
     return this.delete(`${this.endpoint}/${id}`)
   }
 
-  // Test kết nối app
-  testConnection(id) {
-    return this.get(`/configurations/test/dify/${id}`)
-  }
 
   // Cập nhật trạng thái app
   updateStatus(id, isActive) {

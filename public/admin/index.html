@@ -244,9 +244,9 @@
         let SidebarComponent, HeaderComponent, AdminLayoutComponent, ListComponent, PageComponent;
         let DashboardPageComponent, UsersPageComponent, UserListComponent, UserFormComponent, UserPasswordFormComponent, UserPermissionsComponent, UserRolesComponent, SystemConfigurationComponent, LogsPageComponent;
         let RolePageComponent, RoleListComponent, RoleFormComponent, RolePermissionsComponent;
-        let ChatwootAccountListComponent, ChatwootAccountFormComponent, ChatwootAccountsPageComponent, DifyAppsListComponent, TelegramBotsListComponent;
+        let ChatwootAccountListComponent, ChatwootAccountFormComponent, ChatwootAccountsPageComponent, DifyAppsListComponent, DifyAppFormComponent, DifyAppsPageComponent, TelegramBotsListComponent;
         let FormListingSortComponent, FormTableFiltersComponent, FormCheckBoxComponent, PaginateComponent, ActionButtonsComponent;
-        let FormInputTextComponent, FormImageComponent, FormSelectComponent, FormInputDateComponent, FormInputTextAreaComponent, ConfirmDialogComponent;
+        let FormInputTextComponent, FormImageComponent, FormSelectComponent, FormInputDateComponent, FormInputTextAreaComponent;
         
         async function loadComponents() {
             
@@ -325,6 +325,12 @@
             DifyAppsListComponent = await loadVueComponent('/admin/src/modules/dify/DifyAppsListComponent.vue');
             window.DifyAppsListComponent = DifyAppsListComponent;
             
+            DifyAppFormComponent = await loadVueComponent('/admin/src/modules/dify/DifyAppFormComponent.vue');
+            window.DifyAppFormComponent = DifyAppFormComponent;
+            
+            DifyAppsPageComponent = await loadVueComponent('/admin/src/modules/dify/DifyAppsPageComponent.vue');
+            window.DifyAppsPageComponent = DifyAppsPageComponent;
+            
             TelegramBotsListComponent = await loadVueComponent('/admin/src/modules/telegram/TelegramBotsListComponent.vue');
             window.TelegramBotsListComponent = TelegramBotsListComponent;
             
@@ -360,8 +366,6 @@
             FormInputTextAreaComponent = await loadVueComponent('/admin/src/components/shared/FormInputTextAreaComponent.vue');
             window.FormInputTextAreaComponent = FormInputTextAreaComponent;
             
-            ConfirmDialogComponent = await loadVueComponent('/admin/src/components/shared/ConfirmDialogComponent.vue');
-            window.ConfirmDialogComponent = ConfirmDialogComponent;
         }
 
 
@@ -422,7 +426,7 @@
                 path: '/admin/dify-apps',
                 component: window.AdminLayoutComponent,
                 children: [
-                    { path: '', component: window.DifyAppsListComponent }
+                    { path: '', component: window.DifyAppsPageComponent }
                 ]
             },
             {
@@ -683,6 +687,8 @@
             if (window.ChatwootAccountFormComponent) app.component('ChatwootAccountFormComponent', window.ChatwootAccountFormComponent);
             if (window.ChatwootAccountsPageComponent) app.component('ChatwootAccountsPageComponent', window.ChatwootAccountsPageComponent);
             if (window.DifyAppsListComponent) app.component('DifyAppsListComponent', window.DifyAppsListComponent);
+            if (window.DifyAppFormComponent) app.component('DifyAppFormComponent', window.DifyAppFormComponent);
+            if (window.DifyAppsPageComponent) app.component('DifyAppsPageComponent', window.DifyAppsPageComponent);
             if (window.TelegramBotsListComponent) app.component('TelegramBotsListComponent', window.TelegramBotsListComponent);
             if (window.FormListingSortComponent) app.component('FormListingSortComponent', window.FormListingSortComponent);
             if (window.FormTableFiltersComponent) app.component('FormTableFiltersComponent', window.FormTableFiltersComponent);
@@ -694,7 +700,6 @@
             if (window.FormSelectComponent) app.component('FormSelectComponent', window.FormSelectComponent);
             if (window.FormInputDateComponent) app.component('FormInputDateComponent', window.FormInputDateComponent);
             if (window.FormInputTextAreaComponent) app.component('FormInputTextAreaComponent', window.FormInputTextAreaComponent);
-            if (window.ConfirmDialogComponent) app.component('ConfirmDialogComponent', window.ConfirmDialogComponent);
         }
 
         app.use(router);
