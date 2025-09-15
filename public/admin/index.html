@@ -244,9 +244,9 @@
         let SidebarComponent, HeaderComponent, AdminLayoutComponent, ListComponent, PageComponent;
         let DashboardPageComponent, UsersPageComponent, UserListComponent, UserFormComponent, UserPasswordFormComponent, UserPermissionsComponent, UserRolesComponent, SystemConfigurationComponent, LogsPageComponent;
         let RolePageComponent, RoleListComponent, RoleFormComponent, RolePermissionsComponent;
-        let ChatwootAccountsListComponent, DifyAppsListComponent, TelegramBotsListComponent;
+        let ChatwootAccountListComponent, ChatwootAccountFormComponent, ChatwootAccountsPageComponent, DifyAppsListComponent, TelegramBotsListComponent;
         let FormListingSortComponent, FormTableFiltersComponent, FormCheckBoxComponent, PaginateComponent, ActionButtonsComponent;
-        let FormInputTextComponent, FormImageComponent, FormSelectComponent, FormInputDateComponent, FormInputTextAreaComponent;
+        let FormInputTextComponent, FormImageComponent, FormSelectComponent, FormInputDateComponent, FormInputTextAreaComponent, ConfirmDialogComponent;
         
         async function loadComponents() {
             
@@ -312,9 +312,15 @@
             LogsPageComponent = await loadVueComponent('/admin/src/modules/logs/LogsPageComponent.vue');
             window.LogsPageComponent = LogsPageComponent;
             
-            // Load additional components
-            ChatwootAccountsListComponent = await loadVueComponent('/admin/src/modules/chatwoot/ChatwootAccountsListComponent.vue');
-            window.ChatwootAccountsListComponent = ChatwootAccountsListComponent;
+            // Load Chatwoot components
+            ChatwootAccountListComponent = await loadVueComponent('/admin/src/modules/chatwoot/ChatwootAccountListComponent.vue');
+            window.ChatwootAccountListComponent = ChatwootAccountListComponent;
+            
+            ChatwootAccountFormComponent = await loadVueComponent('/admin/src/modules/chatwoot/ChatwootAccountFormComponent.vue');
+            window.ChatwootAccountFormComponent = ChatwootAccountFormComponent;
+            
+            ChatwootAccountsPageComponent = await loadVueComponent('/admin/src/modules/chatwoot/ChatwootAccountsPageComponent.vue');
+            window.ChatwootAccountsPageComponent = ChatwootAccountsPageComponent;
             
             DifyAppsListComponent = await loadVueComponent('/admin/src/modules/dify/DifyAppsListComponent.vue');
             window.DifyAppsListComponent = DifyAppsListComponent;
@@ -353,6 +359,9 @@
             
             FormInputTextAreaComponent = await loadVueComponent('/admin/src/components/shared/FormInputTextAreaComponent.vue');
             window.FormInputTextAreaComponent = FormInputTextAreaComponent;
+            
+            ConfirmDialogComponent = await loadVueComponent('/admin/src/components/shared/ConfirmDialogComponent.vue');
+            window.ConfirmDialogComponent = ConfirmDialogComponent;
         }
 
 
@@ -406,7 +415,7 @@
                 path: '/admin/chatwoot-accounts',
                 component: window.AdminLayoutComponent,
                 children: [
-                    { path: '', component: window.ChatwootAccountsListComponent }
+                    { path: '', component: window.ChatwootAccountsPageComponent }
                 ]
             },
             {
@@ -670,7 +679,9 @@
             if (window.RolePermissionsComponent) app.component('RolePermissionsComponent', window.RolePermissionsComponent);
             if (window.SystemConfigurationComponent) app.component('SystemConfigurationComponent', window.SystemConfigurationComponent);
             if (window.LogsPageComponent) app.component('LogsPageComponent', window.LogsPageComponent);
-            if (window.ChatwootAccountsListComponent) app.component('ChatwootAccountsListComponent', window.ChatwootAccountsListComponent);
+            if (window.ChatwootAccountListComponent) app.component('ChatwootAccountListComponent', window.ChatwootAccountListComponent);
+            if (window.ChatwootAccountFormComponent) app.component('ChatwootAccountFormComponent', window.ChatwootAccountFormComponent);
+            if (window.ChatwootAccountsPageComponent) app.component('ChatwootAccountsPageComponent', window.ChatwootAccountsPageComponent);
             if (window.DifyAppsListComponent) app.component('DifyAppsListComponent', window.DifyAppsListComponent);
             if (window.TelegramBotsListComponent) app.component('TelegramBotsListComponent', window.TelegramBotsListComponent);
             if (window.FormListingSortComponent) app.component('FormListingSortComponent', window.FormListingSortComponent);
@@ -683,6 +694,7 @@
             if (window.FormSelectComponent) app.component('FormSelectComponent', window.FormSelectComponent);
             if (window.FormInputDateComponent) app.component('FormInputDateComponent', window.FormInputDateComponent);
             if (window.FormInputTextAreaComponent) app.component('FormInputTextAreaComponent', window.FormInputTextAreaComponent);
+            if (window.ConfirmDialogComponent) app.component('ConfirmDialogComponent', window.ConfirmDialogComponent);
         }
 
         app.use(router);

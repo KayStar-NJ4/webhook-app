@@ -4,7 +4,7 @@ class ChatwootService extends BaseService {
     this.endpoint = '/chatwoot-accounts'
   }
 
-  // Lấy danh sách accounts
+  // Lấy danh sách accounts với pagination và search
   getList(params = {}) {
     return this.get(this.endpoint, params)
   }
@@ -26,13 +26,9 @@ class ChatwootService extends BaseService {
 
   // Xóa account
   delete(id) {
-    return this.delete(`${this.endpoint}/${id}`)
+    return super.delete(`${this.endpoint}/${id}`)
   }
 
-  // Test kết nối account
-  testConnection(id) {
-    return this.get(`/configurations/test/chatwoot/${id}`)
-  }
 
   // Cập nhật trạng thái account
   updateStatus(id, isActive) {
@@ -47,6 +43,15 @@ class ChatwootService extends BaseService {
   // Lấy conversations của account
   getConversations(accountId, params = {}) {
     return this.get(`${this.endpoint}/${accountId}/conversations`, params)
+  }
+
+  // Helper method để tạo hoặc cập nhật account (compatible với code cũ)
+  createOrUpdate(data) {
+    if (data.id && data.id !== 0) {
+      return this.update(data.id, data)
+    } else {
+      return this.create(data)
+    }
   }
 }
 

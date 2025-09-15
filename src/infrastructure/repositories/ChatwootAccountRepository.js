@@ -1,37 +1,39 @@
+const BaseRepository = require('./BaseRepository')
+
 /**
  * Chatwoot Account Repository - Infrastructure layer
  * Handles chatwoot account data operations
  */
-class ChatwootAccountRepository {
+class ChatwootAccountRepository extends BaseRepository {
   constructor({ db, logger }) {
-    this.db = db
-    this.logger = logger
+    super({ db, logger, tableName: 'chatwoot_accounts' })
+    
+    // Define searchable fields
+    this.searchFields = ['name', 'base_url', 'account_id']
+    
+    // Define sortable fields
+    this.sortableFields = ['name', 'created_at', 'updated_at', 'is_active']
   }
 
   /**
    * Create a new chatwoot account
    * @param {Object} accountData - Account data
+   * @param {Object} user - User object (optional)
    * @returns {Promise<Object>} - Created account
    */
-  async create(accountData) {
-    try {
-      const { name, baseUrl, accessToken, accountId, inboxId, isActive, createdBy } = accountData
-      
-      const query = `
-        INSERT INTO chatwoot_accounts (name, base_url, access_token, account_id, inbox_id, is_active, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING id, name, base_url, access_token, account_id, inbox_id, is_active, created_at
-      `
-      
-      const result = await this.db.query(query, [name, baseUrl, accessToken, accountId, inboxId, isActive, createdBy])
-      
-      this.logger.info('Chatwoot account created', { accountId: result.rows[0].id, name })
-      return result.rows[0]
-      
-    } catch (error) {
-      this.logger.error('Failed to create chatwoot account', { error: error.message })
-      throw error
+  async create(accountData, user = null) {
+    const { name, baseUrl, accessToken, accountId, inboxId, isActive } = accountData
+    
+    const data = {
+      name,
+      base_url: baseUrl,
+      access_token: accessToken,
+      account_id: accountId,
+      inbox_id: inboxId || 1,
+      is_active: isActive !== undefined ? isActive : true
     }
+    
+    return super.create(data, user)
   }
 
   /**
@@ -40,16 +42,7 @@ class ChatwootAccountRepository {
    * @returns {Promise<Object|null>} - Account object or null
    */
   async findById(id) {
-    try {
-      const query = 'SELECT * FROM chatwoot_accounts WHERE id = $1'
-      const result = await this.db.query(query, [id])
-      
-      return result.rows[0] || null
-      
-    } catch (error) {
-      this.logger.error('Failed to find chatwoot account by ID', { id, error: error.message })
-      throw error
-    }
+    return super.findById(id)
   }
 
   /**
@@ -76,53 +69,28 @@ class ChatwootAccountRepository {
    * @returns {Promise<Object>} - Accounts and pagination info
    */
   async findAll(options = {}) {
-    try {
-      const { page = 1, limit = 10, search = '', isActive = null } = options
-      const offset = (page - 1) * limit
+    const { isActive = null } = options
+    
+    // Add custom filtering for isActive
+    if (isActive !== null) {
+      const result = await super.findAll(options)
       
-      let whereClause = 'WHERE 1=1'
-      let params = []
-      let paramCount = 0
-      
-      if (search) {
-        paramCount++
-        whereClause += ` AND name ILIKE $${paramCount}`
-        params.push(`%${search}%`)
-      }
-      
-      if (isActive !== null) {
-        paramCount++
-        whereClause += ` AND is_active = $${paramCount}`
-        params.push(isActive)
-      }
-      
-      const countQuery = `SELECT COUNT(*) as total FROM chatwoot_accounts ${whereClause}`
-      const countResult = await this.db.query(countQuery, params)
-      const total = parseInt(countResult.rows[0].total)
-      
-      const query = `
-        SELECT id, name, base_url, access_token, account_id, inbox_id, is_active, created_at, updated_at
-        FROM chatwoot_accounts 
-        ${whereClause}
-        ORDER BY created_at DESC
-        LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
-      `
-      
-      const result = await this.db.query(query, [...params, limit, offset])
+      // Filter by isActive
+      const filteredRecords = result.records.filter(record => record.is_active === isActive)
       
       return {
-        accounts: result.rows,
+        accounts: filteredRecords,
         pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.ceil(total / limit)
+          ...result.pagination,
+          total: filteredRecords.length
         }
       }
-      
-    } catch (error) {
-      this.logger.error('Failed to find all chatwoot accounts', { error: error.message })
-      throw error
+    }
+    
+    const result = await super.findAll(options)
+    return {
+      accounts: result.records,
+      pagination: result.pagination
     }
   }
 
@@ -130,38 +98,22 @@ class ChatwootAccountRepository {
    * Update account
    * @param {number} id - Account ID
    * @param {Object} updateData - Update data
+   * @param {Object} user - User object (optional)
    * @returns {Promise<Object>} - Updated account
    */
-  async update(id, updateData) {
-    try {
-      const { name, baseUrl, accessToken, accountId, inboxId, isActive } = updateData
-      
-      const query = `
-        UPDATE chatwoot_accounts 
-        SET name = COALESCE($1, name),
-            base_url = COALESCE($2, base_url),
-            access_token = COALESCE($3, access_token),
-            account_id = COALESCE($4, account_id),
-            inbox_id = COALESCE($5, inbox_id),
-            is_active = COALESCE($6, is_active),
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = $7
-        RETURNING id, name, base_url, access_token, account_id, inbox_id, is_active, created_at, updated_at
-      `
-      
-      const result = await this.db.query(query, [name, baseUrl, accessToken, accountId, inboxId, isActive, id])
-      
-      if (result.rows.length === 0) {
-        throw new Error('Chatwoot account not found')
-      }
-      
-      this.logger.info('Chatwoot account updated', { accountId: id })
-      return result.rows[0]
-      
-    } catch (error) {
-      this.logger.error('Failed to update chatwoot account', { id, error: error.message })
-      throw error
+  async update(id, updateData, user = null) {
+    const { name, baseUrl, accessToken, accountId, inboxId, isActive } = updateData
+    
+    const data = {
+      name,
+      base_url: baseUrl,
+      access_token: accessToken,
+      account_id: accountId,
+      inbox_id: inboxId || 1,
+      is_active: isActive !== undefined ? isActive : true
     }
+    
+    return super.update(id, data, user)
   }
 
   /**
@@ -170,21 +122,7 @@ class ChatwootAccountRepository {
    * @returns {Promise<boolean>} - Success status
    */
   async delete(id) {
-    try {
-      const query = 'DELETE FROM chatwoot_accounts WHERE id = $1'
-      const result = await this.db.query(query, [id])
-      
-      const deleted = result.rowCount > 0
-      if (deleted) {
-        this.logger.info('Chatwoot account deleted', { accountId: id })
-      }
-      
-      return deleted
-      
-    } catch (error) {
-      this.logger.error('Failed to delete chatwoot account', { id, error: error.message })
-      throw error
-    }
+    return super.delete(id)
   }
 
   /**

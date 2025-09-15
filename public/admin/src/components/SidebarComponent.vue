@@ -39,7 +39,7 @@
                    :class="{ active: activeRoute === '/admin/chatwoot-accounts' }"
                    @click="navigate('/admin/chatwoot-accounts')">
                   <i class="nav-icon fas fa-comments"></i>
-                  <p>Chatwoot</p>
+                  <p>Tài khoản Chatwoot</p>
                 </a>
               </li>
               <li class="nav-item" v-if="hasPermission('dify', 'read')">

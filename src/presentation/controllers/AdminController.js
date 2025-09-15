@@ -201,17 +201,22 @@ class AdminController {
    */
   async getChatwootAccounts(req, res) {
     try {
-      const { page = 1, limit = 10, search = '', isActive } = req.query
+      const { page = 1, limit = 10, search = '', isActive, sort_by } = req.query
       const result = await this.chatwootAccountRepository.findAll({ 
         page: parseInt(page), 
         limit: parseInt(limit), 
         search,
+        sort_by,
         isActive: isActive ? isActive === 'true' : null
       })
 
       res.json({
         success: true,
-        data: result
+        data: result.accounts || [],
+        meta: {
+          total_item: result.pagination?.total || 0,
+          total_page: result.pagination?.pages || 0
+        }
       })
 
     } catch (error) {
@@ -245,9 +250,8 @@ class AdminController {
         accessToken,
         accountId,
         inboxId: inboxId || 1,
-        isActive: true,
-        createdBy: req.user.userId
-      })
+        isActive: true
+      }, req.user)
 
       res.status(201).json({
         success: true,
@@ -257,6 +261,86 @@ class AdminController {
 
     } catch (error) {
       this.logger.error('Create chatwoot account failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Update chatwoot account
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async updateChatwootAccount(req, res) {
+    try {
+      const { id } = req.params
+      const { name, baseUrl, accessToken, accountId, inboxId, isActive } = req.body
+
+      if (!name || !baseUrl || !accessToken || !accountId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Name, base URL, access token and account ID are required'
+        })
+      }
+
+      const account = await this.chatwootAccountRepository.update(id, {
+        name,
+        baseUrl,
+        accessToken,
+        accountId,
+        inboxId: inboxId || 1,
+        isActive: isActive !== undefined ? isActive : true
+      }, req.user)
+
+      if (!account) {
+        return res.status(404).json({
+          success: false,
+          message: 'Chatwoot account not found'
+        })
+      }
+
+      res.json({
+        success: true,
+        message: 'Chatwoot account updated successfully',
+        data: account
+      })
+
+    } catch (error) {
+      this.logger.error('Update chatwoot account failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Delete chatwoot account
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async deleteChatwootAccount(req, res) {
+    try {
+      const { id } = req.params
+
+      const deleted = await this.chatwootAccountRepository.delete(id)
+
+      if (!deleted) {
+        return res.status(404).json({
+          success: false,
+          message: 'Chatwoot account not found'
+        })
+      }
+
+      res.json({
+        success: true,
+        message: 'Chatwoot account deleted successfully'
+      })
+
+    } catch (error) {
+      this.logger.error('Delete chatwoot account failed', { error: error.message })
       res.status(500).json({
         success: false,
         message: 'Internal server error'

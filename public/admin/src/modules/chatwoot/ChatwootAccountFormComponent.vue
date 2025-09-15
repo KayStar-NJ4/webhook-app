@@ -1,134 +1,330 @@
 <template>
-    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title">{{ account ? 'Sửa Account' : 'Thêm Account mới' }}</h4>
-                    <button type="button" class="close" @click="close">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-                    <form @submit.prevent="save">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Tên Account</label>
-                                    <input type="text" class="form-control" v-model="form.name" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>URL</label>
-                                    <input type="url" class="form-control" v-model="form.url" required
-                                           placeholder="https://yourdomain.chatwoot.com">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Account ID</label>
-                                    <input type="text" class="form-control" v-model="form.accountId" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Inbox ID</label>
-                                    <input type="text" class="form-control" v-model="form.inboxId">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>API Token</label>
-                                    <input type="password" class="form-control" v-model="form.apiToken" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Webhook Token</label>
-                                    <input type="password" class="form-control" v-model="form.webhookToken" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <div class="form-check">
-                                <input type="checkbox" class="form-check-input" v-model="form.isActive" id="isActive">
-                                <label class="form-check-label" for="isActive">
-                                    Kích hoạt account
-                                </label>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @click="close">Hủy</button>
-                    <button type="button" class="btn btn-primary" @click="save" :disabled="saving">
-                        <span v-if="saving" class="spinner-border spinner-border-sm mr-2"></span>
-                        {{ saving ? 'Đang lưu...' : (account ? 'Cập nhật' : 'Thêm') }}
-                    </button>
-                </div>
-            </div>
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content" :class="{'overlay-wrapper' : saving }">
+      <div class="overlay" v-if="saving">
+        <i class="fas fa-3x fa-spinner fa-spin"></i>
+        <div class="text-bold pt-2">Đang xử lý...</div>
+      </div>
+      
+      <!-- Header -->
+      <div class="modal-header bg-primary text-white">
+        <h4 class="modal-title mb-0">
+          <i class="fas fa-comments mr-2"></i>
+          {{ isEdit ? 'Chỉnh sửa tài khoản Chatwoot' : 'Thêm tài khoản Chatwoot mới' }}
+        </h4>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" @click="resetForm">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <!-- Body -->
+      <div class="modal-body p-6" :class="{ 'overlay-wrapper': saving }">
+        <div class="row">
+          <div class="col-md-6">
+            <!-- Tên tài khoản -->
+            <form-input-text-component
+              v-model="form.name"
+              :placeholder="'Nhập tên tài khoản'"
+              :label="'Tên tài khoản'"
+              :required="true"
+              :is_row="false"
+            />
+          </div>
+          <div class="col-md-6">
+            <!-- Base URL -->
+            <form-input-text-component
+              v-model="form.base_url"
+              :placeholder="'https://yourdomain.chatwoot.com'"
+              :label="'Base URL'"
+              :required="true"
+              :is_row="false"
+            />
+          </div>
         </div>
-        <div class="modal-backdrop fade show"></div>
+        
+        <div class="row">
+          <div class="col-md-6">
+            <!-- Account ID -->
+            <form-input-text-component
+              v-model="form.account_id"
+              :placeholder="'Nhập Account ID'"
+              :label="'Account ID'"
+              :required="true"
+              :is_row="false"
+            />
+          </div>
+          <div class="col-md-6">
+            <!-- Inbox ID -->
+            <form-input-text-component
+              v-model="form.inbox_id"
+              :placeholder="'Nhập Inbox ID (mặc định: 1)'"
+              :label="'Inbox ID'"
+              :is_row="false"
+            />
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-md-12">
+            <!-- Access Token -->
+            <div class="form-group">
+              <label>Access Token <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input 
+                  :type="showToken ? 'text' : 'password'" 
+                  class="form-control" 
+                  v-model="form.access_token" 
+                  required
+                  placeholder="Nhập Access Token"
+                >
+                <div class="input-group-append">
+                  <button 
+                    type="button" 
+                    class="btn btn-outline-secondary" 
+                    @click="showToken = !showToken"
+                  >
+                    <i :class="showToken ? 'fa fa-eye-slash' : 'fa fa-eye'"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-md-12">
+            <!-- Trạng thái -->
+            <form-check-box-component
+              :checked="form.is_active"
+              :label="'Kích hoạt tài khoản'"
+              :is_row="false"
+              :id="'isActive'"
+              :name="'is_active'"
+              @update:value="form.is_active = $event"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" @click="resetForm">
+          <i class="fas fa-times mr-1"></i>
+          Hủy
+        </button>
+        <button 
+          type="button" 
+          class="btn btn-primary" 
+          @click="handleSave"
+          :disabled="saving"
+        >
+          <i class="fas fa-save mr-1" v-if="!saving"></i>
+          <i class="fas fa-spinner fa-spin mr-1" v-if="saving"></i>
+          {{ saving ? 'Đang xử lý...' : (isEdit ? 'Cập nhật' : 'Thêm mới') }}
+        </button>
+      </div>
     </div>
+  </div>
 </template>
 
 <script>
 export default {
-    name: 'ChatwootAccountFormComponent',
-    props: {
-        account: {
-            type: Object,
-            default: null
-        }
+  name: 'ChatwootAccountFormComponent',
+  props: {
+    id: {
+      type: [Number, String],
+      default: 0
     },
-    data() {
-        return {
-            saving: false,
-            form: {
-                name: '',
-                url: '',
-                accountId: '',
-                inboxId: '',
-                apiToken: '',
-                webhookToken: '',
-                isActive: true
-            }
-        }
-    },
-    mounted() {
-        if (this.account) {
-            this.form = { ...this.account };
-        }
-    },
-    methods: {
-        async save() {
-            this.saving = true;
-            try {
-                if (this.account) {
-                    await this.$apiCall('put', `/api/admin/chatwoot-accounts/${this.account.id}`, this.form);
-                } else {
-                    await this.$apiCall('post', '/api/admin/chatwoot-accounts', this.form);
-                }
-                this.$emit('saved');
-            } catch (error) {
-                console.error('Error saving account:', error);
-                if (error.response?.status === 401) {
-                    window.ToastService.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-                    this.$router.push('/admin/login');
-                } else {
-                    window.ToastService.handleError(error, 'Có lỗi xảy ra khi lưu account');
-                }
-            } finally {
-                this.saving = false;
-            }
-        },
-        close() {
-            this.$emit('close');
-        }
+    object_info: {
+      type: Object,
+      default: () => ({})
     }
+  },
+  data() {
+    return {
+      saving: false,
+      showToken: false,
+      form: {
+        name: '',
+        base_url: '',
+        account_id: '',
+        inbox_id: '',
+        access_token: '',
+        is_active: true
+      }
+    }
+  },
+  computed: {
+    isEdit() {
+      return this.id && this.id !== 0;
+    }
+  },
+  mounted() {
+    this.clearFormData();
+    this.setupModalEvents();
+  },
+  watch: {
+    id: function (newVal, oldVal) {
+      this.clearFormData();
+    },
+    object_info: {
+      handler: function (newVal) {
+        if (newVal && newVal.name) {
+          this.form.name = newVal.name || '';
+          this.form.base_url = newVal.base_url || '';
+          this.form.account_id = newVal.account_id || '';
+          this.form.inbox_id = newVal.inbox_id || '';
+          this.form.access_token = newVal.access_token || '';
+          this.form.is_active = newVal.is_active !== undefined ? newVal.is_active : true;
+        }
+      },
+      deep: true,
+      immediate: true
+    }
+  },
+  methods: {
+    async handleSave() {
+      this.saving = true;
+      try {
+        // Validate form
+        if (!this.form.name || !this.form.base_url || !this.form.account_id || !this.form.access_token) {
+          this.showError('Vui lòng điền đầy đủ thông tin bắt buộc');
+          return;
+        }
+
+        // Prepare data for API
+        const data = {
+          name: this.form.name,
+          baseUrl: this.form.base_url,
+          accountId: this.form.account_id,
+          accessToken: this.form.access_token,
+          inboxId: this.form.inbox_id || 1,
+          isActive: this.form.is_active
+        };
+
+        if (this.isEdit) {
+          await window.ChatwootService.update(this.id, data);
+          this.showSuccess('Cập nhật tài khoản Chatwoot thành công');
+        } else {
+          await window.ChatwootService.create(data);
+          this.showSuccess('Thêm tài khoản Chatwoot thành công');
+        }
+        
+        this.$emit('success');
+      } catch (error) {
+        console.error('Error saving chatwoot account:', error);
+        this.showError((error.response && error.response.data && error.response.data.message) || error.message || 'Có lỗi xảy ra khi lưu tài khoản Chatwoot');
+      } finally {
+        this.saving = false;
+      }
+    },
+           clearFormData() {
+             this.form = {
+               name: '',
+               base_url: '',
+               account_id: '',
+               inbox_id: '',
+               access_token: '',
+               is_active: true
+             };
+             this.showToken = false;
+           },
+           resetForm() {
+             this.clearFormData();
+           },
+           setupModalEvents() {
+             // Listen for modal close events
+             const modal = document.getElementById('chatwootAccountFormModal');
+             if (modal) {
+               modal.addEventListener('hidden.bs.modal', () => {
+                 // Reset form to empty state when modal is closed
+                 this.resetForm();
+               });
+               
+               // Also listen for modal show to reset form when opening
+               modal.addEventListener('show.bs.modal', () => {
+                 this.resetForm();
+               });
+             }
+           },
+    showSuccess(message) {
+      if (window.toast) {
+        window.toast.success(message);
+      } else {
+        this.showFallbackToast(message, 'success');
+      }
+    },
+    showError(message) {
+      if (window.toast) {
+        window.toast.error(message);
+      } else {
+        this.showFallbackToast(message, 'error');
+      }
+    },
+    showFallbackToast(message, type) {
+      const colors = {
+        success: '#28a745',
+        error: '#dc3545',
+        warning: '#ffc107',
+        info: '#17a2b8'
+      };
+      const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+      };
+      
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${colors[type]};
+        color: white;
+        padding: 12px 16px;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 9999;
+        max-width: 400px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        animation: slideIn 0.3s ease-out;
+      `;
+      
+      toast.innerHTML = `
+        <span style="margin-right: 8px;">${icons[type]}</span>
+        <span>${message}</span>
+      `;
+      
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.style.animation = 'slideIn 0.3s ease-out reverse';
+          setTimeout(() => toast.remove(), 300);
+        }
+      }, 5000);
+    }
+  }
 }
 </script>
+
+<style scoped>
+.overlay-wrapper {
+  position: relative;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+</style>

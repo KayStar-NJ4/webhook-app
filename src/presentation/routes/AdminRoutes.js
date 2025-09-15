@@ -210,6 +210,16 @@ class AdminRoutes {
       this.permissionMiddleware.requirePermission('chatwoot', 'create'),
       (req, res) => this.adminController.createChatwootAccount(req, res)
     )
+    this.router.put('/api/admin/chatwoot-accounts/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('chatwoot', 'update'),
+      (req, res) => this.adminController.updateChatwootAccount(req, res)
+    )
+    this.router.delete('/api/admin/chatwoot-accounts/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('chatwoot', 'delete'),
+      (req, res) => this.adminController.deleteChatwootAccount(req, res)
+    )
     
     // Dify app management API
     this.router.get('/api/admin/dify-apps', 
