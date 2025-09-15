@@ -34,7 +34,6 @@ class ConfigurationService {
         timestamp: Date.now()
       })
 
-      this.logger.debug('Configuration retrieved', { key, value })
       return value
 
     } catch (error) {

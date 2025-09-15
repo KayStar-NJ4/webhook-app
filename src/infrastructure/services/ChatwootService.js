@@ -155,17 +155,10 @@ class ChatwootService {
       // Get or create Telegram inbox
       const inboxId = await this.getOrCreateTelegramInbox()
       
-      // Debug logging for configuration
       this.logger.info('Creating/updating Chatwoot conversation', {
         conversationId: conversation.id,
         messageId: message.id,
-        chatDisplayName: conversation.getChatDisplayName(),
-        config: {
-          baseUrl: this.baseUrl,
-          accountId: this.accountId,
-          inboxId: inboxId,
-          hasAccessToken: !!this.accessToken
-        }
+        chatDisplayName: conversation.getChatDisplayName()
       })
 
       let chatwootConversation

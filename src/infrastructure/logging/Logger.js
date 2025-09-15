@@ -96,19 +96,6 @@ class Logger {
     }
   }
 
-  /**
-   * Log debug message
-   * @param {string} message - Log message
-   * @param {Object} meta - Additional metadata
-   */
-  async debug(message, meta = {}) {
-    this.logger.debug(message, { component: this.component, ...meta })
-    
-    // Also log to database if repository is available
-    if (this.logRepository) {
-      await this.logRepository.log('debug', message, { component: this.component, ...meta })
-    }
-  }
 
   /**
    * Log HTTP request
@@ -143,7 +130,6 @@ class Logger {
       info: async (message, meta = {}) => await this.info(message, { ...context, ...meta }),
       error: async (message, meta = {}) => await this.error(message, { ...context, ...meta }),
       warn: async (message, meta = {}) => await this.warn(message, { ...context, ...meta }),
-      debug: async (message, meta = {}) => await this.debug(message, { ...context, ...meta })
     }
   }
 }
