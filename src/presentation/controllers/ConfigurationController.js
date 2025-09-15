@@ -309,13 +309,44 @@ class ConfigurationController {
   }
 
   /**
+   * Get system configuration by key
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async getSystemConfigurationByKey(req, res) {
+    try {
+      const { key } = req.params
+      const configuration = await this.configurationRepository.findByKey(key)
+
+      if (!configuration) {
+        return res.status(404).json({
+          success: false,
+          message: 'Configuration not found'
+        })
+      }
+
+      res.json({
+        success: true,
+        data: configuration
+      })
+
+    } catch (error) {
+      this.logger.error('Get system configuration by key failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
    * Update system configuration
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
   async updateSystemConfiguration(req, res) {
     try {
-      const { key, value, description } = req.body
+      const { key, value, type, description } = req.body
 
       if (!key || value === undefined) {
         return res.status(400).json({
@@ -324,7 +355,39 @@ class ConfigurationController {
         })
       }
 
-      const configuration = await this.configurationRepository.upsert(key, value, description)
+      // Validate value based on type
+      let validatedValue = value
+      if (type === 'number') {
+        validatedValue = Number(value)
+        if (isNaN(validatedValue)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Value must be a valid number'
+          })
+        }
+      } else if (type === 'boolean') {
+        if (value === 'true' || value === true) {
+          validatedValue = true
+        } else if (value === 'false' || value === false) {
+          validatedValue = false
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: 'Boolean value must be true or false'
+          })
+        }
+      } else if (type === 'json') {
+        try {
+          validatedValue = JSON.parse(value)
+        } catch (e) {
+          return res.status(400).json({
+            success: false,
+            message: 'Value must be valid JSON'
+          })
+        }
+      }
+
+      const configuration = await this.configurationRepository.upsert(key, validatedValue, type, description)
 
       res.json({
         success: true,
@@ -334,6 +397,38 @@ class ConfigurationController {
 
     } catch (error) {
       this.logger.error('Update system configuration failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Delete system configuration
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async deleteSystemConfiguration(req, res) {
+    try {
+      const { id } = req.params
+
+      const result = await this.configurationRepository.deleteById(id)
+
+      if (!result) {
+        return res.status(404).json({
+          success: false,
+          message: 'Configuration not found'
+        })
+      }
+
+      res.json({
+        success: true,
+        message: 'Configuration deleted successfully'
+      })
+
+    } catch (error) {
+      this.logger.error('Delete system configuration failed', { error: error.message })
       res.status(500).json({
         success: false,
         message: 'Internal server error'

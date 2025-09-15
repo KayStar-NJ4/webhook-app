@@ -226,7 +226,7 @@ class AdminRoutes {
     // Permission management API routes
     this.router.get('/api/admin/permissions', 
       this.authMiddleware.verifyToken, 
-      this.permissionMiddleware.requirePermission('roles', 'manage_permissions'),
+      this.permissionMiddleware.requirePermission('permissions', 'read'),
       (req, res) => this.permissionController.getPermissions(req, res)
     )
     this.router.get('/api/admin/permissions/grouped', 
@@ -237,6 +237,11 @@ class AdminRoutes {
     this.router.get('/api/admin/user-permissions', 
       this.authMiddleware.verifyToken, 
       (req, res) => this.permissionController.getUserPermissions(req, res)
+    )
+    this.router.get('/api/admin/permissions/for-assignment', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('permissions', 'read'),
+      (req, res) => this.permissionController.getPermissionsForAssignment(req, res)
     )
     // Removed duplicate role management routes - using RoleController instead
     this.router.post('/api/admin/assign-role', 
@@ -310,13 +315,23 @@ class AdminRoutes {
     )
     this.router.get('/api/admin/configurations/system', 
       this.authMiddleware.verifyToken, 
-      this.permissionMiddleware.requirePermission('config', 'read'),
+      this.permissionMiddleware.requirePermission('configurations', 'read'),
       (req, res) => this.configurationController.getSystemConfigurations(req, res)
     )
     this.router.put('/api/admin/configurations/system', 
       this.authMiddleware.verifyToken, 
-      this.permissionMiddleware.requirePermission('config', 'update'),
+      this.permissionMiddleware.requirePermission('configurations', 'update'),
       (req, res) => this.configurationController.updateSystemConfiguration(req, res)
+    )
+    this.router.get('/api/admin/configurations/system/:key', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('configurations', 'read'),
+      (req, res) => this.configurationController.getSystemConfigurationByKey(req, res)
+    )
+    this.router.delete('/api/admin/configurations/system/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('configurations', 'delete'),
+      (req, res) => this.configurationController.deleteSystemConfiguration(req, res)
     )
     this.router.get('/api/admin/configurations/test/:type/:id', 
       this.authMiddleware.verifyToken, 

@@ -108,7 +108,7 @@
                   <p>Vai trò người dùng</p>
                 </a>
               </li>
-              <li class="nav-item" v-if="hasPermission('config', 'read')">
+              <li class="nav-item" v-if="hasPermission('configurations', 'read')">
                 <a href="#" 
                    class="nav-link" 
                    :class="{ active: activeRoute === '/admin/configurations' }"
@@ -197,7 +197,7 @@ export default {
     hasAnySystemSettingsPermission() {
       return this.hasPermission('users', 'read') || 
              this.hasPermission('roles', 'read') || 
-             this.hasPermission('config', 'read') || 
+             this.hasPermission('configurations', 'read') || 
              this.hasPermission('system', 'logs')
     }
   },

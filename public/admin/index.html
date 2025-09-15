@@ -242,7 +242,7 @@
         
         // Load Vue components
         let SidebarComponent, HeaderComponent, AdminLayoutComponent, ListComponent, PageComponent;
-        let DashboardPageComponent, UsersPageComponent, UserListComponent, UserFormComponent, UserPasswordFormComponent, UserPermissionsComponent, UserRolesComponent, ConfigurationsPageComponent, LogsPageComponent;
+        let DashboardPageComponent, UsersPageComponent, UserListComponent, UserFormComponent, UserPasswordFormComponent, UserPermissionsComponent, UserRolesComponent, SystemConfigurationComponent, LogsPageComponent;
         let RolePageComponent, RoleListComponent, RoleFormComponent, RolePermissionsComponent;
         let ChatwootAccountsListComponent, DifyAppsListComponent, TelegramBotsListComponent;
         let FormListingSortComponent, FormTableFiltersComponent, FormCheckBoxComponent, PaginateComponent, ActionButtonsComponent;
@@ -306,8 +306,8 @@
             RolePageComponent = await loadVueComponent('/admin/src/modules/roles/RolePageComponent.vue');
             window.RolePageComponent = RolePageComponent;
             
-            ConfigurationsPageComponent = await loadVueComponent('/admin/src/modules/configurations/ConfigurationsPageComponent.vue');
-            window.ConfigurationsPageComponent = ConfigurationsPageComponent;
+            SystemConfigurationComponent = await loadVueComponent('/admin/src/modules/configurations/SystemConfigurationComponent.vue');
+            window.SystemConfigurationComponent = SystemConfigurationComponent;
             
             LogsPageComponent = await loadVueComponent('/admin/src/modules/logs/LogsPageComponent.vue');
             window.LogsPageComponent = LogsPageComponent;
@@ -420,7 +420,7 @@
                 path: '/admin/configurations',
                 component: window.AdminLayoutComponent,
                 children: [
-                    { path: '', component: window.ConfigurationsPageComponent }
+                    { path: '', component: window.SystemConfigurationComponent }
                 ]
             },
             {
@@ -496,6 +496,24 @@
             
             // Make toast available globally
             window.toast = window.Vue3Toastify.toast;
+            
+            // Create ToastService wrapper for backward compatibility
+            window.ToastService = {
+                success: (msg) => window.toast.success(msg),
+                error: (msg) => window.toast.error(msg),
+                warning: (msg) => window.toast.warning(msg),
+                info: (msg) => window.toast.info(msg),
+                handleError: (error, defaultMsg) => {
+                    const message = (error.response && error.response.data && error.response.data.message) || error.message || defaultMsg;
+                    window.toast.error(message);
+                },
+                confirmAsync: async (message, title = 'Confirm') => {
+                    return new Promise((resolve) => {
+                        const result = confirm(`${title}\n\n${message}`);
+                        resolve(result);
+                    });
+                }
+            };
         } else {
             // Enhanced fallback with better UI
             // Create a simple toast container
@@ -516,6 +534,24 @@
                 error: (msg) => showToast(msg, 'error'),
                 warning: (msg) => showToast(msg, 'warning'),
                 info: (msg) => showToast(msg, 'info')
+            };
+            
+            // Create ToastService wrapper for backward compatibility
+            window.ToastService = {
+                success: (msg) => window.toast.success(msg),
+                error: (msg) => window.toast.error(msg),
+                warning: (msg) => window.toast.warning(msg),
+                info: (msg) => window.toast.info(msg),
+                handleError: (error, defaultMsg) => {
+                    const message = (error.response && error.response.data && error.response.data.message) || error.message || defaultMsg;
+                    window.toast.error(message);
+                },
+                confirmAsync: async (message, title = 'Confirm') => {
+                    return new Promise((resolve) => {
+                        const result = confirm(`${title}\n\n${message}`);
+                        resolve(result);
+                    });
+                }
             };
             
             function showToast(message, type) {
@@ -632,7 +668,7 @@
             if (window.RoleListComponent) app.component('RoleListComponent', window.RoleListComponent);
             if (window.RoleFormComponent) app.component('RoleFormComponent', window.RoleFormComponent);
             if (window.RolePermissionsComponent) app.component('RolePermissionsComponent', window.RolePermissionsComponent);
-            if (window.ConfigurationsPageComponent) app.component('ConfigurationsPageComponent', window.ConfigurationsPageComponent);
+            if (window.SystemConfigurationComponent) app.component('SystemConfigurationComponent', window.SystemConfigurationComponent);
             if (window.LogsPageComponent) app.component('LogsPageComponent', window.LogsPageComponent);
             if (window.ChatwootAccountsListComponent) app.component('ChatwootAccountsListComponent', window.ChatwootAccountsListComponent);
             if (window.DifyAppsListComponent) app.component('DifyAppsListComponent', window.DifyAppsListComponent);

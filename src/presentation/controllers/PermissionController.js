@@ -37,7 +37,7 @@ class PermissionController {
   }
 
   /**
-   * Get all permissions
+   * Get all permissions grouped by resource
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
@@ -45,15 +45,23 @@ class PermissionController {
     try {
       const permissions = await this.permissionService.getAllPermissions()
       
-      // Group permissions by feature
+      // Group permissions by resource
       const groupedPermissions = {}
       permissions.forEach(permission => {
-        const [feature, action] = permission.name.split('.')
+        const resource = permission.resource
         
-        if (!groupedPermissions[feature]) {
-          groupedPermissions[feature] = []
+        if (!groupedPermissions[resource]) {
+          groupedPermissions[resource] = []
         }
-        groupedPermissions[feature].push(action)
+        
+        groupedPermissions[resource].push({
+          id: permission.id,
+          name: permission.name,
+          description: permission.description,
+          resource: permission.resource,
+          action: permission.action,
+          createdAt: permission.createdAt
+        })
       })
 
       res.json({
@@ -117,6 +125,95 @@ class PermissionController {
         message: 'Internal server error'
       })
     }
+  }
+
+  /**
+   * Get all permissions for assignment (grouped by resource)
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async getPermissionsForAssignment(req, res) {
+    try {
+      const permissions = await this.permissionService.getAllPermissions()
+      
+      // Group permissions by resource for easy selection
+      const groupedPermissions = {}
+      permissions.forEach(permission => {
+        const resource = permission.resource
+        
+        if (!groupedPermissions[resource]) {
+          groupedPermissions[resource] = {
+            resource: resource,
+            resourceName: this.getResourceDisplayName(resource),
+            actions: []
+          }
+        }
+        
+        groupedPermissions[resource].actions.push({
+          id: permission.id,
+          name: permission.name,
+          description: permission.description,
+          action: permission.action,
+          actionName: this.getActionDisplayName(permission.action)
+        })
+      })
+
+      // Convert to array format for easier frontend handling
+      const permissionsArray = Object.values(groupedPermissions)
+
+      res.json({
+        success: true,
+        data: {
+          permissions: permissionsArray
+        }
+      })
+
+    } catch (error) {
+      this.logger.error('Get permissions for assignment failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Get resource display name in Vietnamese
+   * @param {string} resource - Resource name
+   * @returns {string} - Display name
+   */
+  getResourceDisplayName(resource) {
+    const resourceNames = {
+      'system': 'Hệ thống',
+      'users': 'Người dùng', 
+      'roles': 'Vai trò',
+      'permissions': 'Quyền',
+      'config': 'Cấu hình',
+      'chatwoot': 'Chatwoot',
+      'telegram': 'Telegram',
+      'dify': 'Dify'
+    }
+    return resourceNames[resource] || resource
+  }
+
+  /**
+   * Get action display name in Vietnamese
+   * @param {string} action - Action name
+   * @returns {string} - Display name
+   */
+  getActionDisplayName(action) {
+    const actionNames = {
+      'dashboard': 'Bảng điều khiển',
+      'logs': 'Nhật ký',
+      'metrics': 'Thống kê',
+      'create': 'Tạo',
+      'read': 'Xem',
+      'update': 'Sửa',
+      'delete': 'Xóa',
+      'manage_permissions': 'Quản lý quyền',
+      'manage_roles': 'Quản lý vai trò'
+    }
+    return actionNames[action] || action
   }
 
   /**
@@ -447,48 +544,19 @@ class PermissionController {
    */
   async updateRolePermissions(req, res) {
     try {
-      const { roleId } = req.params
-      const { permissions = [] } = req.body
-
-      // Check if role exists
-      const role = await this.permissionService.getRoleById(parseInt(roleId))
-      if (!role) {
-        return res.status(404).json({
-          success: false,
-          message: 'Role not found'
-        })
-      }
-
-      await this.permissionService.updateRolePermissions(parseInt(roleId), permissions)
-
-      this.logger.info('Role permissions updated', { roleId, permissions, updatedBy: req.user?.userId })
-
-      res.json({
-        success: true,
-        message: 'Role permissions updated successfully'
-      })
-
-    } catch (error) {
-      this.logger.error('Update role permissions failed', { error: error.message })
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      })
-    }
-  }
-
-  /**
-   * Update role permissions (for PermissionService)
-   * @param {Object} req - Express request
-   * @param {Object} res - Express response
-   */
-  async updateRolePermissions(req, res) {
-    try {
       const { id } = req.params
       const { permissions = [] } = req.body
 
-      // Check if role exists - gọi qua roleRepository
-      const role = await this.permissionService.roleRepository.findById(id)
+      this.logger.info('Update role permissions request', { 
+        roleId: id, 
+        permissions, 
+        permissionsType: typeof permissions,
+        permissionsLength: permissions.length,
+        updatedBy: req.user?.userId 
+      })
+
+      // Check if role exists
+      const role = await this.permissionService.getRoleById(parseInt(id))
       if (!role) {
         return res.status(404).json({
           success: false,
@@ -496,11 +564,23 @@ class PermissionController {
         })
       }
 
-      await this.permissionService.roleRepository.updatePermissions(id, permissions)
+      // Convert permission names to array if needed
+      let permissionNames = permissions
+      if (typeof permissions === 'string') {
+        permissionNames = [permissions]
+      } else if (Array.isArray(permissions)) {
+        // If permissions is array of objects with name property, extract names
+        if (permissions.length > 0 && typeof permissions[0] === 'object' && permissions[0].name) {
+          permissionNames = permissions.map(p => p.name)
+        }
+        // If permissions is already array of strings, use as is
+      }
 
-      this.logger.info('Role permissions updated via PermissionService', { 
+      await this.permissionService.updateRolePermissions(parseInt(id), permissionNames)
+
+      this.logger.info('Role permissions updated successfully', { 
         roleId: id, 
-        permissions, 
+        permissionNames, 
         updatedBy: req.user?.userId 
       })
 
@@ -510,13 +590,19 @@ class PermissionController {
       })
 
     } catch (error) {
-      this.logger.error('Update role permissions failed', { error: error.message })
+      this.logger.error('Update role permissions failed', { 
+        error: error.message, 
+        stack: error.stack,
+        roleId: req.params.id,
+        permissions: req.body.permissions
+      })
       res.status(500).json({
         success: false,
         message: 'Internal server error'
       })
     }
   }
+
 }
 
 module.exports = PermissionController

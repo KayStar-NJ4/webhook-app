@@ -61,8 +61,8 @@ class BaseService {
     return axios.put(`${this.baseURL}${url}`, data)
   }
 
-  delete(url) {
-    return axios.delete(`${this.baseURL}${url}`)
+  delete(url, data = {}) {
+    return axios.delete(`${this.baseURL}${url}`, { data })
   }
 
   patch(url, data = {}) {

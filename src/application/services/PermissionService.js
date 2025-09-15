@@ -301,6 +301,36 @@ class PermissionService {
       return []
     }
   }
+
+  /**
+   * Get role by ID
+   * @param {number} roleId - Role ID
+   * @returns {Promise<Object|null>} - Role object or null
+   */
+  async getRoleById(roleId) {
+    try {
+      return await this.roleRepository.findById(roleId)
+    } catch (error) {
+      this.logger.error('Failed to get role by ID', { roleId, error: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * Update role permissions
+   * @param {number} roleId - Role ID
+   * @param {Array} permissionNames - Array of permission names
+   * @returns {Promise<void>}
+   */
+  async updateRolePermissions(roleId, permissionNames) {
+    try {
+      return await this.roleRepository.updatePermissions(roleId, permissionNames)
+    } catch (error) {
+      this.logger.error('Failed to update role permissions', { roleId, error: error.message })
+      throw error
+    }
+  }
+
 }
 
 module.exports = PermissionService

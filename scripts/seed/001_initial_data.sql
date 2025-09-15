@@ -35,8 +35,10 @@ INSERT INTO permissions (name, description, resource, action) VALUES
 ('permissions.delete', 'Delete permissions', 'permissions', 'delete'),
 
 -- Configuration Management
-('config.read', 'View system configuration', 'config', 'read'),
-('config.update', 'Update system configuration', 'config', 'update'),
+('configurations.create', 'Create system configurations', 'configurations', 'create'),
+('configurations.read', 'View system configurations', 'configurations', 'read'),
+('configurations.update', 'Update system configurations', 'configurations', 'update'),
+('configurations.delete', 'Delete system configurations', 'configurations', 'delete'),
 
 -- Chatwoot Account Management
 ('chatwoot.create', 'Create chatwoot accounts', 'chatwoot', 'create'),
