@@ -130,6 +130,10 @@ class AdminService extends BaseService {
   getRoutingConfiguration(telegramBotId) {
     return this.get(`/platform-mappings/telegram-bot/${telegramBotId}/routing`)
   }
+
+  testPlatformMappingConnection(id) {
+    return this.post(`/platform-mappings/${id}/test-connection`)
+  }
 }
 
 // Export to global window object

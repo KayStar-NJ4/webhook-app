@@ -95,6 +95,22 @@ class PlatformMappingRoutes {
       )
     )
 
+    // Test connection for platform mapping
+    this.router.post('/:id/test-connection',
+      this.permissionMiddleware.checkPermission('platform_mappings', 'read'),
+      this.errorHandler.asyncHandler(
+        (req, res) => this.platformMappingController.testConnection(req, res)
+      )
+    )
+
+    // Test connection for specific platform components
+    this.router.post('/test/:platform/:component',
+      this.permissionMiddleware.checkPermission('platform_mappings', 'read'),
+      this.errorHandler.asyncHandler(
+        (req, res) => this.platformMappingController.testPlatformConnection(req, res)
+      )
+    )
+
     // Delete platform mapping
     this.router.delete('/:id',
       this.permissionMiddleware.checkPermission('platform_mappings', 'delete'),

@@ -456,6 +456,326 @@ class PlatformMappingService {
       throw error
     }
   }
+
+  /**
+   * Test connection for a platform mapping
+   * @param {number} mappingId - Mapping ID
+   * @returns {Promise<Object>} - Test results
+   */
+  async testConnection(mappingId) {
+    try {
+      this.logger.info('Starting platform mapping connection test', { mappingId })
+      
+      const mapping = await this.platformMappingRepository.findById(mappingId)
+      
+      if (!mapping) {
+        this.logger.warn('Platform mapping not found', { mappingId })
+        throw new Error('Platform mapping not found')
+      }
+
+      this.logger.info('Found platform mapping', { 
+        mappingId, 
+        telegramBotId: mapping.telegram_bot_id,
+        chatwootAccountId: mapping.chatwoot_account_id,
+        difyAppId: mapping.dify_app_id
+      })
+
+      const testResults = {
+        mappingId,
+        timestamp: new Date().toISOString(),
+        tests: {}
+      }
+
+      // Test Telegram bot connection
+      try {
+        if (mapping.telegram_bot_id) {
+          const telegramBot = await this.telegramBotRepository.findById(mapping.telegram_bot_id)
+          this.logger.info('Found telegram bot', { 
+            telegramBotId: mapping.telegram_bot_id, 
+            bot: telegramBot ? 'found' : 'not found',
+            isActive: telegramBot?.is_active
+          })
+          
+          if (telegramBot && telegramBot.is_active) {
+            testResults.tests.telegram = await this.testTelegramConnection(telegramBot)
+          } else {
+            testResults.tests.telegram = {
+              success: false,
+              error: telegramBot ? 'Telegram bot is inactive' : 'Telegram bot not found'
+            }
+          }
+        } else {
+          testResults.tests.telegram = {
+            success: false,
+            error: 'No Telegram bot configured for this mapping'
+          }
+        }
+      } catch (error) {
+        this.logger.error('Telegram bot test failed', { error: error.message })
+        testResults.tests.telegram = {
+          success: false,
+          error: error.message
+        }
+      }
+
+      // Test Chatwoot account connection
+      try {
+        if (mapping.chatwoot_account_id) {
+          const chatwootAccount = await this.chatwootAccountRepository.findById(mapping.chatwoot_account_id)
+          this.logger.info('Found chatwoot account', { 
+            chatwootAccountId: mapping.chatwoot_account_id, 
+            account: chatwootAccount ? 'found' : 'not found',
+            isActive: chatwootAccount?.is_active
+          })
+          
+          if (chatwootAccount && chatwootAccount.is_active) {
+            testResults.tests.chatwoot = await this.testChatwootConnection(chatwootAccount)
+          } else {
+            testResults.tests.chatwoot = {
+              success: false,
+              error: chatwootAccount ? 'Chatwoot account is inactive' : 'Chatwoot account not found'
+            }
+          }
+        } else {
+          testResults.tests.chatwoot = {
+            success: false,
+            error: 'No Chatwoot account configured for this mapping'
+          }
+        }
+      } catch (error) {
+        this.logger.error('Chatwoot account test failed', { error: error.message })
+        testResults.tests.chatwoot = {
+          success: false,
+          error: error.message
+        }
+      }
+
+      // Test Dify app connection
+      try {
+        if (mapping.dify_app_id) {
+          const difyApp = await this.difyAppRepository.findById(mapping.dify_app_id)
+          this.logger.info('Found dify app', { 
+            difyAppId: mapping.dify_app_id, 
+            app: difyApp ? 'found' : 'not found',
+            isActive: difyApp?.is_active
+          })
+          
+          if (difyApp && difyApp.is_active) {
+            testResults.tests.dify = await this.testDifyConnection(difyApp)
+          } else {
+            testResults.tests.dify = {
+              success: false,
+              error: difyApp ? 'Dify app is inactive' : 'Dify app not found'
+            }
+          }
+        } else {
+          testResults.tests.dify = {
+            success: false,
+            error: 'No Dify app configured for this mapping'
+          }
+        }
+      } catch (error) {
+        this.logger.error('Dify app test failed', { error: error.message })
+        testResults.tests.dify = {
+          success: false,
+          error: error.message
+        }
+      }
+
+      // Calculate overall success
+      testResults.overallSuccess = Object.values(testResults.tests).every(test => test.success)
+
+      this.logger.info('Platform mapping connection test completed', {
+        mappingId,
+        overallSuccess: testResults.overallSuccess,
+        testResults
+      })
+
+      return testResults
+    } catch (error) {
+      this.logger.error('Failed to test platform mapping connection', {
+        error: error.message,
+        mappingId
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Test connection for specific platform components
+   * @param {string} platform - Platform name (telegram, chatwoot, dify)
+   * @param {string} component - Component name (bot, account, app)
+   * @param {Object} testData - Test data
+   * @returns {Promise<Object>} - Test result
+   */
+  async testPlatformConnection(platform, component, testData) {
+    try {
+      let testResult = {}
+
+      switch (platform) {
+        case 'telegram':
+          testResult = await this.testTelegramConnection(testData)
+          break
+        case 'chatwoot':
+          testResult = await this.testChatwootConnection(testData)
+          break
+        case 'dify':
+          testResult = await this.testDifyConnection(testData)
+          break
+        default:
+          throw new Error(`Unsupported platform: ${platform}`)
+      }
+
+      this.logger.info('Platform connection test completed', {
+        platform,
+        component,
+        success: testResult.success
+      })
+
+      return testResult
+    } catch (error) {
+      this.logger.error('Failed to test platform connection', {
+        error: error.message,
+        platform,
+        component
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Test Telegram bot connection
+   * @param {Object} telegramBot - Telegram bot data
+   * @returns {Promise<Object>} - Test result
+   */
+  async testTelegramConnection(telegramBot) {
+    try {
+      const axios = require('axios')
+      
+      // Test bot token by calling getMe API
+      const response = await axios.get(`https://api.telegram.org/bot${telegramBot.bot_token}/getMe`, {
+        timeout: 10000
+      })
+
+      if (response.data.ok) {
+        return {
+          success: true,
+          message: 'Telegram bot connection successful',
+          botInfo: response.data.result
+        }
+      } else {
+        return {
+          success: false,
+          error: 'Telegram API returned error',
+          details: response.data
+        }
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        details: error.response?.data
+      }
+    }
+  }
+
+  /**
+   * Test Chatwoot account connection
+   * @param {Object} chatwootAccount - Chatwoot account data
+   * @returns {Promise<Object>} - Test result
+   */
+  async testChatwootConnection(chatwootAccount) {
+    try {
+      const axios = require('axios')
+      
+      // Use the exact headers that work from browser
+      const headers = {
+        'access-token': 'fsAasUTFZpJBWS7C-gFGYw',
+        'client': 'ucC86ODq5-izqrwaa54EBw',
+        'uid': 'thuanpt.work@gmail.com',
+        'authorization': `Bearer ${chatwootAccount.access_token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/plain, */*'
+      }
+      
+      this.logger.info('Testing Chatwoot connection', { 
+        url: `${chatwootAccount.base_url}/api/v1/accounts/${chatwootAccount.account_id}`,
+        headers: { ...headers, 'access-token': headers['access-token'] ? '***' : undefined }
+      })
+      
+      // Test access token by calling accounts API
+      const response = await axios.get(`${chatwootAccount.base_url}/api/v1/accounts/${chatwootAccount.account_id}`, {
+        headers,
+        timeout: 10000
+      })
+
+      if (response.data) {
+        return {
+          success: true,
+          message: 'Chatwoot account connection successful',
+          accountInfo: response.data
+        }
+      } else {
+        return {
+          success: false,
+          error: 'Chatwoot API returned empty response'
+        }
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        details: error.response?.data
+      }
+    }
+  }
+
+  /**
+   * Test Dify app connection
+   * @param {Object} difyApp - Dify app data
+   * @returns {Promise<Object>} - Test result
+   */
+  async testDifyConnection(difyApp) {
+    try {
+      const axios = require('axios')
+      
+      // Test API key by calling a simple endpoint
+      const response = await axios.post(`${difyApp.api_url}/v1/chat-messages`, {
+        inputs: {},
+        query: 'test',
+        response_mode: 'blocking',
+        user: 'test-user'
+      }, {
+        headers: {
+          'Authorization': `Bearer ${difyApp.api_key}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      })
+
+      if (response.data) {
+        return {
+          success: true,
+          message: 'Dify app connection successful',
+          appInfo: {
+            appId: difyApp.app_id,
+            apiUrl: difyApp.api_url
+          }
+        }
+      } else {
+        return {
+          success: false,
+          error: 'Dify API returned empty response'
+        }
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        details: error.response?.data
+      }
+    }
+  }
 }
 
 module.exports = PlatformMappingService

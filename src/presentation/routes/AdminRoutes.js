@@ -330,6 +330,12 @@ class AdminRoutes {
       this.permissionMiddleware.requirePermission('platform_mappings', 'update'),
       (req, res) => this.platformMappingController.updateMapping(req, res)
     )
+    this.router.post('/api/admin/platform-mappings/:id/test-connection', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('platform_mappings', 'read'),
+      (req, res) => this.platformMappingController.testConnection(req, res)
+    )
+
     this.router.delete('/api/admin/platform-mappings/:id', 
       this.authMiddleware.verifyToken, 
       this.permissionMiddleware.requirePermission('platform_mappings', 'delete'),

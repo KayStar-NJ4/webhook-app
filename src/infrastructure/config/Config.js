@@ -34,6 +34,12 @@ class Config {
         password: Joi.string().allow(''),
         ssl: Joi.boolean().default(false),
         connectionString: Joi.string().allow('')
+      }).required(),
+
+      // JWT configuration from environment
+      jwt: Joi.object({
+        secret: Joi.string().required(),
+        expiry: Joi.string().default('24h')
       }).required()
     })
   }
@@ -60,6 +66,10 @@ class Config {
         password: process.env.DB_PASSWORD,
         ssl: process.env.DB_SSL,
         connectionString: process.env.DATABASE_URL
+      },
+      jwt: {
+        secret: process.env.JWT_SECRET,
+        expiry: process.env.JWT_EXPIRY
       }
     }
 
@@ -136,6 +146,14 @@ class Config {
       password: dbConfig.password,
       ssl: dbConfig.ssl
     }
+  }
+
+  /**
+   * Get JWT configuration
+   * @returns {Object} - JWT configuration
+   */
+  getJWT() {
+    return this.config.jwt
   }
 }
 
