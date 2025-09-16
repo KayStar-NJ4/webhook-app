@@ -143,7 +143,6 @@
     "fields": {
       "name": "Bot Name",
       "botToken": "Bot Token",
-      "apiUrl": "API URL",
       "webhookUrl": "Webhook URL",
       "isActive": "Active"
     },
@@ -169,8 +168,7 @@
     },
     "help": {
       "botToken": "Get this from @BotFather on Telegram",
-      "apiUrl": "Telegram Bot API URL (usually https://api.telegram.org)",
-      "webhookUrl": "URL to receive updates from Telegram"
+      "webhookUrl": "URL to receive updates from Telegram (optional)"
     }
   },
   "dify": {

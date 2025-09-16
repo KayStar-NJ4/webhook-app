@@ -15,15 +15,15 @@ class TelegramBotRepository {
    */
   async create(botData) {
     try {
-      const { name, botToken, webhookUrl, apiUrl, isActive, createdBy } = botData
+      const { name, botToken, webhookUrl, isActive, createdBy } = botData
       
       const query = `
         INSERT INTO telegram_bots (name, bot_token, webhook_url, api_url, is_active, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, 'https://api.telegram.org', $4, $5)
         RETURNING id, name, bot_token, webhook_url, api_url, is_active, created_at
       `
       
-      const result = await this.db.query(query, [name, botToken, webhookUrl, apiUrl, isActive, createdBy])
+      const result = await this.db.query(query, [name, botToken, webhookUrl, isActive, createdBy])
       
       this.logger.info('Telegram bot created', { botId: result.rows[0].id, name })
       return result.rows[0]
@@ -146,21 +146,21 @@ class TelegramBotRepository {
    */
   async update(id, updateData) {
     try {
-      const { name, botToken, webhookUrl, apiUrl, isActive } = updateData
+      const { name, botToken, webhookUrl, isActive } = updateData
       
       const query = `
         UPDATE telegram_bots 
         SET name = COALESCE($1, name),
             bot_token = COALESCE($2, bot_token),
             webhook_url = COALESCE($3, webhook_url),
-            api_url = COALESCE($4, api_url),
-            is_active = COALESCE($5, is_active),
+            api_url = 'https://api.telegram.org',
+            is_active = COALESCE($4, is_active),
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = $6
+        WHERE id = $5
         RETURNING id, name, bot_token, webhook_url, api_url, is_active, created_at, updated_at
       `
       
-      const result = await this.db.query(query, [name, botToken, webhookUrl, apiUrl, isActive, id])
+      const result = await this.db.query(query, [name, botToken, webhookUrl, isActive, id])
       
       if (result.rows.length === 0) {
         throw new Error('Telegram bot not found')

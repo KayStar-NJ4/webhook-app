@@ -38,22 +38,13 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <form-input-text-component
                                     v-model="form.webhookUrl"
                                     type="url"
                                     label="Webhook URL"
-                                    placeholder="https://yourdomain.com/webhook"
-                                    help-text="URL để nhận webhook từ Telegram"
-                                />
-                            </div>
-                            <div class="col-md-6">
-                                <form-input-text-component
-                                    v-model="form.apiUrl"
-                                    type="url"
-                                    label="API URL"
-                                    placeholder="https://api.telegram.org"
-                                    help-text="URL API của Telegram (mặc định: https://api.telegram.org)"
+                                    placeholder="https://yourdomain.com/webhook/webhook"
+                                    help-text="URL để nhận webhook từ Telegram (tùy chọn)"
                                 />
                             </div>
                         </div>
@@ -110,7 +101,6 @@ export default {
                 name: '',
                 botToken: '',
                 webhookUrl: '',
-                apiUrl: 'https://api.telegram.org',
                 isActive: true
             }
         }
@@ -135,7 +125,6 @@ export default {
                     name: this.object_info.name || '',
                     botToken: this.object_info.bot_token || '',
                     webhookUrl: this.object_info.webhook_url || '',
-                    apiUrl: this.object_info.api_url || 'https://api.telegram.org',
                     isActive: this.object_info.is_active !== undefined ? this.object_info.is_active : true
                 };
             } else {
@@ -189,7 +178,6 @@ export default {
                 name: '',
                 botToken: '',
                 webhookUrl: '',
-                apiUrl: 'https://api.telegram.org',
                 isActive: true
             };
         },

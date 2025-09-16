@@ -169,7 +169,6 @@ class Validation {
       name: Joi.string().min(1).max(100).required(),
       botToken: Joi.string().min(1).max(500).required(),
       webhookUrl: Joi.string().uri().allow('').optional(),
-      apiUrl: Joi.string().uri().default('https://api.telegram.org'),
       isActive: Joi.boolean().default(true)
     }),
 
@@ -177,7 +176,6 @@ class Validation {
       name: Joi.string().min(1).max(100).optional(),
       botToken: Joi.string().min(1).max(500).optional(),
       webhookUrl: Joi.string().uri().allow('').optional(),
-      apiUrl: Joi.string().uri().optional(),
       isActive: Joi.boolean().optional()
     }),
 
