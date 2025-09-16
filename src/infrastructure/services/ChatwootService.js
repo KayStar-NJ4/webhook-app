@@ -148,9 +148,10 @@ class ChatwootService {
    * Create or update conversation
    * @param {Conversation} conversation - Conversation entity
    * @param {Message} message - Message entity
+   * @param {number} chatwootAccountId - Optional Chatwoot account ID
    * @returns {Promise<Object>} - Chatwoot conversation
    */
-  async createOrUpdateConversation(conversation, message) {
+  async createOrUpdateConversation(conversation, message, chatwootAccountId = null) {
     try {
       // Get or create Telegram inbox
       const inboxId = await this.getOrCreateTelegramInbox()

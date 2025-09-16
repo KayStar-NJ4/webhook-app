@@ -13,6 +13,7 @@ const ChatwootAccountRepository = require('../repositories/ChatwootAccountReposi
 const DifyAppRepository = require('../repositories/DifyAppRepository')
 const RoleRepository = require('../repositories/RoleRepository')
 const PermissionRepository = require('../repositories/PermissionRepository')
+const PlatformMappingRepository = require('../repositories/PlatformMappingRepository')
 
 // Services
 const TelegramService = require('../services/TelegramService')
@@ -20,6 +21,7 @@ const ChatwootService = require('../services/ChatwootService')
 const DifyService = require('../services/DifyService')
 const LogsService = require('../../application/services/LogsService')
 const ConfigurationService = require('../services/ConfigurationService')
+const PlatformMappingService = require('../services/PlatformMappingService')
 
 // Use Cases
 const ProcessMessageUseCase = require('../../application/useCases/ProcessMessageUseCase')
@@ -119,6 +121,14 @@ class ServiceRegistry {
       return new PermissionRepository({ db, logger })
     }, true)
 
+    this.container.register('platformMappingRepository', (container) => {
+      const config = container.get('config')
+      const logger = container.get('logger')
+      const { Pool } = require('pg')
+      const db = new Pool(config.getDatabase())
+      return new PlatformMappingRepository({ db, logger })
+    }, true)
+
     // External services
     this.container.register('telegramService', (container) => new TelegramService({
       config: container.get('config'),
@@ -143,6 +153,14 @@ class ServiceRegistry {
       logger: container.get('logger')
     }), true)
 
+    this.container.register('platformMappingService', (container) => new PlatformMappingService({
+      platformMappingRepository: container.get('platformMappingRepository'),
+      telegramBotRepository: container.get('telegramBotRepository'),
+      chatwootAccountRepository: container.get('chatwootAccountRepository'),
+      difyAppRepository: container.get('difyAppRepository'),
+      logger: container.get('logger')
+    }), true)
+
     // Use Cases
     this.container.register('processMessageUseCase', (container) => new ProcessMessageUseCase({
       conversationRepository: container.get('conversationRepository'),
@@ -151,6 +169,7 @@ class ServiceRegistry {
       chatwootService: container.get('chatwootService'),
       difyService: container.get('difyService'),
       configurationService: container.get('configurationService'),
+      platformMappingService: container.get('platformMappingService'),
       logger: container.get('logger')
     }), true)
 

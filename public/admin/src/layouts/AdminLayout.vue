@@ -49,6 +49,13 @@
             </router-link>
           </li>
           
+          <li v-if="hasPermission('platform_mappings', 'read')" class="nav-item">
+            <router-link to="/admin/platform-mappings" class="nav-link">
+              <i class="fas fa-link"></i>
+              <span v-if="!sidebarCollapsed">{{ $t('nav.platformMappings') }}</span>
+            </router-link>
+          </li>
+          
           <li v-if="hasPermission('mappings', 'read')" class="nav-item">
             <router-link to="/admin/configurations" class="nav-link">
               <i class="fas fa-cogs"></i>
@@ -172,6 +179,7 @@ export default {
         '/admin/chatwoot-accounts': this.$t('nav.chatwootAccounts'),
         '/admin/telegram-bots': this.$t('nav.telegramBots'),
         '/admin/dify-apps': this.$t('nav.difyApps'),
+        '/admin/platform-mappings': this.$t('nav.platformMappings'),
         '/admin/configurations': this.$t('nav.configurations')
       }
       return titles[route.path] || this.$t('app.name')

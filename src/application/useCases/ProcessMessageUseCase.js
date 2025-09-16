@@ -14,6 +14,7 @@ class ProcessMessageUseCase {
     chatwootService,
     difyService,
     configurationService,
+    platformMappingService,
     logger
   }) {
     this.conversationRepository = conversationRepository
@@ -22,6 +23,7 @@ class ProcessMessageUseCase {
     this.chatwootService = chatwootService
     this.difyService = difyService
     this.configurationService = configurationService
+    this.platformMappingService = platformMappingService
     this.logger = logger
     
     // Rate limiting để tránh trả lời liên tục
@@ -306,81 +308,229 @@ class ProcessMessageUseCase {
    * @returns {Promise<Object>}
    */
   async processTelegramMessage(message, conversation) {
-    // 1. Create/update Chatwoot conversation
+    try {
+      // 1. Get platform mapping configuration for this Telegram bot
+      const telegramBotId = await this.getTelegramBotIdFromMessage(message)
+      const routingConfig = await this.platformMappingService.getRoutingConfiguration(telegramBotId)
+      
+      if (!routingConfig.hasMapping) {
+        this.logger.warn('No platform mapping found for Telegram bot', {
+          telegramBotId,
+          conversationId: conversation.id
+        })
+        return {
+          success: false,
+          error: 'No platform mapping configured for this Telegram bot'
+        }
+      }
+
+      // 2. Process based on routing configuration
+      const results = {
+        chatwootConversationId: null,
+        difyConversationId: null,
+        responses: []
+      }
+
+      // Process each mapping
+      for (const mapping of routingConfig.mappings) {
+        const mappingResult = await this.processTelegramMessageWithMapping(
+          message, 
+          conversation, 
+          mapping
+        )
+        
+        if (mappingResult.chatwootConversationId) {
+          results.chatwootConversationId = mappingResult.chatwootConversationId
+        }
+        if (mappingResult.difyConversationId) {
+          results.difyConversationId = mappingResult.difyConversationId
+        }
+        if (mappingResult.response) {
+          results.responses.push(mappingResult.response)
+        }
+      }
+
+      return {
+        success: true,
+        ...results,
+        note: 'Message processed with platform routing'
+      }
+
+    } catch (error) {
+      this.logger.error('Failed to process Telegram message with routing', {
+        error: error.message,
+        conversationId: conversation.id,
+        messageId: message.id
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Process Telegram message with specific mapping
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @param {Object} mapping - Platform mapping configuration
+   * @returns {Promise<Object>}
+   */
+  async processTelegramMessageWithMapping(message, conversation, mapping) {
+    const results = {
+      chatwootConversationId: null,
+      difyConversationId: null,
+      response: null
+    }
+
+    try {
+      // 1. Handle Chatwoot routing
+      if (mapping.routing.telegramToChatwoot && mapping.chatwootAccountId) {
+        const chatwootResult = await this.processTelegramToChatwoot(
+          message, 
+          conversation, 
+          mapping.chatwootAccountId
+        )
+        results.chatwootConversationId = chatwootResult.conversationId
+      }
+
+      // 2. Handle Dify routing
+      if (mapping.routing.telegramToDify && mapping.difyAppId) {
+        const difyResult = await this.processTelegramToDify(
+          message, 
+          conversation, 
+          mapping.difyAppId
+        )
+        results.difyConversationId = difyResult.conversationId
+        results.response = difyResult.response
+      }
+
+      // 3. Handle combined routing (Telegram -> Chatwoot + Dify -> Chatwoot)
+      if (mapping.routing.telegramToChatwoot && 
+          mapping.routing.telegramToDify && 
+          mapping.routing.difyToChatwoot &&
+          results.chatwootConversationId && 
+          results.difyConversationId && 
+          results.response) {
+        
+        await this.processDifyResponseToChatwoot(
+          results.response,
+          results.chatwootConversationId,
+          conversation.id
+        )
+      }
+
+      return results
+
+    } catch (error) {
+      this.logger.error('Failed to process Telegram message with mapping', {
+        error: error.message,
+        mappingId: mapping.id,
+        conversationId: conversation.id
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Process Telegram to Chatwoot routing
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @param {number} chatwootAccountId - Chatwoot account ID
+   * @returns {Promise<Object>}
+   */
+  async processTelegramToChatwoot(message, conversation, chatwootAccountId) {
+    // Create/update Chatwoot conversation
     const chatwootConversation = await this.chatwootService.createOrUpdateConversation(
       conversation,
-      message
+      message,
+      chatwootAccountId
     )
 
-    // 2. Send message to Dify (real-time mode - no conversation history)
+    // Update conversation with Chatwoot ID
+    conversation.chatwootId = chatwootConversation.id
+    await this.conversationRepository.update(conversation)
+
+    return {
+      conversationId: chatwootConversation.id
+    }
+  }
+
+  /**
+   * Process Telegram to Dify routing
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @param {number} difyAppId - Dify app ID
+   * @returns {Promise<Object>}
+   */
+  async processTelegramToDify(message, conversation, difyAppId) {
+    // Send message to Dify
     const difyResponse = await this.difyService.sendMessage(
       conversation,
-      message.getFormattedContent()
+      message.getFormattedContent(),
+      { difyAppId }
     )
 
-    // 3. Update conversation with external IDs
-    conversation.chatwootId = chatwootConversation.id
-    // Lưu difyId vào DB để duy trì conversation context
+    // Update conversation with Dify ID
     conversation.difyId = difyResponse.conversationId
     await this.conversationRepository.update(conversation)
 
-    // 4. Send response to Chatwoot (Chatwoot sẽ tự động sync tới Telegram)
-    if (difyResponse.response && difyResponse.response.trim()) {
-      // Get cooldown configuration from database
-      const difyConfig = await this.configurationService.getDifyConfig()
-      
-      // Kiểm tra cooldown để tránh trả lời liên tục
-      const now = Date.now()
-      const lastResponseTime = this.responseCooldown.get(conversation.id) || 0
-      
-      if (now - lastResponseTime < difyConfig.cooldownPeriod) {
-        this.logger.info('Response skipped due to cooldown', {
-          conversationId: conversation.id,
-          timeSinceLastResponse: now - lastResponseTime,
-          cooldownPeriod: difyConfig.cooldownPeriod
-        })
-        return {
-          success: true,
-          chatwootConversationId: chatwootConversation.id,
-          difyConversationId: difyResponse.conversationId,
-          note: 'Response skipped due to cooldown to prevent continuous responses'
-        }
-      }
-      
-      // Cập nhật thời gian response cuối
-      this.responseCooldown.set(conversation.id, now)
-      
-      // Đảm bảo chỉ gửi 1 tin nhắn duy nhất
-      const singleResponse = difyResponse.response.trim()
-      this.logger.info('Sending SINGLE response to Chatwoot (Chatwoot will sync to Telegram)', {
-        chatwootConversationId: chatwootConversation.id,
-        responseLength: singleResponse.length,
-        responsePreview: singleResponse.substring(0, 100) + (singleResponse.length > 100 ? '...' : '')
-      })
-      
-      // Gửi chỉ 1 tin nhắn duy nhất
-      await this.chatwootService.sendMessage(
-        chatwootConversation.id,
-        singleResponse
-      )
-      
-      this.logger.info('Single response sent successfully', {
-        chatwootConversationId: chatwootConversation.id,
-        messageId: message.id
-      })
-    } else {
-      this.logger.warn('No valid response from Dify to send to Chatwoot', {
-        chatwootConversationId: chatwootConversation.id,
-        difyResponse
-      })
+    return {
+      conversationId: difyResponse.conversationId,
+      response: difyResponse.response
+    }
+  }
+
+  /**
+   * Process Dify response to Chatwoot
+   * @param {string} response - Dify response
+   * @param {string} chatwootConversationId - Chatwoot conversation ID
+   * @param {string} conversationId - Internal conversation ID
+   * @returns {Promise<void>}
+   */
+  async processDifyResponseToChatwoot(response, chatwootConversationId, conversationId) {
+    if (!response || !response.trim()) {
+      return
     }
 
-    return {
-      success: true,
-      chatwootConversationId: chatwootConversation.id,
-      difyConversationId: difyResponse.conversationId,
-      note: 'Response sent to Chatwoot only - Chatwoot handles Telegram sync'
+    // Check cooldown
+    const difyConfig = await this.configurationService.getDifyConfig()
+    const now = Date.now()
+    const lastResponseTime = this.responseCooldown.get(conversationId) || 0
+    
+    if (now - lastResponseTime < difyConfig.cooldownPeriod) {
+      this.logger.info('Response skipped due to cooldown', {
+        conversationId,
+        timeSinceLastResponse: now - lastResponseTime,
+        cooldownPeriod: difyConfig.cooldownPeriod
+      })
+      return
     }
+    
+    // Update cooldown
+    this.responseCooldown.set(conversationId, now)
+    
+    // Send response to Chatwoot
+    const singleResponse = response.trim()
+    await this.chatwootService.sendMessage(
+      chatwootConversationId,
+      singleResponse
+    )
+    
+    this.logger.info('Dify response sent to Chatwoot', {
+      chatwootConversationId,
+      responseLength: singleResponse.length
+    })
+  }
+
+  /**
+   * Get Telegram bot ID from message
+   * @param {Message} message - Message entity
+   * @returns {Promise<number>}
+   */
+  async getTelegramBotIdFromMessage(message) {
+    // This is a simplified implementation
+    // In a real scenario, you might need to store bot ID in conversation metadata
+    // or determine it from the webhook configuration
+    const telegramConfig = await this.configurationService.getTelegramConfig()
+    return telegramConfig.botId || 1 // Default to first bot
   }
 
   /**

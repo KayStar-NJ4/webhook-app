@@ -9,6 +9,7 @@
     "chatwootAccounts": "Chatwoot Accounts",
     "telegramBots": "Telegram Bots",
     "difyApps": "Dify Apps",
+    "platformMappings": "Platform Mappings",
     "configurations": "Configurations",
     "logs": "Logs"
   },
@@ -251,6 +252,35 @@
     "deleted": "Deleted successfully",
     "updated": "Updated successfully",
     "created": "Created successfully"
+  },
+  "platformMappings": {
+    "title": "Platform Mappings",
+    "createMapping": "Create Mapping",
+    "editMapping": "Edit Mapping",
+    "telegramBots": "Telegram Bots",
+    "chatwootAccounts": "Chatwoot Accounts",
+    "difyApps": "Dify Apps",
+    "noMappings": "No platform mappings configured",
+    "routing": "Routing Configuration",
+    "telegramToChatwoot": "Telegram → Chatwoot",
+    "telegramToDify": "Telegram → Dify",
+    "chatwootToTelegram": "Chatwoot → Telegram",
+    "difyToChatwoot": "Dify → Chatwoot",
+    "difyToTelegram": "Dify → Telegram",
+    "autoConnect": "Auto Connect",
+    "autoConnectTelegramChatwoot": "Auto connect Telegram-Chatwoot",
+    "autoConnectTelegramDify": "Auto connect Telegram-Dify",
+    "telegramBot": "Telegram Bot",
+    "chatwootAccount": "Chatwoot Account",
+    "difyApp": "Dify App",
+    "loadError": "Error loading mappings",
+    "loadPlatformsError": "Error loading available platforms",
+    "createSuccess": "Platform mapping created successfully",
+    "updateSuccess": "Platform mapping updated successfully",
+    "deleteSuccess": "Platform mapping deleted successfully",
+    "saveError": "Error saving platform mapping",
+    "deleteError": "Error deleting platform mapping",
+    "deleteConfirm": "Are you sure you want to delete this platform mapping?"
   },
   "pages": {
     "logs": {

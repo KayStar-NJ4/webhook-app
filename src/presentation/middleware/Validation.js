@@ -179,6 +179,37 @@ class Validation {
       webhookUrl: Joi.string().uri().allow('').optional(),
       apiUrl: Joi.string().uri().optional(),
       isActive: Joi.boolean().optional()
+    }),
+
+    platformMapping: Joi.object({
+      platformType: Joi.string().valid('telegram', 'zalo', 'facebook').default('telegram'),
+      platformId: Joi.number().integer().positive().required(),
+      telegramBotId: Joi.number().integer().positive().when('platformType', {
+        is: 'telegram',
+        then: Joi.required(),
+        otherwise: Joi.optional().allow(null)
+      }),
+      chatwootAccountId: Joi.number().integer().positive().required(),
+      difyAppId: Joi.number().integer().positive().required(),
+      enableTelegramToChatwoot: Joi.boolean().default(true),
+      enableTelegramToDify: Joi.boolean().default(true),
+      enableChatwootToTelegram: Joi.boolean().default(true),
+      enableDifyToChatwoot: Joi.boolean().default(true),
+      enableDifyToTelegram: Joi.boolean().default(true),
+      autoConnectTelegramChatwoot: Joi.boolean().default(true),
+      autoConnectTelegramDify: Joi.boolean().default(true),
+      isActive: Joi.boolean().default(true)
+    }),
+
+    platformMappingUpdate: Joi.object({
+      enableTelegramToChatwoot: Joi.boolean().optional(),
+      enableTelegramToDify: Joi.boolean().optional(),
+      enableChatwootToTelegram: Joi.boolean().optional(),
+      enableDifyToChatwoot: Joi.boolean().optional(),
+      enableDifyToTelegram: Joi.boolean().optional(),
+      autoConnectTelegramChatwoot: Joi.boolean().optional(),
+      autoConnectTelegramDify: Joi.boolean().optional(),
+      isActive: Joi.boolean().optional()
     })
   }
 

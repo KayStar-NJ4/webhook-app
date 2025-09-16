@@ -208,6 +208,26 @@ class ConfigurationService {
       return {}
     }
   }
+
+  /**
+   * Get Dify app by ID
+   * @param {number} difyAppId - Dify app ID
+   * @returns {Promise<Object|null>} - Dify app configuration
+   */
+  async getDifyAppById(difyAppId) {
+    try {
+      // This would need to be implemented in the repository
+      // For now, we'll use a simple approach
+      const difyApps = await this.configRepository.findByType('dify_app')
+      return difyApps.find(app => app.id === difyAppId) || null
+    } catch (error) {
+      this.logger.error('Failed to get Dify app by ID', {
+        difyAppId,
+        error: error.message
+      })
+      return null
+    }
+  }
 }
 
 module.exports = ConfigurationService

@@ -59,7 +59,13 @@ INSERT INTO permissions (name, description, resource, action) VALUES
 ('dify.update', 'Update dify apps', 'dify', 'update'),
 ('dify.delete', 'Delete dify apps', 'dify', 'delete'),
 
--- Mapping Management
+-- Platform Mapping Management (for future expansion: Telegram, Zalo, Facebook, etc.)
+('platform_mappings.create', 'Create platform mappings', 'platform_mappings', 'create'),
+('platform_mappings.read', 'View platform mappings', 'platform_mappings', 'read'),
+('platform_mappings.update', 'Update platform mappings', 'platform_mappings', 'update'),
+('platform_mappings.delete', 'Delete platform mappings', 'platform_mappings', 'delete'),
+
+-- Legacy Mapping Management (for backward compatibility)
 ('mappings.create', 'Create bot-account mappings', 'mappings', 'create'),
 ('mappings.read', 'View mappings', 'mappings', 'read'),
 ('mappings.update', 'Update mappings', 'mappings', 'update'),

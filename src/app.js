@@ -152,6 +152,7 @@ class Application {
         logRepository: this.serviceRegistry.get('logRepository'),
         logsService: this.serviceRegistry.get('logsService'),
         permissionService: this.serviceRegistry.get('permissionService'),
+        platformMappingService: this.serviceRegistry.get('platformMappingService'),
         logger: logger.child({ component: 'AdminRoutes' })
       })
 

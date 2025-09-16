@@ -78,6 +78,17 @@
             </ul>
           </li>
 
+          <!-- Liên kết Platform -->
+          <li class="nav-item" v-if="hasPermission('platform_mappings', 'read')">
+            <a href="#" 
+               class="nav-link" 
+               :class="{ active: activeRoute === '/admin/platform-mappings' }"
+               @click="navigate('/admin/platform-mappings')">
+              <i class="nav-icon fas fa-link"></i>
+              <p>Liên kết Platform</p>
+            </a>
+          </li>
+
           <!-- Cài đặt hệ thống -->
           <li class="nav-item has-treeview" 
               v-if="hasAnySystemSettingsPermission()"

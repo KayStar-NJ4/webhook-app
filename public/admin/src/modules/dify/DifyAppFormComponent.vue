@@ -85,11 +85,15 @@
                         </div>
                     </form>
                 </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal" @click="resetForm">Hủy</button>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" @click="resetForm">
+                    <i class="fas fa-times mr-1"></i>
+                    Hủy
+                </button>
                 <button type="button" class="btn btn-primary" @click="save" :disabled="saving">
-                    <span v-if="saving" class="spinner-border spinner-border-sm mr-2"></span>
-                    {{ saving ? 'Đang lưu...' : (object_info && object_info.id ? 'Cập nhật' : 'Thêm') }}
+                    <i class="fas fa-save mr-1" v-if="!saving"></i>
+                    <i class="fas fa-spinner fa-spin mr-1" v-if="saving"></i>
+                    {{ saving ? 'Đang xử lý...' : (object_info && object_info.id ? 'Cập nhật' : 'Thêm mới') }}
                 </button>
             </div>
         </div>

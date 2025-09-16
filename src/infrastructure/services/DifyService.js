@@ -43,6 +43,38 @@ class DifyService {
   }
 
   /**
+   * Initialize service with specific Dify app ID
+   * @param {number} difyAppId - Dify app ID
+   */
+  async initializeWithAppId(difyAppId) {
+    try {
+      // Get Dify app configuration from database
+      const difyApp = await this.configurationService.getDifyAppById(difyAppId)
+      
+      if (!difyApp) {
+        throw new Error(`Dify app with ID ${difyAppId} not found`)
+      }
+
+      this.apiUrl = difyApp.api_url
+      this.apiKey = difyApp.api_key
+      this.appId = difyApp.app_id
+      this.timeout = difyApp.timeout || 30000
+      
+      this.logger.info('Dify service initialized with specific app', { 
+        difyAppId, 
+        apiUrl: this.apiUrl, 
+        appId: this.appId 
+      })
+    } catch (error) {
+      this.logger.error('Failed to initialize Dify service with app ID', { 
+        error: error.message, 
+        difyAppId 
+      })
+      throw error
+    }
+  }
+
+  /**
    * Get headers for API requests
    * @returns {Object} - Headers
    */
@@ -62,8 +94,13 @@ class DifyService {
    */
   async sendMessage(conversation, content, options = {}) {
     try {
-      if (!this.apiUrl || !this.apiKey || !this.appId) {
-        await this.initialize()
+      // If difyAppId is provided in options, use specific app configuration
+      if (options.difyAppId) {
+        await this.initializeWithAppId(options.difyAppId)
+      } else {
+        if (!this.apiUrl || !this.apiKey || !this.appId) {
+          await this.initialize()
+        }
       }
       
       // Get configuration from database

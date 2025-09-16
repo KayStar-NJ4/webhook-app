@@ -51,6 +51,7 @@ export default {
         'telegram-bots': 'Quản lý Telegram Bots',
         'chatwoot-accounts': 'Quản lý Chatwoot Accounts',
         'dify-apps': 'Quản lý Dify Apps',
+        'platform-mappings': 'Liên kết Platform',
         'configurations': 'Cấu hình hệ thống',
         'logs': 'Logs hệ thống',
         'roles': 'Quản lý Vai trò người dùng'

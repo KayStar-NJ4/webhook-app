@@ -6,6 +6,7 @@ const RoleController = require('../controllers/RoleController')
 const PermissionController = require('../controllers/PermissionController')
 const ConfigurationController = require('../controllers/ConfigurationController')
 const LogsController = require('../controllers/LogsController')
+const PlatformMappingController = require('../controllers/PlatformMappingController')
 const AuthMiddleware = require('../middleware/AuthMiddleware')
 const PermissionMiddleware = require('../middleware/PermissionMiddleware')
 
@@ -26,6 +27,7 @@ class AdminRoutes {
     logRepository,
     logsService,
     permissionService,
+    platformMappingService,
     logger 
   }) {
     this.router = express.Router()
@@ -66,6 +68,10 @@ class AdminRoutes {
     this.logsController = new LogsController({ 
       logService: logsService, 
       logger 
+    })
+    this.platformMappingController = new PlatformMappingController({
+      platformMappingService,
+      logger
     })
     this.authMiddleware = new AuthMiddleware({ logger, configurationService })
     this.permissionMiddleware = new PermissionMiddleware({ permissionService, logger })
@@ -281,6 +287,53 @@ class AdminRoutes {
       this.authMiddleware.verifyToken, 
       this.permissionMiddleware.requirePermission('dify', 'delete'),
       (req, res) => this.adminController.deleteMapping(req, res)
+    )
+
+    // Platform mapping management API
+    this.router.get('/api/admin/platform-mappings', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('platform_mappings', 'read'),
+      (req, res) => this.platformMappingController.getAllMappings(req, res)
+    )
+    this.router.get('/api/admin/platform-mappings/available-platforms', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('platform_mappings', 'read'),
+      (req, res) => this.platformMappingController.getAvailablePlatforms(req, res)
+    )
+    this.router.post('/api/admin/platform-mappings', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('platform_mappings', 'create'),
+      (req, res) => this.platformMappingController.createMapping(req, res)
+    )
+    this.router.get('/api/admin/platform-mappings/telegram-bot/:telegramBotId', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('platform_mappings', 'read'),
+      (req, res) => this.platformMappingController.getMappingsByTelegramBot(req, res)
+    )
+    this.router.get('/api/admin/platform-mappings/chatwoot-account/:chatwootAccountId', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('platform_mappings', 'read'),
+      (req, res) => this.platformMappingController.getMappingsByChatwootAccount(req, res)
+    )
+    this.router.get('/api/admin/platform-mappings/dify-app/:difyAppId', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('platform_mappings', 'read'),
+      (req, res) => this.platformMappingController.getMappingsByDifyApp(req, res)
+    )
+    this.router.get('/api/admin/platform-mappings/telegram-bot/:telegramBotId/routing', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('platform_mappings', 'read'),
+      (req, res) => this.platformMappingController.getRoutingConfiguration(req, res)
+    )
+    this.router.put('/api/admin/platform-mappings/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('platform_mappings', 'update'),
+      (req, res) => this.platformMappingController.updateMapping(req, res)
+    )
+    this.router.delete('/api/admin/platform-mappings/:id', 
+      this.authMiddleware.verifyToken, 
+      this.permissionMiddleware.requirePermission('platform_mappings', 'delete'),
+      (req, res) => this.platformMappingController.deleteMapping(req, res)
     )
 
     // Permission management API routes

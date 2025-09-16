@@ -93,6 +93,43 @@ class AdminService extends BaseService {
   deleteConfiguration(id) {
     return this.delete(`/configurations/${id}`)
   }
+
+  // Platform Mappings
+  getPlatformMappings(params = {}) {
+    return this.get('/platform-mappings', params)
+  }
+
+  getAvailablePlatforms() {
+    return this.get('/platform-mappings/available-platforms')
+  }
+
+  createPlatformMapping(data) {
+    return this.post('/platform-mappings', data)
+  }
+
+  updatePlatformMapping(id, data) {
+    return this.put(`/platform-mappings/${id}`, data)
+  }
+
+  deletePlatformMapping(id) {
+    return this.delete(`/platform-mappings/${id}`)
+  }
+
+  getMappingsByTelegramBot(telegramBotId) {
+    return this.get(`/platform-mappings/telegram-bot/${telegramBotId}`)
+  }
+
+  getMappingsByChatwootAccount(chatwootAccountId) {
+    return this.get(`/platform-mappings/chatwoot-account/${chatwootAccountId}`)
+  }
+
+  getMappingsByDifyApp(difyAppId) {
+    return this.get(`/platform-mappings/dify-app/${difyAppId}`)
+  }
+
+  getRoutingConfiguration(telegramBotId) {
+    return this.get(`/platform-mappings/telegram-bot/${telegramBotId}/routing`)
+  }
 }
 
 // Export to global window object

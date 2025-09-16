@@ -9,6 +9,7 @@
     "chatwootAccounts": "Tài khoản Chatwoot",
     "telegramBots": "Bot Telegram",
     "difyApps": "Ứng dụng Dify",
+    "platformMappings": "Liên kết Platform",
     "configurations": "Cấu hình",
     "logs": "Nhật ký"
   },
@@ -251,6 +252,35 @@
     "deleted": "Đã xóa thành công",
     "updated": "Đã cập nhật thành công",
     "created": "Đã tạo thành công"
+  },
+  "platformMappings": {
+    "title": "Liên kết Platform",
+    "createMapping": "Tạo liên kết",
+    "editMapping": "Chỉnh sửa liên kết",
+    "telegramBots": "Telegram Bots",
+    "chatwootAccounts": "Tài khoản Chatwoot",
+    "difyApps": "Ứng dụng Dify",
+    "noMappings": "Chưa có liên kết platform nào được cấu hình",
+    "routing": "Cấu hình định tuyến",
+    "telegramToChatwoot": "Telegram → Chatwoot",
+    "telegramToDify": "Telegram → Dify",
+    "chatwootToTelegram": "Chatwoot → Telegram",
+    "difyToChatwoot": "Dify → Chatwoot",
+    "difyToTelegram": "Dify → Telegram",
+    "autoConnect": "Tự động kết nối",
+    "autoConnectTelegramChatwoot": "Tự động kết nối Telegram-Chatwoot",
+    "autoConnectTelegramDify": "Tự động kết nối Telegram-Dify",
+    "telegramBot": "Telegram Bot",
+    "chatwootAccount": "Tài khoản Chatwoot",
+    "difyApp": "Ứng dụng Dify",
+    "loadError": "Lỗi khi tải liên kết",
+    "loadPlatformsError": "Lỗi khi tải platform có sẵn",
+    "createSuccess": "Tạo liên kết platform thành công",
+    "updateSuccess": "Cập nhật liên kết platform thành công",
+    "deleteSuccess": "Xóa liên kết platform thành công",
+    "saveError": "Lỗi khi lưu liên kết platform",
+    "deleteError": "Lỗi khi xóa liên kết platform",
+    "deleteConfirm": "Bạn có chắc chắn muốn xóa liên kết platform này?"
   },
   "pages": {
     "logs": {
