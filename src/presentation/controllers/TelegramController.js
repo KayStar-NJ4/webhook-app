@@ -15,7 +15,7 @@ class TelegramController {
    */
   async setupWebhook(req, res) {
     try {
-      const { webhookUrl } = req.body
+      const { webhookUrl, botToken, secretToken } = req.body
 
       if (!webhookUrl) {
         return res.status(400).json({
@@ -24,9 +24,14 @@ class TelegramController {
         })
       }
 
-      this.logger.info('Setting up Telegram webhook', { webhookUrl })
+      this.logger.info('Setting up Telegram webhook', { webhookUrl, hasBotToken: !!botToken })
 
-      const result = await this.telegramService.setWebhook(webhookUrl)
+      let result
+      if (botToken) {
+        result = await this.telegramService.setWebhookForBot(botToken, webhookUrl, secretToken)
+      } else {
+        result = await this.telegramService.setWebhook(webhookUrl)
+      }
 
       res.status(200).json({
         success: true,
@@ -43,6 +48,24 @@ class TelegramController {
         success: false,
         error: error.message
       })
+    }
+  }
+
+  /**
+   * Setup webhooks for all active bots using base URL
+   */
+  async setupAllWebhooks(req, res) {
+    try {
+      const { webhookUrl } = req.body
+      if (!webhookUrl) {
+        return res.status(400).json({ success: false, error: 'webhookUrl is required' })
+      }
+      const baseUrl = webhookUrl.replace(/\/$/, '')
+      const results = await this.telegramService.setWebhookForAllBots(baseUrl)
+      res.status(200).json({ success: true, data: results })
+    } catch (error) {
+      this.logger.error('Failed to setup all Telegram webhooks', { error: error.message })
+      res.status(500).json({ success: false, error: error.message })
     }
   }
 

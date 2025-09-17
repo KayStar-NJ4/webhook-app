@@ -43,6 +43,35 @@ class ConfigurationRepository {
   }
 
   /**
+   * Find configurations by type
+   * @param {string} type - Configuration type
+   * @returns {Promise<Array>} - Array of configuration objects
+   */
+  async findByType(type) {
+    try {
+      const query = 'SELECT * FROM configurations WHERE type = $1'
+      const result = await this.db.query(query, [type])
+      
+      return result.rows.map(config => ({
+        id: config.id,
+        key: config.key,
+        value: this.parseValue(config.value, config.type),
+        type: config.type,
+        description: config.description,
+        createdAt: config.created_at,
+        updatedAt: config.updated_at
+      }))
+
+    } catch (error) {
+      this.logger.error('Failed to find configurations by type', {
+        type,
+        error: error.message
+      })
+      throw error
+    }
+  }
+
+  /**
    * Upsert configuration
    * @param {string} key - Configuration key
    * @param {*} value - Configuration value

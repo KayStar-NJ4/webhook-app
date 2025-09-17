@@ -23,8 +23,16 @@ class WebhookRoutes {
       (req, res) => this.webhookController.healthCheck(req, res)
     ))
 
-    // Telegram webhook
+    // Telegram webhook - auto-detect bot ID
     this.router.post('/telegram', 
+      this.validation.validate(Validation.schemas.telegramWebhook, 'body'),
+      this.errorHandler.asyncHandler(
+        (req, res) => this.webhookController.handleTelegramWebhook(req, res)
+      )
+    )
+
+    // Telegram webhook with explicit botId in URL (optional)
+    this.router.post('/telegram/:botId',
       this.validation.validate(Validation.schemas.telegramWebhook, 'body'),
       this.errorHandler.asyncHandler(
         (req, res) => this.webhookController.handleTelegramWebhook(req, res)

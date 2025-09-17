@@ -58,6 +58,14 @@ class ApiRoutes {
       )
     )
 
+    // Setup all active bots with base URL (appends /webhook/telegram/:botId)
+    this.router.post('/telegram/setup-all',
+      this.validation.validate(Validation.schemas.webhookSetup, 'body'),
+      this.errorHandler.asyncHandler(
+        (req, res) => this.telegramController.setupAllWebhooks(req, res)
+      )
+    )
+
     this.router.get('/telegram/webhook-info',
       this.errorHandler.asyncHandler(
         (req, res) => this.telegramController.getWebhookInfo(req, res)

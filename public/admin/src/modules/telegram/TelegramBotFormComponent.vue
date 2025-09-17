@@ -38,6 +38,18 @@
                             </div>
                         </div>
                         <div class="row">
+                            <div class="col-md-6">
+                                <form-input-text-component
+                                    v-model="form.secretToken"
+                                    type="password"
+                                    label="Secret Token"
+                                    placeholder="Nhập Secret Token (tùy chọn)"
+                                    help-text="Token bí mật để bảo mật webhook"
+                                    :show-password-toggle="true"
+                                />
+                            </div>
+                        </div>
+                        <div class="row">
                             <div class="col-md-12">
                                 <form-input-text-component
                                     v-model="form.webhookUrl"
@@ -100,6 +112,7 @@ export default {
             form: {
                 name: '',
                 botToken: '',
+                secretToken: '',
                 webhookUrl: '',
                 isActive: true
             }
@@ -124,6 +137,7 @@ export default {
                 this.form = {
                     name: this.object_info.name || '',
                     botToken: this.object_info.bot_token || '',
+                    secretToken: this.object_info.secret_token || '',
                     webhookUrl: this.object_info.webhook_url || '',
                     isActive: this.object_info.is_active !== undefined ? this.object_info.is_active : true
                 };
@@ -177,6 +191,7 @@ export default {
             this.form = {
                 name: '',
                 botToken: '',
+                secretToken: '',
                 webhookUrl: '',
                 isActive: true
             };

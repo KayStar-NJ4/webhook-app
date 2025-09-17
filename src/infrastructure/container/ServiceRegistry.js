@@ -150,6 +150,7 @@ class ServiceRegistry {
     this.container.register('difyService', (container) => new DifyService({
       config: container.get('config'),
       configurationService: container.get('configurationService'),
+      difyAppRepository: container.get('difyAppRepository'),
       logger: container.get('logger')
     }), true)
 

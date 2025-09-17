@@ -272,6 +272,7 @@ class PlatformMappingService {
           chatwootAccountName: mapping.chatwoot_account_name,
           difyAppId: mapping.dify_app_id,
           difyAppName: mapping.dify_app_name,
+          telegramBotId: mapping.telegram_bot_id,
           routing: {
             telegramToChatwoot: mapping.enable_telegram_to_chatwoot,
             telegramToDify: mapping.enable_telegram_to_dify,
@@ -296,6 +297,63 @@ class PlatformMappingService {
       this.logger.error('Failed to get routing configuration', {
         error: error.message,
         telegramBotId
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Get routing configuration by Chatwoot external account ID
+   * @param {number|string} chatwootExternalAccountId - Chatwoot external account id (chatwoot.accounts.account_id)
+   * @returns {Promise<Object>} - Routing configuration
+   */
+  async getRoutingConfigurationByChatwootExternalAccountId(chatwootExternalAccountId) {
+    try {
+      const account = await this.chatwootAccountRepository.findByAccountId(String(chatwootExternalAccountId))
+
+      if (!account) {
+        return { hasMapping: false, mappings: [] }
+      }
+
+      const mappings = await this.platformMappingRepository.findByChatwootAccountId(account.id)
+
+      if (mappings.length === 0) {
+        return { hasMapping: false, mappings: [] }
+      }
+
+      const routingConfig = {
+        hasMapping: true,
+        mappings: mappings.map(mapping => ({
+          id: mapping.id,
+          chatwootAccountId: mapping.chatwoot_account_id,
+          chatwootAccountName: mapping.chatwoot_account_name,
+          difyAppId: mapping.dify_app_id,
+          difyAppName: mapping.dify_app_name,
+          telegramBotId: mapping.telegram_bot_id,
+          routing: {
+            telegramToChatwoot: mapping.enable_telegram_to_chatwoot,
+            telegramToDify: mapping.enable_telegram_to_dify,
+            chatwootToTelegram: mapping.enable_chatwoot_to_telegram,
+            difyToChatwoot: mapping.enable_dify_to_chatwoot,
+            difyToTelegram: mapping.enable_dify_to_telegram
+          },
+          autoConnect: {
+            telegramChatwoot: mapping.auto_connect_telegram_chatwoot,
+            telegramDify: mapping.auto_connect_telegram_dify
+          }
+        }))
+      }
+
+      this.logger.info('Retrieved routing configuration by Chatwoot external account ID', {
+        chatwootExternalAccountId,
+        mappingCount: mappings.length
+      })
+
+      return routingConfig
+    } catch (error) {
+      this.logger.error('Failed to get routing configuration by Chatwoot external account ID', {
+        error: error.message,
+        chatwootExternalAccountId
       })
       throw error
     }

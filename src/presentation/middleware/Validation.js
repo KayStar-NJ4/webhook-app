@@ -86,7 +86,7 @@ class Validation {
         }).required(),
         chat: Joi.object({
           id: Joi.number().required(),
-          type: Joi.string().valid('private', 'group', 'supergroup').required(),
+          type: Joi.string().valid('private', 'group', 'supergroup', 'channel').required(),
           title: Joi.string().allow('')
         }).required(),
         text: Joi.string().required(),
@@ -168,6 +168,7 @@ class Validation {
     telegramBot: Joi.object({
       name: Joi.string().min(1).max(100).required(),
       botToken: Joi.string().min(1).max(500).required(),
+      secretToken: Joi.string().min(1).max(255).optional().allow(''),
       webhookUrl: Joi.string().uri().allow('').optional(),
       isActive: Joi.boolean().default(true)
     }),
@@ -175,6 +176,7 @@ class Validation {
     telegramBotUpdate: Joi.object({
       name: Joi.string().min(1).max(100).optional(),
       botToken: Joi.string().min(1).max(500).optional(),
+      secretToken: Joi.string().min(1).max(255).optional().allow(''),
       webhookUrl: Joi.string().uri().allow('').optional(),
       isActive: Joi.boolean().optional()
     }),
@@ -208,7 +210,43 @@ class Validation {
       autoConnectTelegramChatwoot: Joi.boolean().optional(),
       autoConnectTelegramDify: Joi.boolean().optional(),
       isActive: Joi.boolean().optional()
-    })
+    }),
+
+    // Webhook validation schemas
+    telegramWebhook: Joi.object({
+      update_id: Joi.number().required(),
+      message: Joi.object({
+        message_id: Joi.number().required(),
+        from: Joi.object({
+          id: Joi.number().required(),
+          is_bot: Joi.boolean().default(false),
+          first_name: Joi.string().optional(),
+          last_name: Joi.string().optional(),
+          username: Joi.string().optional(),
+          language_code: Joi.string().optional()
+        }).required(),
+        chat: Joi.object({
+          id: Joi.number().required(),
+          type: Joi.string().valid('private', 'group', 'supergroup', 'channel').required(),
+          title: Joi.string().optional(),
+          username: Joi.string().optional(),
+          description: Joi.string().optional()
+        }).required(),
+        date: Joi.number().required(),
+        text: Joi.string().optional()
+      }).optional(),
+      callback_query: Joi.object().optional()
+    }).unknown(true), // Allow additional fields
+
+    chatwootWebhook: Joi.object({
+      event: Joi.string().required(),
+      id: Joi.number().optional(),
+      conversation: Joi.object().optional(),
+      message: Joi.object().optional(),
+      sender: Joi.object().optional(),
+      account: Joi.object().optional(),
+      account_id: Joi.number().optional()
+    }).unknown(true) // Allow additional fields
   }
 
   /**
@@ -223,6 +261,12 @@ class Validation {
    */
   validateTelegramBot = this.validate(Validation.schemas.telegramBot, 'body')
   validateTelegramBotUpdate = this.validate(Validation.schemas.telegramBotUpdate, 'body')
+
+  /**
+   * Validation middleware methods for Webhooks
+   */
+  validateTelegramWebhook = this.validate(Validation.schemas.telegramWebhook, 'body')
+  validateChatwootWebhook = this.validate(Validation.schemas.chatwootWebhook, 'body')
 }
 
 module.exports = Validation

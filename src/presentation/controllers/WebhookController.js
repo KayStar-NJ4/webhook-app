@@ -15,9 +15,20 @@ class WebhookController {
    */
   async handleTelegramWebhook(req, res) {
     try {
-      this.logger.info('Received Telegram webhook', { body: req.body })
+      const botIdFromPath = req.params?.botId
+      const secretToken = req.headers['x-telegram-bot-api-secret-token']
+      this.logger.info('Received Telegram webhook', { body: req.body, botIdFromPath, hasSecretToken: !!secretToken })
 
-      const result = await this.messageBrokerService.handleTelegramWebhook(req.body)
+      // Attach botId to body metadata if provided
+      const body = { ...req.body }
+      if (botIdFromPath) {
+        body.__bot_id = botIdFromPath
+      }
+      if (secretToken) {
+        body.__secret_token = secretToken
+      }
+
+      const result = await this.messageBrokerService.handleTelegramWebhook(body)
 
       res.status(200).json({
         success: true,

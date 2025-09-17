@@ -19,7 +19,11 @@ class MessageBrokerService {
    */
   async handleMessage(platform, messageData) {
     try {
-      this.logger.info('Handling message from platform', { platform, messageData })
+      this.logger.info('Handling message from platform', { 
+        platform, 
+        messageData,
+        conversation_id: messageData.conversationId
+      })
 
       const enrichedMessageData = {
         ...messageData,
@@ -32,7 +36,8 @@ class MessageBrokerService {
       this.logger.info('Message handled successfully', {
         platform,
         messageId: messageData.id,
-        result
+        result,
+        conversation_id: messageData.conversationId
       })
 
       return result
@@ -42,7 +47,8 @@ class MessageBrokerService {
         error: error.message,
         stack: error.stack,
         platform,
-        messageData
+        messageData,
+        conversation_id: messageData.conversationId
       })
       throw error
     }
@@ -100,18 +106,59 @@ class MessageBrokerService {
    * @returns {Object} - Parsed message data
    */
   parseTelegramMessage(telegramData) {
+    // Validate webhook data structure
+    if (!telegramData || !telegramData.message) {
+      this.logger.warn('Invalid Telegram webhook data - no message found', { telegramData })
+      throw new Error('Invalid Telegram webhook data - no message found')
+    }
+
     const message = telegramData.message
     const chat = message.chat
     const from = message.from
 
+    // Validate required fields
+    if (!chat || !from) {
+      this.logger.warn('Invalid Telegram message structure', { message })
+      throw new Error('Invalid Telegram message structure - missing chat or from data')
+    }
+
+    // Skip bot messages to prevent loops
+    if (from.is_bot) {
+      this.logger.info('Skipping bot message to prevent loops', { 
+        messageId: message.message_id,
+        botId: from.id 
+      })
+      throw new Error('Bot message skipped to prevent loops')
+    }
+
+    // Skip messages without text content
+    if (!message.text || !message.text.trim()) {
+      this.logger.info('Skipping non-text message', { 
+        messageId: message.message_id,
+        hasText: !!message.text,
+        messageType: message.content_type || 'unknown'
+      })
+      throw new Error('Non-text message skipped')
+    }
+
     const isGroupChat = chat.type === 'group' || chat.type === 'supergroup'
     const conversationId = isGroupChat ? chat.id.toString() : from.id.toString()
+
+    this.logger.info('Parsing Telegram message', {
+      messageId: message.message_id,
+      chatId: chat.id,
+      userId: from.id,
+      isGroupChat,
+      conversationId,
+      hasText: !!message.text,
+      textLength: message.text?.length || 0
+    })
 
     return {
       id: `${message.message_id}_${conversationId}`,
       content: message.text,
       senderId: from.id.toString(),
-      senderName: `${from.first_name} ${from.last_name || ''}`.trim(),
+      senderName: `${from.first_name || ''} ${from.last_name || ''}`.trim() || from.username || `User ${from.id}`,
       conversationId,
       metadata: {
         isGroupChat,
@@ -119,7 +166,27 @@ class MessageBrokerService {
         messageId: message.message_id,
         chatId: chat.id.toString(),
         userId: from.id.toString(),
-        username: from.username
+        username: from.username,
+        firstName: from.first_name,
+        lastName: from.last_name,
+        languageCode: from.language_code,
+        botId: telegramData.__bot_id ? Number(telegramData.__bot_id) : undefined,
+        secretToken: telegramData.__secret_token,
+        chat: {
+          id: chat.id,
+          type: chat.type,
+          title: chat.title,
+          username: chat.username,
+          description: chat.description
+        },
+        sender: {
+          id: from.id,
+          username: from.username,
+          first_name: from.first_name,
+          last_name: from.last_name,
+          language_code: from.language_code,
+          is_bot: from.is_bot
+        }
       }
     }
   }
@@ -168,6 +235,9 @@ class MessageBrokerService {
         conversationId: conversation.id,
         senderId: sender.id,
         inboxId: conversation.inbox_id,
+        accountId: chatwootData.account?.id || chatwootData.account_id || message?.account_id || 1,
+        messageType: message.message_type,
+        isOutgoing: message.message_type === 'outgoing',
         event: 'message_created',
         // Add chat type information for conversation creation
         chatType: 'private', // Chatwoot conversations are typically private
@@ -213,6 +283,9 @@ class MessageBrokerService {
         conversationId: conversation.id,
         senderId: sender.id,
         inboxId: conversation.inbox_id,
+        accountId: chatwootData.account?.id || chatwootData.account_id || conversation?.account_id || 1,
+        messageType: latestMessage.message_type,
+        isOutgoing: latestMessage.message_type === 'outgoing',
         event: 'conversation_updated',
         // Add chat type information for conversation creation
         chatType: 'private', // Chatwoot conversations are typically private

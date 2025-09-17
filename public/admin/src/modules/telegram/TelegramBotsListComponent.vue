@@ -56,6 +56,7 @@
                     <th style="width: 120px;"></th>
                     <th class="text-center text-nowrap">Tên Bot</th>
                     <th class="text-center text-nowrap">Bot Token</th>
+                    <th class="text-center text-nowrap">Secret Token</th>
                     <th class="text-center text-nowrap">Webhook URL</th>
                     <th class="text-center text-nowrap">API URL</th>
                     <th class="text-center text-nowrap">Trạng thái</th>
@@ -88,6 +89,7 @@
                     </td>
                     <td class="align-middle">{{ item.name || '' }}</td>
                     <td class="align-middle">{{ item.bot_token ? '***' + item.bot_token.slice(-4) : '' }}</td>
+                    <td class="align-middle">{{ item.secret_token ? '***' + item.secret_token.slice(-4) : '' }}</td>
                     <td class="align-middle">{{ item.webhook_url || '' }}</td>
                     <td class="align-middle">{{ item.api_url || '' }}</td>
                     <td class="align-middle text-center">
