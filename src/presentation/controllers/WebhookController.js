@@ -109,7 +109,8 @@ class WebhookController {
         senderId: req.body.sender?.id,
         accountId: req.body.account?.id,
         content: req.body.content?.substring(0, 100),
-        fullPayload: req.body
+        timestamp: new Date().toISOString(),
+        requestId: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       })
 
       const result = await this.messageBrokerService.handleChatwootWebhook(req.body)

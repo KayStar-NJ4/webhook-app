@@ -15,6 +15,7 @@ class ProcessMessageUseCase {
     difyService,
     configurationService,
     platformMappingService,
+    databaseService,
     logger
   }) {
     this.conversationRepository = conversationRepository
@@ -24,11 +25,51 @@ class ProcessMessageUseCase {
     this.difyService = difyService
     this.configurationService = configurationService
     this.platformMappingService = platformMappingService
+    this.databaseService = databaseService
     this.logger = logger
     
     // Rate limiting để tránh trả lời liên tục
     this.responseCooldown = new Map() // conversationId -> lastResponseTime
+    this.processingMessages = new Set() // Set of message IDs currently being processed
+    this.processedMessages = new Set() // Set of message IDs already processed
   }
+
+  /**
+   * Check if message is from bot itself to prevent self-loop
+   * @param {Object} messageData - Raw message data
+   * @returns {boolean} - True if message is from bot
+   */
+  isBotMessage(messageData) {
+    // 1. TELEGRAM: Check from.is_bot (most reliable for Telegram)
+    if (messageData.metadata?.sender?.is_bot === true) {
+      return true
+    }
+    
+    // 2. CHATWOOT: Check outgoing message (most reliable for Chatwoot)
+    if (messageData.metadata?.isOutgoing === true || 
+        messageData.metadata?.messageType === 'outgoing') {
+      return true
+    }
+    
+    // 3. CHATWOOT: Check sender type indicators
+    if (messageData.sender?.type === 'agent_bot' || 
+        messageData.sender?.is_bot === true) {
+      return true
+    }
+    
+    // 4. CHATWOOT: Check message_type field (additional check)
+    if (messageData.metadata?.messageType === 1 || messageData.metadata?.messageType === 'outgoing') {
+      return true
+    }
+    
+    // 5. CHATWOOT: Check sender ID = 1 (bot user ID in Chatwoot)
+    if (messageData.metadata?.senderId === 1 || messageData.metadata?.senderId === '1') {
+      return true
+    }
+    
+    return false
+  }
+
 
   /**
    * Execute the use case
@@ -43,30 +84,93 @@ class ProcessMessageUseCase {
       const message = this.createMessageEntity(messageData)
       message.validate()
 
-      // 2. Check if message already processed
+      // 1.5. PREVENT SELF-LOOP: Check if message is from bot itself
+      const isBot = this.isBotMessage(messageData)
+      this.logger.info('SELF-LOOP PREVENTION: Checking if message is from bot', {
+        messageId: message.id,
+        conversation_id: message.conversationId,
+        platform: message.platform,
+        isBot: isBot,
+        senderType: messageData.sender?.type || 'unknown',
+        senderName: messageData.sender?.name || 'unknown',
+        isOutgoing: messageData.metadata?.isOutgoing,
+        messageType: messageData.metadata?.messageType,
+        content: messageData.content?.substring(0, 50) || 'N/A'
+      })
+      
+      if (isBot) {
+        this.logger.warn('SELF-LOOP PREVENTION: Message is from bot itself, skipping', {
+          messageId: message.id,
+          conversation_id: message.conversationId,
+          platform: message.platform,
+          senderType: messageData.sender?.type || 'unknown',
+          senderName: messageData.sender?.name || 'unknown',
+          isOutgoing: messageData.metadata?.isOutgoing,
+          messageType: messageData.metadata?.messageType
+        })
+        return { success: true, message: 'SELF-LOOP PREVENTED - Message is from bot itself', skipped: true }
+      }
+
+      // 2. STRONG DEDUPLICATION: Check if message is currently being processed
+      if (this.processingMessages.has(message.id)) {
+        this.logger.warn('DUPLICATE PREVENTION: Message is currently being processed, skipping', { 
+          messageId: message.id,
+          conversation_id: message.conversationId,
+          platform: message.platform
+        })
+        return { success: true, message: 'DUPLICATE PREVENTED - Message is being processed', duplicate: true }
+      }
+
+      // 3. STRONG DEDUPLICATION: Check if message already processed (in-memory)
+      if (this.processedMessages.has(message.id)) {
+        this.logger.warn('DUPLICATE PREVENTION: Message already processed in session, skipping', { 
+          messageId: message.id,
+          conversation_id: message.conversationId,
+          platform: message.platform
+        })
+        return { success: true, message: 'DUPLICATE PREVENTED - Message already processed in session', duplicate: true }
+      }
+
+      // 4. STRONG DEDUPLICATION: Check if message already processed (database)
       const messageExists = await this.messageRepository.exists(message.id)
       if (messageExists) {
-        this.logger.info('Message already processed, skipping to avoid duplicate responses', { messageId: message.id })
-        return { success: true, message: 'Message already processed - duplicate response prevented' }
+        this.logger.warn('DUPLICATE PREVENTION: Message already processed in database, skipping', { 
+          messageId: message.id,
+          conversation_id: message.conversationId,
+          platform: message.platform
+        })
+        return { success: true, message: 'DUPLICATE PREVENTED - Message already processed in database', duplicate: true }
       }
+
+      // 5. Mark message as being processed
+      this.processingMessages.add(message.id)
 
       // 3. Get or create conversation
       const conversation = await this.getOrCreateConversation(message)
 
-      // 4. Save message
+      // 6. Save message
       await this.messageRepository.save(message)
 
-      // 5. Process based on platform
+      // 7. Process based on platform
       const result = await this.processByPlatform(message, conversation)
+
+      // 8. Mark message as processed
+      this.processedMessages.add(message.id)
+      this.processingMessages.delete(message.id)
 
       this.logger.info('Message processed successfully', {
         messageId: message.id,
-        conversationId: conversation.id
+        conversationId: conversation.id,
+        conversation_id: message.conversationId
       })
 
       return result
 
     } catch (error) {
+      // Cleanup on error - use the same key as when adding to processingMessages
+      const message = this.createMessageEntity(messageData)
+      this.processingMessages.delete(message.id)
+      
       this.logger.error('Failed to process message', {
         error: error.message,
         stack: error.stack,
@@ -666,13 +770,16 @@ class ProcessMessageUseCase {
       { difyAppId }
     )
 
-    // Update conversation with Dify ID
-    this.logger.info('Updating conversation with Dify ID', {
-      conversationId: conversation.id,
-      difyId: difyResponse.conversationId
+    // Update conversation with Dify conversation_id from API response
+    this.logger.info('Updating conversation with Dify conversation_id from API response', {
+      dbConversationId: conversation.id,
+      difyConversationId: difyResponse.conversationId,
+      note: 'difyResponse.conversationId comes from Dify API response.data.conversation_id'
     })
     
     conversation.difyId = difyResponse.conversationId
+    
+    
     await this.conversationRepository.update(conversation)
     
     this.logger.info('Conversation updated successfully with Dify ID', {
@@ -750,37 +857,18 @@ class ProcessMessageUseCase {
     
     // Try to find bot ID by secret token (recommended) or matching webhook
     try {
-      const { Pool } = require('pg')
-      const pool = new Pool({
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        database: process.env.DB_NAME,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        ssl: process.env.DB_SSL === 'true'
-      })
-      
       // 1) via secret token if configured
       if (message.metadata?.secretToken) {
-        const resToken = await pool.query(
-          'SELECT id FROM telegram_bots WHERE secret_token = $1 AND is_active = true LIMIT 1',
-          [message.metadata.secretToken]
-        )
-        if (resToken.rows.length > 0) {
-          const botId = resToken.rows[0].id
-          await pool.end()
+        const botId = await this.databaseService.getBotIdBySecretToken(message.metadata.secretToken)
+        if (botId) {
           this.logger.info('Resolved Telegram bot by secret token', { botId })
           return botId
         }
       }
 
       // 2) fallback: get first active bot
-      const result = await pool.query('SELECT id FROM telegram_bots WHERE is_active = true ORDER BY id LIMIT 1')
-      
-      await pool.end()
-      
-      if (result.rows.length > 0) {
-        const botId = result.rows[0].id
+      const botId = await this.databaseService.getFirstActiveBotId()
+      if (botId) {
         this.logger.info('Found active Telegram bot', { botId })
         return botId
       }
@@ -800,14 +888,16 @@ class ProcessMessageUseCase {
    * @returns {Promise<Object>}
    */
   async processChatwootMessage(message, conversation) {
-    // Kiểm tra xem có phải tin nhắn từ bot không (để tránh loop)
-    const isFromBot = message.metadata?.event === 'message_created' && 
-                     message.metadata?.sender?.is_bot === true
+    // Use the same bot detection logic as in execute()
+    const isFromBot = this.isBotMessage(message)
     
     if (isFromBot) {
       this.logger.info('Skipping bot message to prevent loop', {
         messageId: message.id,
-        conversationId: conversation.id
+        conversationId: conversation.id,
+        isOutgoing: message.metadata?.isOutgoing,
+        messageType: message.metadata?.messageType,
+        senderIsBot: message.metadata?.sender?.is_bot
       })
       return {
         success: true,
@@ -834,16 +924,20 @@ class ProcessMessageUseCase {
       }
     }
 
-    // 1. Send message to Dify (real-time mode - no conversation history) if mapping allows or no mapping present
+    // 1. Send message to Dify (REALTIME mode - no conversation history) if mapping allows or no mapping present
     let difyResponse = { conversationId: conversation.difyId, response: null }
     const anyMappingAllowsDify = routingConfig.hasMapping ? routingConfig.mappings.some(m => m.routing?.difyToChatwoot || m.routing?.difyToTelegram || m.routing?.telegramToDify) : true
     
-    this.logger.info('Dify processing check', {
+    this.logger.info('Dify processing check (REALTIME mode)', {
       hasMapping: routingConfig.hasMapping,
       anyMappingAllowsDify,
       difyServiceExists: !!this.difyService,
       conversationId: conversation.id,
-      messageContent: message.content.substring(0, 50)
+      messageContent: message.content.substring(0, 50),
+      mode: 'REALTIME',
+      note: 'Each message processed independently without conversation history',
+      hasDifyId: !!conversation.difyId,
+      difyId: conversation.difyId
     })
     
     if (anyMappingAllowsDify) {
@@ -881,6 +975,22 @@ class ProcessMessageUseCase {
           throw new Error('No routing configuration found')
         }
         
+        // Reload conversation from database to get latest difyId before sending to Dify
+        const freshConversation = await this.conversationRepository.findById(conversation.id)
+        if (freshConversation) {
+          this.logger.info('Using fresh conversation data for Dify', {
+            dbConversationId: freshConversation.id,
+            oldDifyId: conversation.difyId,
+            newDifyId: freshConversation.difyId
+          })
+          // Update conversation object with fresh difyId
+          conversation.difyId = freshConversation.difyId
+        } else {
+          this.logger.warn('Could not reload conversation from database', {
+            dbConversationId: conversation.id
+          })
+        }
+        
         difyResponse = await this.difyService.sendMessage(
           conversation,
           message.content
@@ -889,8 +999,15 @@ class ProcessMessageUseCase {
         this.logger.info('Dify response received', {
           conversationId: difyResponse.conversationId,
           hasResponse: !!difyResponse.response,
-          responseLength: difyResponse.response?.length || 0
+          responseLength: difyResponse.response?.length || 0,
+          usedConversationId: conversation.difyId,
+          newConversationId: difyResponse.conversationId
         })
+        
+        // Update conversation with new difyId
+        if (difyResponse.conversationId) {
+          conversation.difyId = difyResponse.conversationId
+        }
       } catch (difyError) {
         this.logger.error('Dify processing failed', {
           error: difyError.message,
@@ -908,8 +1025,24 @@ class ProcessMessageUseCase {
     }
 
     // 2. Update conversation with difyId để duy trì context trong DB
-    conversation.difyId = difyResponse.conversationId
-    await this.conversationRepository.update(conversation)
+    if (difyResponse.conversationId) {
+      conversation.difyId = difyResponse.conversationId
+    }
+    
+    try {
+      await this.conversationRepository.update(conversation)
+      this.logger.info('Conversation updated in database successfully', {
+        dbConversationId: conversation.id,
+        difyId: conversation.difyId
+      })
+    } catch (updateError) {
+      this.logger.error('Failed to update conversation in database', {
+        error: updateError.message,
+        dbConversationId: conversation.id,
+        difyId: conversation.difyId
+      })
+    }
+    
 
     // 3a. Send response back to Chatwoot (chỉ gửi một lần) if mapping allows
     const allowDifyToChatwoot = !routingConfig.hasMapping || routingConfig.mappings.some(m => m.routing?.difyToChatwoot)
@@ -927,25 +1060,38 @@ class ProcessMessageUseCase {
       // Get cooldown configuration from database
       const difyConfig = await this.configurationService.getDifyConfig()
       
-      // Kiểm tra cooldown để tránh trả lời liên tục
+      // SMART DEDUPLICATION: Chỉ ngăn duplicate cho cùng 1 message, cho phép tin nhắn mới
       const now = Date.now()
       const lastResponseTime = this.responseCooldown.get(conversation.id) || 0
+      const cooldownPeriod = difyConfig.cooldownPeriod || 5000 // 5 seconds default (ngắn hơn)
       
-      if (now - lastResponseTime < difyConfig.cooldownPeriod) {
-        this.logger.info('Response skipped due to cooldown', {
+      // Kiểm tra cooldown ngắn (chỉ 5 giây) để tránh spam
+      if (now - lastResponseTime < cooldownPeriod) {
+        this.logger.warn('DUPLICATE PREVENTION: Response skipped due to short cooldown', {
           conversationId: conversation.id,
           timeSinceLastResponse: now - lastResponseTime,
-          cooldownPeriod: difyConfig.cooldownPeriod
+          cooldownPeriod: cooldownPeriod,
+          conversation_id: conversation.id,
+          messageId: message.id
         })
         return {
           success: true,
           difyConversationId: difyResponse.conversationId,
-          note: 'Response skipped due to cooldown to prevent continuous responses'
+          note: `DUPLICATE PREVENTED - Response skipped due to cooldown (${cooldownPeriod}ms)`,
+          skipped: true,
+          duplicate: true
         }
       }
       
-      // Cập nhật thời gian response cuối
+      // Cập nhật cooldown
       this.responseCooldown.set(conversation.id, now)
+      
+      this.logger.info('DUPLICATE PREVENTION: All checks passed - proceeding with response', {
+        conversationId: conversation.id,
+        timeSinceLastResponse: now - lastResponseTime,
+        cooldownPeriod: cooldownPeriod,
+        conversation_id: conversation.id
+      })
       
       // Đảm bảo chỉ gửi 1 tin nhắn duy nhất
       const singleResponse = difyResponse.response.trim()
@@ -1103,7 +1249,8 @@ class ProcessMessageUseCase {
     return {
       success: true,
       difyConversationId: difyResponse.conversationId,
-      note: 'Real-time response - no conversation history used'
+      note: 'REALTIME response - each message processed independently without conversation history',
+      mode: 'REALTIME'
     }
   }
 
@@ -1113,19 +1260,7 @@ class ProcessMessageUseCase {
   async getTelegramBotToken(telegramBotId) {
     try {
       if (!telegramBotId) return null
-      // Direct DB query to fetch token to avoid circular DI; using pg like other helpers
-      const { Pool } = require('pg')
-      const pool = new Pool({
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        database: process.env.DB_NAME,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        ssl: process.env.DB_SSL === 'true'
-      })
-      const result = await pool.query('SELECT bot_token FROM telegram_bots WHERE id = $1', [telegramBotId])
-      await pool.end()
-      return result.rows[0]?.bot_token || null
+      return await this.databaseService.getBotToken(telegramBotId)
     } catch (e) {
       this.logger.warn('Failed to resolve Telegram bot token', { error: e.message, telegramBotId })
       return null
@@ -1139,25 +1274,7 @@ class ProcessMessageUseCase {
    */
   async getChatwootAccountByExternalAccountId(externalAccountId) {
     try {
-      const { Pool } = require('pg')
-      const pool = new Pool({
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        database: process.env.DB_NAME,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        ssl: process.env.DB_SSL === 'true'
-      })
-      
-      const result = await pool.query('SELECT * FROM chatwoot_accounts WHERE account_id = $1', [externalAccountId])
-      await pool.end()
-      
-      if (result.rows.length === 0) {
-        this.logger.warn('Chatwoot account not found for external account ID', { externalAccountId })
-        return null
-      }
-      
-      return result.rows[0]
+      return await this.databaseService.getChatwootAccountByExternalAccountId(externalAccountId)
     } catch (error) {
       this.logger.error('Failed to get Chatwoot account by external account ID', {
         error: error.message,

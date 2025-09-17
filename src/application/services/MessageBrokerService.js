@@ -90,6 +90,13 @@ class MessageBrokerService {
    */
   async handleChatwootWebhook(chatwootData) {
     try {
+      this.logger.info('Processing Chatwoot webhook', {
+        event: chatwootData.event,
+        messageId: chatwootData.id,
+        conversationId: chatwootData.conversation?.id,
+        timestamp: new Date().toISOString()
+      })
+      
       const messageData = this.parseChatwootMessage(chatwootData)
       
       // If parsing returns null (unhandled event or no message), just log and return success
@@ -100,6 +107,13 @@ class MessageBrokerService {
         })
         return { success: true, message: 'Webhook processed but no message to handle' }
       }
+      
+      this.logger.info('Chatwoot message parsed successfully', {
+        messageId: messageData.id,
+        conversationId: messageData.conversationId,
+        content: messageData.content?.substring(0, 50),
+        platform: 'chatwoot'
+      })
       
       return await this.handleMessage('chatwoot', messageData)
     } catch (error) {
@@ -234,6 +248,18 @@ class MessageBrokerService {
     const conversation = message.conversation
     const sender = message.sender
 
+    // Log detailed message information for debugging
+    this.logger.info('Parsing Chatwoot message_created event', {
+      messageId: message.id,
+      senderId: sender.id,
+      senderName: sender.name,
+      messageType: message.message_type,
+      isOutgoing: message.message_type === 'outgoing',
+      content: message.content?.substring(0, 100),
+      conversationId: conversation.id,
+      accountId: chatwootData.account?.id || chatwootData.account_id || message?.account_id || 1
+    })
+
     return {
       id: `${message.id}_chatwoot`,
       content: message.content,
@@ -259,7 +285,7 @@ class MessageBrokerService {
           name: sender.name,
           username: sender.additional_attributes?.username,
           language_code: sender.additional_attributes?.language_code,
-          is_bot: false
+          is_bot: message.message_type === 'outgoing' // Bot messages are outgoing
         }
       }
     }
@@ -307,7 +333,7 @@ class MessageBrokerService {
           name: sender.name,
           username: sender.additional_attributes?.username,
           language_code: sender.additional_attributes?.language_code,
-          is_bot: false
+          is_bot: latestMessage.message_type === 'outgoing' // Bot messages are outgoing
         }
       }
     }

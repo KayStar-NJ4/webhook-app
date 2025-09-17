@@ -81,21 +81,35 @@ class DifyService {
         throw new Error('Dify service not properly initialized. Missing apiUrl, apiKey, or appId.')
       }
 
-      this.logger.info('Sending message to Dify (real-time mode)', {
+      this.logger.info('Sending message to Dify', {
         conversationId: conversation?.id,
-        content: content.substring(0, 100),
-        apiUrl: this.apiUrl,
-        hasApiKey: !!this.apiKey,
-        appId: this.appId,
-        conversation_id: conversation?.id
+        content: content.substring(0, 50),
+        difyId: conversation?.difyId
       })
 
+      // Use conversation_id from Dify to maintain conversation context
       const payload = {
         inputs: {},
         query: content,
         response_mode: 'blocking',
-        user: conversation?.userId || conversation?.id || 'anonymous'
+        user: `user-${conversation?.id || 'new'}` // Use database conversation ID as user ID
       }
+
+      // Add conversation_id if we have one from previous Dify responses
+      if (conversation?.difyId) {
+        payload.conversation_id = conversation.difyId
+        this.logger.info('Using existing Dify conversation_id', {
+          difyConversationId: conversation.difyId
+        })
+      } else {
+        this.logger.info('Starting new Dify conversation')
+      }
+
+      this.logger.info('Dify API payload', {
+        hasConversationId: !!payload.conversation_id,
+        user: payload.user,
+        mode: payload.conversation_id ? 'CONTINUOUS' : 'NEW'
+      })
 
       const response = await axios.post(
         `${this.apiUrl}/v1/chat-messages`,
@@ -103,14 +117,11 @@ class DifyService {
         { headers: this.getHeaders(), timeout: this.timeout }
       )
 
-      // Log the full response for debugging
-      this.logger.info('Dify API raw response', {
+      // Log the response for debugging
+      this.logger.info('Dify API response', {
         status: response.status,
-        statusText: response.statusText,
-        hasData: !!response.data,
-        dataKeys: response.data ? Object.keys(response.data) : [],
-        fullResponse: response.data,
-        conversation_id: conversation?.id
+        hasAnswer: !!response.data.answer,
+        conversation_id: response.data.conversation_id
       })
 
       // Check if the response indicates an error
@@ -136,15 +147,10 @@ class DifyService {
 
       responseText = String(responseText)
 
-      // Log the actual response for debugging
-      this.logger.info('Dify API response details', {
-        hasAnswer: !!response.data.answer,
-        answerType: typeof response.data.answer,
-        answerValue: response.data.answer,
-        responseText: responseText,
-        responseTextLength: responseText.length,
-        fullResponse: response.data,
-        conversation_id: conversation?.id
+      // Log the response details
+      this.logger.info('Dify response processed', {
+        responseLength: responseText.length,
+        conversation_id: response.data.conversation_id
       })
 
       // If response is empty or null, provide a default response
@@ -157,36 +163,16 @@ class DifyService {
         responseText = 'Xin lỗi, tôi không thể xử lý tin nhắn này lúc này. Vui lòng thử lại sau.'
       }
 
-      // Logic greeting ngắn gọn
-      const simpleGreetings = ['chào', 'hello', 'hi', 'xin chào', 'hey']
-      const isSimpleGreeting =
-        simpleGreetings.some(g => content.toLowerCase().includes(g)) &&
-        content.length < 20
 
-      if (isSimpleGreeting && responseText.length > this.settings.simpleGreetingMaxLength) {
-        responseText = responseText.substring(0, this.settings.simpleGreetingMaxLength) + '...'
-        this.logger.info('Simple greeting detected, response shortened', {
-          originalLength: response.data.answer?.length,
-          shortenedLength: responseText.length
-        })
-      }
-
-      // Giới hạn response
-      if (responseText.length > this.settings.maxResponseLength) {
-        responseText =
-          responseText.substring(0, this.settings.maxResponseLength) +
-          '\n\n[Tin nhắn đã được cắt ngắn]'
-        this.logger.warn('Dify response too long, truncated', {
-          originalLength: response.data.answer?.length,
-          truncatedLength: responseText.length
-        })
-      }
-
-      // Ensure we have a valid conversation ID
-      const conversationId = response.data.conversation_id || `fallback-${Date.now()}`
+      // Get conversation_id from Dify API response (this is the correct one to use)
+      const difyConversationId = response.data.conversation_id || `fallback-${Date.now()}`
+      
+      this.logger.info('Dify conversation_id', {
+        difyConversationId: difyConversationId
+      })
       
       const result = {
-        conversationId: conversationId,
+        conversationId: difyConversationId, // This is the Dify conversation_id
         response: responseText,
         metadata: {
           messageId: response.data.id,
@@ -199,31 +185,16 @@ class DifyService {
         }
       }
 
-      // Log the final result for debugging
-      this.logger.info('Dify service result', {
+      this.logger.info('Dify processing completed', {
         conversationId: result.conversationId,
-        hasResponse: !!result.response,
-        responseLength: result.response?.length || 0,
-        responsePreview: result.response?.substring(0, 100) || 'N/A',
-        conversation_id: conversation?.id
-      })
-
-      this.logger.info('Message sent to Dify successfully', {
-        conversationId: conversation?.id,
-        difyConversationId: result.conversationId,
-        conversation_id: conversation?.id
+        responseLength: result.response?.length || 0
       })
 
       return result
     } catch (error) {
       this.logger.error('Failed to send message to Dify', {
         error: error.message,
-        stack: error.stack,
-        conversationId: conversation?.id,
-        apiUrl: this.apiUrl,
-        hasApiKey: !!this.apiKey,
-        hasAppId: !!this.appId,
-        conversation_id: conversation?.id
+        conversationId: conversation?.id
       })
       throw new Error(`Dify API error: ${error.message}`)
     }

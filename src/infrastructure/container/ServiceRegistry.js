@@ -19,6 +19,7 @@ const PlatformMappingRepository = require('../repositories/PlatformMappingReposi
 const TelegramService = require('../services/TelegramService')
 const ChatwootService = require('../services/ChatwootService')
 const DifyService = require('../services/DifyService')
+const DatabaseService = require('../services/DatabaseService')
 const LogsService = require('../../application/services/LogsService')
 const ConfigurationService = require('../services/ConfigurationService')
 const PlatformMappingService = require('../services/PlatformMappingService')
@@ -162,6 +163,10 @@ class ServiceRegistry {
       logger: container.get('logger')
     }), true)
 
+    this.container.register('databaseService', (container) => new DatabaseService({
+      logger: container.get('logger')
+    }), true)
+
     // Use Cases
     this.container.register('processMessageUseCase', (container) => new ProcessMessageUseCase({
       conversationRepository: container.get('conversationRepository'),
@@ -171,6 +176,7 @@ class ServiceRegistry {
       difyService: container.get('difyService'),
       configurationService: container.get('configurationService'),
       platformMappingService: container.get('platformMappingService'),
+      databaseService: container.get('databaseService'),
       logger: container.get('logger')
     }), true)
 
@@ -226,6 +232,10 @@ class ServiceRegistry {
       // Initialize log repository first
       const logRepository = this.get('logRepository')
       await logRepository.initialize()
+      
+      // Initialize database service
+      const databaseService = this.get('databaseService')
+      databaseService.initialize()
       
       // Initialize conversation repository
       const conversationRepository = this.get('conversationRepository')
