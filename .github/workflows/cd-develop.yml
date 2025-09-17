@@ -1,8 +1,8 @@
-name: CD - Production
+name: CD - Develop
 
 on:
   push:
-    branches: [ master ]
+    branches: [ develop ]
 
 env:
   REGISTRY: ghcr.io
@@ -45,16 +45,16 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
+        file: ./Dockerfile.dev
         platforms: linux/amd64,linux/arm64
         push: true
         tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop
         cache-from: type=gha
         cache-to: type=gha,mode=max
         
-    - name: Deploy to production
+    - name: Deploy to develop
       run: |
-        echo "🚀 Deploying to production..."
-        echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-        echo "✅ Production deployment completed!"
+        echo "🚀 Deploying to develop..."
+        echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop"
+        echo "✅ Develop deployment completed!"

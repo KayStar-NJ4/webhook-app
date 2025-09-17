@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Development application with hot reload
+  # Development Backend
   webhook-app-dev:
     build:
       context: .
@@ -15,9 +15,9 @@ services:
     env_file:
       - .env
     volumes:
-      - ./src:/app/src
-      - ./scripts:/app/scripts
-      - ./logs:/app/logs
+      - ./src:/app/src:rw
+      - ./scripts:/app/scripts:rw
+      - ./logs:/app/logs:rw
       - /app/node_modules
     restart: unless-stopped
     depends_on:
@@ -31,8 +31,16 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
 
-  # Redis for development
+  # Development Redis
   redis-dev:
     image: redis:7-alpine
     container_name: webhook-redis-dev
@@ -49,8 +57,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
 
-  # PostgreSQL for development (optional)
+  # Development PostgreSQL
   postgres-dev:
     image: postgres:15-alpine
     container_name: webhook-postgres-dev
@@ -62,7 +78,7 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     restart: unless-stopped
     networks:
       - webhook-dev-network
@@ -71,25 +87,26 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
     profiles:
       - postgresql
 
-  # Mailhog for email testing
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: webhook-mailhog
-    ports:
-      - "1025:1025"
-      - "8025:8025"
-    networks:
-      - webhook-dev-network
-    profiles:
-      - mailhog
-
 volumes:
   redis_dev_data:
+    driver: local
   postgres_dev_data:
+    driver: local
 
 networks:
   webhook-dev-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
