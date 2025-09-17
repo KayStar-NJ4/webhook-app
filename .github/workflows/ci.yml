@@ -26,8 +26,15 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'yarn'
         
+    - name: Debug yarn.lock
+      run: |
+        echo "Checking yarn.lock file..."
+        ls -la yarn.lock
+        head -5 yarn.lock
+        
     - name: Install dependencies
-      run: yarn install --frozen-lockfile --silent
+      run: |
+        yarn install --frozen-lockfile --silent
       
     - name: Run ESLint
       run: yarn lint
