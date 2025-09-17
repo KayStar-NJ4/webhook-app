@@ -63,7 +63,7 @@ jobs:
         file: ./Dockerfile
         platforms: linux/amd64
         push: false
-        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
+        tags: ${{ env.REGISTRY }}/${{ toLower(env.IMAGE_NAME) }}:test
         cache-from: type=gha
         cache-to: type=gha,mode=max
         
@@ -74,7 +74,7 @@ jobs:
         file: ./Dockerfile.dev
         platforms: linux/amd64
         push: false
-        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-dev
+        tags: ${{ env.REGISTRY }}/${{ toLower(env.IMAGE_NAME) }}:test-dev
         cache-from: type=gha
         cache-to: type=gha,mode=max
         

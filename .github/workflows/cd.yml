@@ -55,8 +55,8 @@ jobs:
         platforms: linux/amd64,linux/arm64
         push: true
         tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
+          ${{ env.REGISTRY }}/${{ toLower(env.IMAGE_NAME) }}:latest
+          ${{ env.REGISTRY }}/${{ toLower(env.IMAGE_NAME) }}:master
         cache-from: type=gha
         cache-to: type=gha,mode=max
         
