@@ -56,6 +56,9 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       
+    - name: Set lowercase image name
+      run: echo "IMAGE_NAME_LOWER=$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+      
     - name: Build production image
       uses: docker/build-push-action@v5
       with:
@@ -63,7 +66,7 @@ jobs:
         file: ./Dockerfile
         platforms: linux/amd64
         push: false
-        tags: ${{ env.REGISTRY }}/${{ toLower(env.IMAGE_NAME) }}:test
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:test
         cache-from: type=gha
         cache-to: type=gha,mode=max
         
@@ -74,19 +77,19 @@ jobs:
         file: ./Dockerfile.dev
         platforms: linux/amd64
         push: false
-        tags: ${{ env.REGISTRY }}/${{ toLower(env.IMAGE_NAME) }}:test-dev
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:test-dev
         cache-from: type=gha
         cache-to: type=gha,mode=max
         
     - name: Test production image
       run: |
-        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test node --version
-        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test yarn --version
+        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:test node --version
+        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:test yarn --version
         
     - name: Test development image
       run: |
-        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-dev node --version
-        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-dev yarn --version
+        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:test-dev node --version
+        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:test-dev yarn --version
 
   security-scan:
     name: Security Scan
@@ -98,6 +101,8 @@ jobs:
       contents: read
     
     steps:
+    - name: Set lowercase image name
+      run: echo "IMAGE_NAME_LOWER=$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
     - name: Checkout code
       uses: actions/checkout@v4
       
