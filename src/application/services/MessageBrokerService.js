@@ -72,6 +72,44 @@ class MessageBrokerService {
    */
   async handleTelegramWebhook(telegramData) {
     try {
+      // Get bot info from database if available
+      let botInfo = null
+      if (telegramData.__bot_id) {
+        try {
+          // Get bot info from database service
+          const databaseService = this.container.get('databaseService')
+          const botToken = await databaseService.getBotToken(telegramData.__bot_id)
+          if (botToken) {
+            // Extract bot username from token (format: botId:token)
+            const tokenParts = botToken.split(':')
+            if (tokenParts.length >= 2) {
+              botInfo = {
+                id: parseInt(telegramData.__bot_id),
+                username: `bot${tokenParts[0]}` // Telegram bot username format
+              }
+            }
+          }
+        } catch (dbError) {
+          this.logger.warn('Failed to get bot info from database', { error: dbError.message })
+        }
+      }
+
+      this.logger.info('Received Telegram webhook', {
+        hasMessage: !!telegramData.message,
+        messageId: telegramData.message?.message_id,
+        chatId: telegramData.message?.chat?.id,
+        chatType: telegramData.message?.chat?.type,
+        chatTitle: telegramData.message?.chat?.title,
+        userId: telegramData.message?.from?.id,
+        userName: telegramData.message?.from?.first_name,
+        hasText: !!telegramData.message?.text,
+        textPreview: telegramData.message?.text?.substring(0, 50),
+        botInfo
+      })
+      
+      // Add bot info to telegramData for parsing
+      telegramData.bot = botInfo
+      
       const messageData = this.parseTelegramMessage(telegramData)
       return await this.handleMessage('telegram', messageData)
     } catch (error) {
@@ -147,13 +185,14 @@ class MessageBrokerService {
       throw new Error('Invalid Telegram message structure - missing chat or from data')
     }
 
-    // Skip bot messages to prevent loops
-    if (from.is_bot) {
-      this.logger.info('Skipping bot message to prevent loops', { 
+    // Skip messages from this bot to prevent loops (but allow other bots in group)
+    if (from.is_bot && from.id === telegramData.bot?.id) {
+      this.logger.info('Skipping message from this bot to prevent loops', { 
         messageId: message.message_id,
-        botId: from.id 
+        botId: from.id,
+        isThisBot: true
       })
-      throw new Error('Bot message skipped to prevent loops')
+      throw new Error('Message from this bot skipped to prevent loops')
     }
 
     // Skip messages without text content
@@ -168,6 +207,17 @@ class MessageBrokerService {
 
     const isGroupChat = chat.type === 'group' || chat.type === 'supergroup'
     const conversationId = isGroupChat ? chat.id.toString() : from.id.toString()
+    
+    // For group chats, only respond when bot is mentioned
+    const isBotMentioned = isGroupChat && message.text && (
+      message.text.includes(`@${telegramData.bot?.username}`) ||
+      message.text.includes(`@${telegramData.bot?.first_name}`) ||
+      message.entities?.some(entity => entity.type === 'mention' && 
+        message.text.substring(entity.offset, entity.offset + entity.length).includes(telegramData.bot?.username))
+    )
+    
+    // Respond to all messages (private and group)
+    const shouldRespond = true
 
     this.logger.info('Parsing Telegram message', {
       messageId: message.message_id,
@@ -176,8 +226,27 @@ class MessageBrokerService {
       isGroupChat,
       conversationId,
       hasText: !!message.text,
-      textLength: message.text?.length || 0
+      textLength: message.text?.length || 0,
+      chatType: chat.type,
+      chatTitle: chat.title,
+      userName: from.first_name,
+      userUsername: from.username,
+      isBotMentioned,
+      botUsername: telegramData.bot?.username,
+      shouldRespond
     })
+    
+    // Skip if we shouldn't respond
+    if (!shouldRespond) {
+      this.logger.info('Skipping message - not mentioned in group or not private chat', {
+        messageId: message.message_id,
+        isGroupChat,
+        isBotMentioned,
+        botUsername: telegramData.bot?.username,
+        messageText: message.text?.substring(0, 100)
+      })
+      throw new Error('Message skipped - not mentioned in group or not private chat')
+    }
 
     return {
       id: `${message.message_id}_${conversationId}`,

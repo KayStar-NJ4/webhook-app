@@ -17,7 +17,21 @@ class WebhookController {
     try {
       const botIdFromPath = req.params?.botId
       const secretToken = req.headers['x-telegram-bot-api-secret-token']
-      this.logger.info('Received Telegram webhook', { body: req.body, botIdFromPath, hasSecretToken: !!secretToken })
+      
+      this.logger.info('Received Telegram webhook', { 
+        body: req.body, 
+        botIdFromPath, 
+        hasSecretToken: !!secretToken,
+        hasMessage: !!req.body.message,
+        messageId: req.body.message?.message_id,
+        chatId: req.body.message?.chat?.id,
+        chatType: req.body.message?.chat?.type,
+        chatTitle: req.body.message?.chat?.title,
+        userId: req.body.message?.from?.id,
+        userName: req.body.message?.from?.first_name,
+        hasText: !!req.body.message?.text,
+        textPreview: req.body.message?.text?.substring(0, 50)
+      })
 
       // Attach botId to body metadata if provided
       const body = { ...req.body }
