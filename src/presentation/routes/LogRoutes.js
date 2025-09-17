@@ -6,12 +6,12 @@ const router = express.Router()
  * API endpoints for log management
  */
 class LogRoutes {
-  constructor(logController) {
+  constructor (logController) {
     this.logController = logController
     this.setupRoutes()
   }
 
-  setupRoutes() {
+  setupRoutes () {
     // Get recent logs
     router.get('/', async (req, res) => {
       await this.logController.getLogs(req, res)
@@ -33,7 +33,7 @@ class LogRoutes {
     })
   }
 
-  getRouter() {
+  getRouter () {
     return router
   }
 }

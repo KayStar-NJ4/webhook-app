@@ -8,30 +8,30 @@ class Platform {
 
   static ALL = [Platform.TELEGRAM, Platform.CHATWOOT, Platform.DIFY]
 
-  constructor(value) {
+  constructor (value) {
     if (!Platform.ALL.includes(value)) {
       throw new Error(`Invalid platform: ${value}. Supported platforms: ${Platform.ALL.join(', ')}`)
     }
     this.value = value
   }
 
-  toString() {
+  toString () {
     return this.value
   }
 
-  equals(other) {
+  equals (other) {
     return other instanceof Platform && this.value === other.value
   }
 
-  isTelegram() {
+  isTelegram () {
     return this.value === Platform.TELEGRAM
   }
 
-  isChatwoot() {
+  isChatwoot () {
     return this.value === Platform.CHATWOOT
   }
 
-  isDify() {
+  isDify () {
     return this.value === Platform.DIFY
   }
 }

@@ -6,7 +6,7 @@ const Conversation = require('../../domain/entities/Conversation')
  * For development and testing purposes
  */
 class InMemoryConversationRepository extends ConversationRepository {
-  constructor() {
+  constructor () {
     super()
     this.conversations = new Map()
   }
@@ -16,7 +16,7 @@ class InMemoryConversationRepository extends ConversationRepository {
    * @param {string} id - Conversation ID
    * @returns {Promise<Conversation|null>}
    */
-  async findById(id) {
+  async findById (id) {
     const conversation = this.conversations.get(id)
     return conversation ? new Conversation(conversation) : null
   }
@@ -27,7 +27,7 @@ class InMemoryConversationRepository extends ConversationRepository {
    * @param {string} externalId - External platform ID
    * @returns {Promise<Conversation|null>}
    */
-  async findByPlatformId(platform, externalId) {
+  async findByPlatformId (platform, externalId) {
     const id = `${platform}_${externalId}`
     return await this.findById(id)
   }
@@ -37,12 +37,12 @@ class InMemoryConversationRepository extends ConversationRepository {
    * @param {Conversation} conversation - Conversation entity
    * @returns {Promise<Conversation>}
    */
-  async save(conversation) {
+  async save (conversation) {
     conversation.validate()
-    
+
     const conversationData = conversation.toJSON()
     this.conversations.set(conversation.id, conversationData)
-    
+
     return new Conversation(conversationData)
   }
 
@@ -51,18 +51,18 @@ class InMemoryConversationRepository extends ConversationRepository {
    * @param {Conversation} conversation - Conversation entity
    * @returns {Promise<Conversation>}
    */
-  async update(conversation) {
+  async update (conversation) {
     if (!this.conversations.has(conversation.id)) {
       throw new Error(`Conversation with ID ${conversation.id} not found`)
     }
 
     conversation.validate()
-    
+
     const conversationData = {
       ...conversation.toJSON(),
       updatedAt: new Date()
     }
-    
+
     this.conversations.set(conversation.id, conversationData)
     return new Conversation(conversationData)
   }
@@ -72,7 +72,7 @@ class InMemoryConversationRepository extends ConversationRepository {
    * @param {string} id - Conversation ID
    * @returns {Promise<boolean>}
    */
-  async delete(id) {
+  async delete (id) {
     return this.conversations.delete(id)
   }
 
@@ -80,7 +80,7 @@ class InMemoryConversationRepository extends ConversationRepository {
    * Get all conversations
    * @returns {Promise<Conversation[]>}
    */
-  async findAll() {
+  async findAll () {
     return Array.from(this.conversations.values())
       .map(data => new Conversation(data))
   }
@@ -90,7 +90,7 @@ class InMemoryConversationRepository extends ConversationRepository {
    * @param {string} platform - Platform name
    * @returns {Promise<Conversation[]>}
    */
-  async findByPlatform(platform) {
+  async findByPlatform (platform) {
     return Array.from(this.conversations.values())
       .filter(data => data.platform === platform)
       .map(data => new Conversation(data))
@@ -100,7 +100,7 @@ class InMemoryConversationRepository extends ConversationRepository {
    * Clear all conversations (for testing)
    * @returns {Promise<void>}
    */
-  async clear() {
+  async clear () {
     this.conversations.clear()
   }
 
@@ -108,7 +108,7 @@ class InMemoryConversationRepository extends ConversationRepository {
    * Get conversation count
    * @returns {Promise<number>}
    */
-  async count() {
+  async count () {
     return this.conversations.size
   }
 }

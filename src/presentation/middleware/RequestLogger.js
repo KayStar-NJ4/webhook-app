@@ -3,7 +3,7 @@
  * Logs HTTP requests with structured format
  */
 class RequestLogger {
-  constructor({ logger }) {
+  constructor ({ logger }) {
     this.logger = logger
   }
 
@@ -13,7 +13,7 @@ class RequestLogger {
    * @param {Object} res - Express response
    * @param {Function} next - Express next function
    */
-  middleware(req, res, next) {
+  middleware (req, res, next) {
     const startTime = Date.now()
 
     // Generate request ID if not present
@@ -35,7 +35,7 @@ class RequestLogger {
     const originalEnd = res.end
     res.end = (chunk, encoding) => {
       const responseTime = Date.now() - startTime
-      
+
       this.logger.info('Request completed', {
         requestId: req.requestId,
         method: req.method,
@@ -55,7 +55,7 @@ class RequestLogger {
    * Generate unique request ID
    * @returns {string} - Request ID
    */
-  generateRequestId() {
+  generateRequestId () {
     return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   }
 
@@ -64,11 +64,11 @@ class RequestLogger {
    * @param {Object} body - Request body
    * @returns {Object} - Sanitized body
    */
-  sanitizeBody(body) {
+  sanitizeBody (body) {
     if (!body) return body
 
     const sanitized = { ...body }
-    
+
     // Remove sensitive fields
     const sensitiveFields = ['password', 'token', 'secret', 'key', 'authorization']
     sensitiveFields.forEach(field => {

@@ -3,7 +3,7 @@
  * Handles business logic for platform mappings
  */
 class PlatformMappingService {
-  constructor({
+  constructor ({
     platformMappingRepository,
     telegramBotRepository,
     chatwootAccountRepository,
@@ -23,7 +23,7 @@ class PlatformMappingService {
    * @param {Object} user - User object
    * @returns {Promise<Object>} - Created mapping
    */
-  async createMapping(mappingData, user) {
+  async createMapping (mappingData, user) {
     try {
       const { telegramBotId, chatwootAccountId, difyAppId } = mappingData
 
@@ -68,10 +68,10 @@ class PlatformMappingService {
    * @param {Object} filters - Filter options
    * @returns {Promise<Array>} - Array of mappings
    */
-  async getAllMappings(filters = {}) {
+  async getAllMappings (filters = {}) {
     try {
       const mappings = await this.platformMappingRepository.getAllWithDetails(filters)
-      
+
       this.logger.info('Retrieved platform mappings', {
         count: mappings.length,
         filters
@@ -92,10 +92,10 @@ class PlatformMappingService {
    * @param {number} telegramBotId - Telegram bot ID
    * @returns {Promise<Array>} - Array of mappings
    */
-  async getMappingsByTelegramBot(telegramBotId) {
+  async getMappingsByTelegramBot (telegramBotId) {
     try {
       const mappings = await this.platformMappingRepository.findByTelegramBotId(telegramBotId)
-      
+
       this.logger.info('Retrieved mappings for Telegram bot', {
         telegramBotId,
         count: mappings.length
@@ -116,10 +116,10 @@ class PlatformMappingService {
    * @param {number} chatwootAccountId - Chatwoot account ID
    * @returns {Promise<Array>} - Array of mappings
    */
-  async getMappingsByChatwootAccount(chatwootAccountId) {
+  async getMappingsByChatwootAccount (chatwootAccountId) {
     try {
       const mappings = await this.platformMappingRepository.findByChatwootAccountId(chatwootAccountId)
-      
+
       this.logger.info('Retrieved mappings for Chatwoot account', {
         chatwootAccountId,
         count: mappings.length
@@ -140,10 +140,10 @@ class PlatformMappingService {
    * @param {number} difyAppId - Dify app ID
    * @returns {Promise<Array>} - Array of mappings
    */
-  async getMappingsByDifyApp(difyAppId) {
+  async getMappingsByDifyApp (difyAppId) {
     try {
       const mappings = await this.platformMappingRepository.findByDifyAppId(difyAppId)
-      
+
       this.logger.info('Retrieved mappings for Dify app', {
         difyAppId,
         count: mappings.length
@@ -166,7 +166,7 @@ class PlatformMappingService {
    * @param {Object} user - User object
    * @returns {Promise<Object>} - Updated mapping
    */
-  async updateMapping(mappingId, updateData, user) {
+  async updateMapping (mappingId, updateData, user) {
     try {
       const mapping = await this.platformMappingRepository.updateConfiguration(
         mappingId,
@@ -198,7 +198,7 @@ class PlatformMappingService {
    * @param {Object} user - User object
    * @returns {Promise<boolean>} - Success status
    */
-  async deleteMapping(mappingId, user) {
+  async deleteMapping (mappingId, user) {
     try {
       const success = await this.platformMappingRepository.delete(mappingId, user)
 
@@ -227,7 +227,7 @@ class PlatformMappingService {
    * @param {number} difyAppId - Dify app ID
    * @returns {Promise<Object|null>} - Active mapping or null
    */
-  async getActiveMapping(telegramBotId, chatwootAccountId, difyAppId) {
+  async getActiveMapping (telegramBotId, chatwootAccountId, difyAppId) {
     try {
       const mapping = await this.platformMappingRepository.findActiveMapping(
         telegramBotId,
@@ -252,10 +252,10 @@ class PlatformMappingService {
    * @param {number} telegramBotId - Telegram bot ID
    * @returns {Promise<Object>} - Routing configuration
    */
-  async getRoutingConfiguration(telegramBotId) {
+  async getRoutingConfiguration (telegramBotId) {
     try {
       const mappings = await this.platformMappingRepository.findByTelegramBotId(telegramBotId)
-      
+
       if (mappings.length === 0) {
         return {
           hasMapping: false,
@@ -307,7 +307,7 @@ class PlatformMappingService {
    * @param {number|string} chatwootExternalAccountId - Chatwoot external account id (chatwoot.accounts.account_id)
    * @returns {Promise<Object>} - Routing configuration
    */
-  async getRoutingConfigurationByChatwootExternalAccountId(chatwootExternalAccountId) {
+  async getRoutingConfigurationByChatwootExternalAccountId (chatwootExternalAccountId) {
     try {
       const account = await this.chatwootAccountRepository.findByAccountId(String(chatwootExternalAccountId))
 
@@ -366,7 +366,7 @@ class PlatformMappingService {
    * @param {number} difyAppId - Dify app ID
    * @returns {Promise<void>}
    */
-  async validatePlatforms(telegramBotId, chatwootAccountId, difyAppId) {
+  async validatePlatforms (telegramBotId, chatwootAccountId, difyAppId) {
     try {
       // Validate Telegram bot
       const telegramBot = await this.telegramBotRepository.findById(telegramBotId)
@@ -406,7 +406,7 @@ class PlatformMappingService {
    * Get available platforms for mapping
    * @returns {Promise<Object>} - Available platforms
    */
-  async getAvailablePlatforms() {
+  async getAvailablePlatforms () {
     try {
       const [telegramBotsResult, chatwootAccountsResult, difyAppsResult] = await Promise.all([
         this.telegramBotRepository.findAll({ isActive: true, limit: 1000 }),
@@ -460,10 +460,10 @@ class PlatformMappingService {
    * @param {number} platformId - Platform bot/account ID
    * @returns {Promise<Object>} - Routing configuration
    */
-  async getPlatformRoutingConfiguration(platformType, platformId) {
+  async getPlatformRoutingConfiguration (platformType, platformId) {
     try {
       const mappings = await this.platformMappingRepository.findByPlatformId(platformType, platformId)
-      
+
       if (mappings.length === 0) {
         return {
           hasMapping: false,
@@ -520,19 +520,19 @@ class PlatformMappingService {
    * @param {number} mappingId - Mapping ID
    * @returns {Promise<Object>} - Test results
    */
-  async testConnection(mappingId) {
+  async testConnection (mappingId) {
     try {
       this.logger.info('Starting platform mapping connection test', { mappingId })
-      
+
       const mapping = await this.platformMappingRepository.findById(mappingId)
-      
+
       if (!mapping) {
         this.logger.warn('Platform mapping not found', { mappingId })
         throw new Error('Platform mapping not found')
       }
 
-      this.logger.info('Found platform mapping', { 
-        mappingId, 
+      this.logger.info('Found platform mapping', {
+        mappingId,
         telegramBotId: mapping.telegram_bot_id,
         chatwootAccountId: mapping.chatwoot_account_id,
         difyAppId: mapping.dify_app_id
@@ -548,12 +548,12 @@ class PlatformMappingService {
       try {
         if (mapping.telegram_bot_id) {
           const telegramBot = await this.telegramBotRepository.findById(mapping.telegram_bot_id)
-          this.logger.info('Found telegram bot', { 
-            telegramBotId: mapping.telegram_bot_id, 
+          this.logger.info('Found telegram bot', {
+            telegramBotId: mapping.telegram_bot_id,
             bot: telegramBot ? 'found' : 'not found',
             isActive: telegramBot?.is_active
           })
-          
+
           if (telegramBot && telegramBot.is_active) {
             testResults.tests.telegram = await this.testTelegramConnection(telegramBot)
           } else {
@@ -580,12 +580,12 @@ class PlatformMappingService {
       try {
         if (mapping.chatwoot_account_id) {
           const chatwootAccount = await this.chatwootAccountRepository.findById(mapping.chatwoot_account_id)
-          this.logger.info('Found chatwoot account', { 
-            chatwootAccountId: mapping.chatwoot_account_id, 
+          this.logger.info('Found chatwoot account', {
+            chatwootAccountId: mapping.chatwoot_account_id,
             account: chatwootAccount ? 'found' : 'not found',
             isActive: chatwootAccount?.is_active
           })
-          
+
           if (chatwootAccount && chatwootAccount.is_active) {
             testResults.tests.chatwoot = await this.testChatwootConnection(chatwootAccount)
           } else {
@@ -612,12 +612,12 @@ class PlatformMappingService {
       try {
         if (mapping.dify_app_id) {
           const difyApp = await this.difyAppRepository.findById(mapping.dify_app_id)
-          this.logger.info('Found dify app', { 
-            difyAppId: mapping.dify_app_id, 
+          this.logger.info('Found dify app', {
+            difyAppId: mapping.dify_app_id,
             app: difyApp ? 'found' : 'not found',
             isActive: difyApp?.is_active
           })
-          
+
           if (difyApp && difyApp.is_active) {
             testResults.tests.dify = await this.testDifyConnection(difyApp)
           } else {
@@ -666,7 +666,7 @@ class PlatformMappingService {
    * @param {Object} testData - Test data
    * @returns {Promise<Object>} - Test result
    */
-  async testPlatformConnection(platform, component, testData) {
+  async testPlatformConnection (platform, component, testData) {
     try {
       let testResult = {}
 
@@ -706,10 +706,10 @@ class PlatformMappingService {
    * @param {Object} telegramBot - Telegram bot data
    * @returns {Promise<Object>} - Test result
    */
-  async testTelegramConnection(telegramBot) {
+  async testTelegramConnection (telegramBot) {
     try {
       const axios = require('axios')
-      
+
       // Test bot token by calling getMe API
       const response = await axios.get(`https://api.telegram.org/bot${telegramBot.bot_token}/getMe`, {
         timeout: 10000
@@ -742,25 +742,25 @@ class PlatformMappingService {
    * @param {Object} chatwootAccount - Chatwoot account data
    * @returns {Promise<Object>} - Test result
    */
-  async testChatwootConnection(chatwootAccount) {
+  async testChatwootConnection (chatwootAccount) {
     try {
       const axios = require('axios')
-      
+
       // Use the exact headers that work from browser
       const headers = {
         'access-token': 'fsAasUTFZpJBWS7C-gFGYw',
-        'client': 'ucC86ODq5-izqrwaa54EBw',
-        'uid': 'thuanpt.work@gmail.com',
-        'authorization': `Bearer ${chatwootAccount.access_token}`,
+        client: 'ucC86ODq5-izqrwaa54EBw',
+        uid: 'thuanpt.work@gmail.com',
+        authorization: `Bearer ${chatwootAccount.access_token}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json, text/plain, */*'
+        Accept: 'application/json, text/plain, */*'
       }
-      
-      this.logger.info('Testing Chatwoot connection', { 
+
+      this.logger.info('Testing Chatwoot connection', {
         url: `${chatwootAccount.base_url}/api/v1/accounts/${chatwootAccount.account_id}`,
         headers: { ...headers, 'access-token': headers['access-token'] ? '***' : undefined }
       })
-      
+
       // Test access token by calling accounts API
       const response = await axios.get(`${chatwootAccount.base_url}/api/v1/accounts/${chatwootAccount.account_id}`, {
         headers,
@@ -793,10 +793,10 @@ class PlatformMappingService {
    * @param {Object} difyApp - Dify app data
    * @returns {Promise<Object>} - Test result
    */
-  async testDifyConnection(difyApp) {
+  async testDifyConnection (difyApp) {
     try {
       const axios = require('axios')
-      
+
       // Test API key by calling a simple endpoint
       const response = await axios.post(`${difyApp.api_url}/v1/chat-messages`, {
         inputs: {},
@@ -805,7 +805,7 @@ class PlatformMappingService {
         user: 'test-user'
       }, {
         headers: {
-          'Authorization': `Bearer ${difyApp.api_key}`,
+          Authorization: `Bearer ${difyApp.api_key}`,
           'Content-Type': 'application/json'
         },
         timeout: 10000

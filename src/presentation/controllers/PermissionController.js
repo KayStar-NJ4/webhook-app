@@ -3,10 +3,10 @@
  * Handles permission and role management endpoints
  */
 class PermissionController {
-  constructor({ 
-    permissionService, 
-    userRepository, 
-    logger 
+  constructor ({
+    permissionService,
+    userRepository,
+    logger
   }) {
     this.permissionService = permissionService
     this.userRepository = userRepository
@@ -18,7 +18,7 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getRoles(req, res) {
+  async getRoles (req, res) {
     try {
       const roles = await this.permissionService.getAllRoles()
 
@@ -26,7 +26,6 @@ class PermissionController {
         success: true,
         data: roles
       })
-
     } catch (error) {
       this.logger.error('Get roles failed', { error: error.message })
       res.status(500).json({
@@ -41,19 +40,19 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getPermissions(req, res) {
+  async getPermissions (req, res) {
     try {
       const permissions = await this.permissionService.getAllPermissions()
-      
+
       // Group permissions by resource
       const groupedPermissions = {}
       permissions.forEach(permission => {
         const resource = permission.resource
-        
+
         if (!groupedPermissions[resource]) {
           groupedPermissions[resource] = []
         }
-        
+
         groupedPermissions[resource].push({
           id: permission.id,
           name: permission.name,
@@ -70,7 +69,6 @@ class PermissionController {
           permissions: groupedPermissions
         }
       })
-
     } catch (error) {
       this.logger.error('Get permissions failed', { error: error.message })
       res.status(500).json({
@@ -85,7 +83,7 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getPermissionsGrouped(req, res) {
+  async getPermissionsGrouped (req, res) {
     try {
       const permissions = await this.permissionService.getPermissionsGrouped()
 
@@ -93,7 +91,6 @@ class PermissionController {
         success: true,
         data: permissions
       })
-
     } catch (error) {
       this.logger.error('Get permissions grouped failed', { error: error.message })
       res.status(500).json({
@@ -108,7 +105,7 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getUserPermissions(req, res) {
+  async getUserPermissions (req, res) {
     try {
       const userId = req.user.userId
       const permissions = await this.permissionService.getUserPermissionsGrouped(userId)
@@ -117,7 +114,6 @@ class PermissionController {
         success: true,
         data: permissions
       })
-
     } catch (error) {
       this.logger.error('Get user permissions failed', { error: error.message })
       res.status(500).json({
@@ -132,23 +128,23 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getPermissionsForAssignment(req, res) {
+  async getPermissionsForAssignment (req, res) {
     try {
       const permissions = await this.permissionService.getAllPermissions()
-      
+
       // Group permissions by resource for easy selection
       const groupedPermissions = {}
       permissions.forEach(permission => {
         const resource = permission.resource
-        
+
         if (!groupedPermissions[resource]) {
           groupedPermissions[resource] = {
-            resource: resource,
+            resource,
             resourceName: this.getResourceDisplayName(resource),
             actions: []
           }
         }
-        
+
         groupedPermissions[resource].actions.push({
           id: permission.id,
           name: permission.name,
@@ -167,7 +163,6 @@ class PermissionController {
           permissions: permissionsArray
         }
       })
-
     } catch (error) {
       this.logger.error('Get permissions for assignment failed', { error: error.message })
       res.status(500).json({
@@ -182,16 +177,16 @@ class PermissionController {
    * @param {string} resource - Resource name
    * @returns {string} - Display name
    */
-  getResourceDisplayName(resource) {
+  getResourceDisplayName (resource) {
     const resourceNames = {
-      'system': 'Hệ thống',
-      'users': 'Người dùng', 
-      'roles': 'Vai trò',
-      'permissions': 'Quyền',
-      'config': 'Cấu hình',
-      'chatwoot': 'Chatwoot',
-      'telegram': 'Telegram',
-      'dify': 'Dify'
+      system: 'Hệ thống',
+      users: 'Người dùng',
+      roles: 'Vai trò',
+      permissions: 'Quyền',
+      config: 'Cấu hình',
+      chatwoot: 'Chatwoot',
+      telegram: 'Telegram',
+      dify: 'Dify'
     }
     return resourceNames[resource] || resource
   }
@@ -201,17 +196,17 @@ class PermissionController {
    * @param {string} action - Action name
    * @returns {string} - Display name
    */
-  getActionDisplayName(action) {
+  getActionDisplayName (action) {
     const actionNames = {
-      'dashboard': 'Bảng điều khiển',
-      'logs': 'Nhật ký',
-      'metrics': 'Thống kê',
-      'create': 'Tạo',
-      'read': 'Xem',
-      'update': 'Sửa',
-      'delete': 'Xóa',
-      'manage_permissions': 'Quản lý quyền',
-      'manage_roles': 'Quản lý vai trò'
+      dashboard: 'Bảng điều khiển',
+      logs: 'Nhật ký',
+      metrics: 'Thống kê',
+      create: 'Tạo',
+      read: 'Xem',
+      update: 'Sửa',
+      delete: 'Xóa',
+      manage_permissions: 'Quản lý quyền',
+      manage_roles: 'Quản lý vai trò'
     }
     return actionNames[action] || action
   }
@@ -221,7 +216,7 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async createRole(req, res) {
+  async createRole (req, res) {
     try {
       const { name, description } = req.body
 
@@ -242,7 +237,6 @@ class PermissionController {
         message: 'Role created successfully',
         data: role
       })
-
     } catch (error) {
       this.logger.error('Create role failed', { error: error.message })
       res.status(500).json({
@@ -257,7 +251,7 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async updateRole(req, res) {
+  async updateRole (req, res) {
     try {
       const { id } = req.params
       const { name, description } = req.body
@@ -272,7 +266,6 @@ class PermissionController {
         message: 'Role updated successfully',
         data: role
       })
-
     } catch (error) {
       this.logger.error('Update role failed', { error: error.message })
       res.status(500).json({
@@ -287,7 +280,7 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async deleteRole(req, res) {
+  async deleteRole (req, res) {
     try {
       const { id } = req.params
 
@@ -304,7 +297,6 @@ class PermissionController {
         success: true,
         message: 'Role deleted successfully'
       })
-
     } catch (error) {
       this.logger.error('Delete role failed', { error: error.message })
       res.status(500).json({
@@ -319,7 +311,7 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async assignRoleToUser(req, res) {
+  async assignRoleToUser (req, res) {
     try {
       const { userId, roleId } = req.body
 
@@ -336,7 +328,6 @@ class PermissionController {
         success: true,
         message: 'Role assigned to user successfully'
       })
-
     } catch (error) {
       this.logger.error('Assign role to user failed', { error: error.message })
       res.status(500).json({
@@ -351,7 +342,7 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async removeRoleFromUser(req, res) {
+  async removeRoleFromUser (req, res) {
     try {
       const { userId, roleId } = req.body
 
@@ -368,7 +359,6 @@ class PermissionController {
         success: true,
         message: 'Role removed from user successfully'
       })
-
     } catch (error) {
       this.logger.error('Remove role from user failed', { error: error.message })
       res.status(500).json({
@@ -383,7 +373,7 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async assignPermissionToRole(req, res) {
+  async assignPermissionToRole (req, res) {
     try {
       const { roleId, permissionId } = req.body
 
@@ -400,7 +390,6 @@ class PermissionController {
         success: true,
         message: 'Permission assigned to role successfully'
       })
-
     } catch (error) {
       this.logger.error('Assign permission to role failed', { error: error.message })
       res.status(500).json({
@@ -415,7 +404,7 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async removePermissionFromRole(req, res) {
+  async removePermissionFromRole (req, res) {
     try {
       const { roleId, permissionId } = req.body
 
@@ -432,7 +421,6 @@ class PermissionController {
         success: true,
         message: 'Permission removed from role successfully'
       })
-
     } catch (error) {
       this.logger.error('Remove permission from role failed', { error: error.message })
       res.status(500).json({
@@ -447,7 +435,7 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getRolePermissions(req, res) {
+  async getRolePermissions (req, res) {
     try {
       const { id } = req.params
       const permissions = await this.permissionService.getRolePermissions(parseInt(id))
@@ -456,7 +444,6 @@ class PermissionController {
         success: true,
         data: permissions
       })
-
     } catch (error) {
       this.logger.error('Get role permissions failed', { error: error.message })
       res.status(500).json({
@@ -471,7 +458,7 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getUserRoles(req, res) {
+  async getUserRoles (req, res) {
     try {
       const { id } = req.params
       const user = await this.userRepository.findWithRolesAndPermissions(parseInt(id))
@@ -490,7 +477,6 @@ class PermissionController {
           permissions: user.permissions
         }
       })
-
     } catch (error) {
       this.logger.error('Get user roles failed', { error: error.message })
       res.status(500).json({
@@ -505,7 +491,7 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async checkPermission(req, res) {
+  async checkPermission (req, res) {
     try {
       const { resource, action } = req.query
       const userId = req.user.userId
@@ -527,7 +513,6 @@ class PermissionController {
           action
         }
       })
-
     } catch (error) {
       this.logger.error('Check permission failed', { error: error.message })
       res.status(500).json({
@@ -542,17 +527,17 @@ class PermissionController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async updateRolePermissions(req, res) {
+  async updateRolePermissions (req, res) {
     try {
       const { id } = req.params
       const { permissions = [] } = req.body
 
-      this.logger.info('Update role permissions request', { 
-        roleId: id, 
-        permissions, 
+      this.logger.info('Update role permissions request', {
+        roleId: id,
+        permissions,
         permissionsType: typeof permissions,
         permissionsLength: permissions.length,
-        updatedBy: req.user?.userId 
+        updatedBy: req.user?.userId
       })
 
       // Check if role exists
@@ -578,20 +563,19 @@ class PermissionController {
 
       await this.permissionService.updateRolePermissions(parseInt(id), permissionNames)
 
-      this.logger.info('Role permissions updated successfully', { 
-        roleId: id, 
-        permissionNames, 
-        updatedBy: req.user?.userId 
+      this.logger.info('Role permissions updated successfully', {
+        roleId: id,
+        permissionNames,
+        updatedBy: req.user?.userId
       })
 
       res.json({
         success: true,
         message: 'Role permissions updated successfully'
       })
-
     } catch (error) {
-      this.logger.error('Update role permissions failed', { 
-        error: error.message, 
+      this.logger.error('Update role permissions failed', {
+        error: error.message,
         stack: error.stack,
         roleId: req.params.id,
         permissions: req.body.permissions
@@ -602,7 +586,6 @@ class PermissionController {
       })
     }
   }
-
 }
 
 module.exports = PermissionController

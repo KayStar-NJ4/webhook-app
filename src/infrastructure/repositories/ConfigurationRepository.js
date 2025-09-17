@@ -3,7 +3,7 @@
  * Handles database operations for application configuration
  */
 class ConfigurationRepository {
-  constructor({ db, logger }) {
+  constructor ({ db, logger }) {
     this.db = db
     this.logger = logger
   }
@@ -13,11 +13,11 @@ class ConfigurationRepository {
    * @param {string} key - Configuration key
    * @returns {Promise<Object|null>} - Configuration object
    */
-  async findByKey(key) {
+  async findByKey (key) {
     try {
       const query = 'SELECT * FROM configurations WHERE key = $1'
       const result = await this.db.query(query, [key])
-      
+
       if (result.rows.length === 0) {
         return null
       }
@@ -32,7 +32,6 @@ class ConfigurationRepository {
         createdAt: config.created_at,
         updatedAt: config.updated_at
       }
-
     } catch (error) {
       this.logger.error('Failed to find configuration by key', {
         key,
@@ -47,11 +46,11 @@ class ConfigurationRepository {
    * @param {string} type - Configuration type
    * @returns {Promise<Array>} - Array of configuration objects
    */
-  async findByType(type) {
+  async findByType (type) {
     try {
       const query = 'SELECT * FROM configurations WHERE type = $1'
       const result = await this.db.query(query, [type])
-      
+
       return result.rows.map(config => ({
         id: config.id,
         key: config.key,
@@ -61,7 +60,6 @@ class ConfigurationRepository {
         createdAt: config.created_at,
         updatedAt: config.updated_at
       }))
-
     } catch (error) {
       this.logger.error('Failed to find configurations by type', {
         type,
@@ -79,11 +77,11 @@ class ConfigurationRepository {
    * @param {string} description - Configuration description
    * @returns {Promise<Object>} - Configuration object
    */
-  async upsert(key, value, type = null, description = null) {
+  async upsert (key, value, type = null, description = null) {
     try {
       let finalType = type
       let serializedValue
-      
+
       if (type) {
         // Use provided type
         serializedValue = this.serializeValueByType(value, type)
@@ -93,7 +91,7 @@ class ConfigurationRepository {
         finalType = serialized.type
         serializedValue = serialized.serializedValue
       }
-      
+
       const query = `
         INSERT INTO configurations (key, value, type, description, created_at, updated_at)
         VALUES ($1, $2, $3, $4, NOW(), NOW())
@@ -105,14 +103,14 @@ class ConfigurationRepository {
           updated_at = NOW()
         RETURNING *
       `
-      
+
       const result = await this.db.query(query, [key, serializedValue, finalType, description])
       const config = result.rows[0]
 
       this.logger.info('Configuration upserted', {
         key,
         type: finalType,
-        value: value
+        value
       })
 
       return {
@@ -124,7 +122,6 @@ class ConfigurationRepository {
         createdAt: config.created_at,
         updatedAt: config.updated_at
       }
-
     } catch (error) {
       this.logger.error('Failed to upsert configuration', {
         key,
@@ -139,7 +136,7 @@ class ConfigurationRepository {
    * Find all configurations
    * @returns {Promise<Array>} - Array of configuration objects
    */
-  async findAll() {
+  async findAll () {
     try {
       const query = 'SELECT * FROM configurations ORDER BY key'
       const result = await this.db.query(query)
@@ -153,7 +150,6 @@ class ConfigurationRepository {
         createdAt: config.created_at,
         updatedAt: config.updated_at
       }))
-
     } catch (error) {
       this.logger.error('Failed to find all configurations', {
         error: error.message
@@ -167,14 +163,13 @@ class ConfigurationRepository {
    * @param {string} key - Configuration key
    * @returns {Promise<boolean>} - Success status
    */
-  async delete(key) {
+  async delete (key) {
     try {
       const query = 'DELETE FROM configurations WHERE key = $1'
       const result = await this.db.query(query, [key])
 
       this.logger.info('Configuration deleted', { key })
       return result.rowCount > 0
-
     } catch (error) {
       this.logger.error('Failed to delete configuration', {
         key,
@@ -189,14 +184,13 @@ class ConfigurationRepository {
    * @param {number} id - Configuration ID
    * @returns {Promise<boolean>} - Success status
    */
-  async deleteById(id) {
+  async deleteById (id) {
     try {
       const query = 'DELETE FROM configurations WHERE id = $1'
       const result = await this.db.query(query, [id])
 
       this.logger.info('Configuration deleted by ID', { id })
       return result.rowCount > 0
-
     } catch (error) {
       this.logger.error('Failed to delete configuration by ID', {
         id,
@@ -211,7 +205,7 @@ class ConfigurationRepository {
    * @param {*} value - Value to serialize
    * @returns {Object} - Serialized value and type
    */
-  serializeValue(value) {
+  serializeValue (value) {
     if (typeof value === 'boolean') {
       return { type: 'boolean', serializedValue: value.toString() }
     } else if (typeof value === 'number') {
@@ -229,7 +223,7 @@ class ConfigurationRepository {
    * @param {string} type - Target type
    * @returns {string} - Serialized value
    */
-  serializeValueByType(value, type) {
+  serializeValueByType (value, type) {
     switch (type) {
       case 'boolean':
         return value.toString()
@@ -248,7 +242,7 @@ class ConfigurationRepository {
    * @param {string} type - Value type
    * @returns {*} - Parsed value
    */
-  parseValue(value, type) {
+  parseValue (value, type) {
     switch (type) {
       case 'boolean':
         return value === 'true'
@@ -269,26 +263,26 @@ class ConfigurationRepository {
    * Initialize default configurations
    * @returns {Promise<void>}
    */
-  async initializeDefaults() {
+  async initializeDefaults () {
     const defaultConfigs = [
       // Server configurations
       { key: 'server.port', value: 3000, type: 'number', description: 'Server port number' },
       { key: 'server.host', value: '0.0.0.0', type: 'string', description: 'Server host' },
       { key: 'server.nodeEnv', value: 'development', type: 'string', description: 'Node.js environment' },
-      
+
       // Security configurations
       { key: 'security.jwtSecret', value: 'your-super-secret-jwt-key-change-this-in-production', type: 'string', description: 'JWT secret key' },
       { key: 'security.jwtExpiry', value: '24h', type: 'string', description: 'JWT token expiry' },
       { key: 'security.corsOrigins', value: 'http://localhost:3000,http://localhost:8080', type: 'string', description: 'Allowed CORS origins' },
-      
+
       // Rate limiting configurations
       { key: 'rateLimit.windowMs', value: 900000, type: 'number', description: 'Rate limit window in milliseconds' },
       { key: 'rateLimit.max', value: 100, type: 'number', description: 'Maximum requests per window' },
-      
+
       // Logging configurations
       { key: 'logging.level', value: 'info', type: 'string', description: 'Log level' },
       { key: 'logging.format', value: 'json', type: 'string', description: 'Log format' },
-      
+
       // Application configurations
       { key: 'dify.maxResponseLength', value: 1000, type: 'number', description: 'Maximum length for Dify responses' },
       { key: 'dify.simpleGreetingMaxLength', value: 200, type: 'number', description: 'Maximum length for simple greeting responses' },

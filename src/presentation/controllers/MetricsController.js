@@ -3,7 +3,7 @@
  * Handles metrics-related HTTP requests
  */
 class MetricsController {
-  constructor({ metrics, logger }) {
+  constructor ({ metrics, logger }) {
     this.metrics = metrics
     this.logger = logger
   }
@@ -13,16 +13,15 @@ class MetricsController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getMetrics(req, res) {
+  async getMetrics (req, res) {
     try {
       const summary = this.metrics.getSummary()
-      
+
       res.status(200).json({
         success: true,
         data: summary,
         timestamp: new Date().toISOString()
       })
-
     } catch (error) {
       this.logger.error('Failed to get metrics', {
         error: error.message,
@@ -41,7 +40,7 @@ class MetricsController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getHealth(req, res) {
+  async getHealth (req, res) {
     try {
       const summary = this.metrics.getSummary()
       const health = {
@@ -67,7 +66,6 @@ class MetricsController {
       }
 
       res.status(health.status === 'healthy' ? 200 : 503).json(health)
-
     } catch (error) {
       this.logger.error('Health check failed', {
         error: error.message,
@@ -87,10 +85,10 @@ class MetricsController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async resetMetrics(req, res) {
+  async resetMetrics (req, res) {
     try {
       this.metrics.reset()
-      
+
       this.logger.info('Metrics reset requested', {
         requestId: req.requestId,
         userAgent: req.get('User-Agent')
@@ -101,7 +99,6 @@ class MetricsController {
         message: 'Metrics reset successfully',
         timestamp: new Date().toISOString()
       })
-
     } catch (error) {
       this.logger.error('Failed to reset metrics', {
         error: error.message,
@@ -120,10 +117,10 @@ class MetricsController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getPrometheusMetrics(req, res) {
+  async getPrometheusMetrics (req, res) {
     try {
       const summary = this.metrics.getSummary()
-      
+
       const prometheusMetrics = [
         '# HELP http_requests_total Total number of HTTP requests',
         '# TYPE http_requests_total counter',
@@ -155,7 +152,6 @@ class MetricsController {
 
       res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
       res.status(200).send(prometheusMetrics)
-
     } catch (error) {
       this.logger.error('Failed to get Prometheus metrics', {
         error: error.message,

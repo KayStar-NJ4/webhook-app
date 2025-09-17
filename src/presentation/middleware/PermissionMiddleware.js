@@ -3,7 +3,7 @@
  * Handles permission-based access control
  */
 class PermissionMiddleware {
-  constructor({ permissionService, logger }) {
+  constructor ({ permissionService, logger }) {
     this.permissionService = permissionService
     this.logger = logger
   }
@@ -14,7 +14,7 @@ class PermissionMiddleware {
    * @param {string} action - Action name
    * @returns {Function} - Express middleware function
    */
-  requirePermission(resource, action) {
+  requirePermission (resource, action) {
     return async (req, res, next) => {
       try {
         if (!req.user || !req.user.userId) {
@@ -25,8 +25,8 @@ class PermissionMiddleware {
         }
 
         const hasPermission = await this.permissionService.hasPermission(
-          req.user.userId, 
-          resource, 
+          req.user.userId,
+          resource,
           action
         )
 
@@ -66,7 +66,7 @@ class PermissionMiddleware {
    * @param {Array} permissions - Array of {resource, action} objects
    * @returns {Function} - Express middleware function
    */
-  requireAnyPermission(permissions) {
+  requireAnyPermission (permissions) {
     return async (req, res, next) => {
       try {
         if (!req.user || !req.user.userId) {
@@ -85,7 +85,7 @@ class PermissionMiddleware {
             permission.resource,
             permission.action
           )
-          
+
           if (hasPermission) {
             hasAnyPermission = true
             break
@@ -126,7 +126,7 @@ class PermissionMiddleware {
    * @param {Array} permissions - Array of {resource, action} objects
    * @returns {Function} - Express middleware function
    */
-  requireAllPermissions(permissions) {
+  requireAllPermissions (permissions) {
     return async (req, res, next) => {
       try {
         if (!req.user || !req.user.userId) {
@@ -145,7 +145,7 @@ class PermissionMiddleware {
             permission.resource,
             permission.action
           )
-          
+
           if (!hasPermission) {
             hasAllPermissions = false
             break
@@ -185,7 +185,7 @@ class PermissionMiddleware {
    * Check if user is super admin
    * @returns {Function} - Express middleware function
    */
-  requireSuperAdmin() {
+  requireSuperAdmin () {
     return async (req, res, next) => {
       try {
         if (!req.user || !req.user.userId) {
@@ -228,7 +228,7 @@ class PermissionMiddleware {
    * Check if user is admin (super admin or admin)
    * @returns {Function} - Express middleware function
    */
-  requireAdmin() {
+  requireAdmin () {
     return async (req, res, next) => {
       try {
         if (!req.user || !req.user.userId) {
@@ -271,7 +271,7 @@ class PermissionMiddleware {
    * Add user permissions to request object
    * @returns {Function} - Express middleware function
    */
-  addUserPermissions() {
+  addUserPermissions () {
     return async (req, res, next) => {
       try {
         if (!req.user || !req.user.userId) {

@@ -5,7 +5,7 @@ const express = require('express')
  * Defines metrics-related routes
  */
 class MetricsRoutes {
-  constructor({ metricsController, validation, errorHandler }) {
+  constructor ({ metricsController, validation, errorHandler }) {
     this.metricsController = metricsController
     this.validation = validation
     this.errorHandler = errorHandler
@@ -16,7 +16,7 @@ class MetricsRoutes {
   /**
    * Setup routes
    */
-  setupRoutes() {
+  setupRoutes () {
     // Get metrics summary
     this.router.get('/',
       this.errorHandler.asyncHandler(
@@ -50,7 +50,7 @@ class MetricsRoutes {
    * Get router instance
    * @returns {express.Router}
    */
-  getRouter() {
+  getRouter () {
     return this.router
   }
 }

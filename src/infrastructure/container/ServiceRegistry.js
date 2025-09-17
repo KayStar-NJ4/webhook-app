@@ -36,7 +36,7 @@ const PermissionService = require('../../application/services/PermissionService'
  * Service Registry - Configures and registers all services
  */
 class ServiceRegistry {
-  constructor() {
+  constructor () {
     this.container = new Container()
     this.registerServices()
   }
@@ -44,13 +44,13 @@ class ServiceRegistry {
   /**
    * Register all services in the container
    */
-  registerServices() {
+  registerServices () {
     // Core services
     this.container.register('config', () => new Config(), true)
-    
+
     // Log repository
     this.container.register('logRepository', () => new LogRepository(), true)
-    
+
     // Logger with database logging
     this.container.register('logger', (container) => {
       const logRepository = container.get('logRepository')
@@ -63,7 +63,7 @@ class ServiceRegistry {
       const logger = container.get('logger')
       return new PostgreSQLConversationRepository({ config, logger })
     }, true)
-    
+
     this.container.register('messageRepository', () => new InMemoryMessageRepository(), true)
 
     this.container.register('configurationRepository', (container) => {
@@ -208,7 +208,7 @@ class ServiceRegistry {
    * Get the container instance
    * @returns {Container}
    */
-  getContainer() {
+  getContainer () {
     return this.container
   }
 
@@ -217,7 +217,7 @@ class ServiceRegistry {
    * @param {string} name - Service name
    * @returns {any}
    */
-  get(name) {
+  get (name) {
     return this.container.get(name)
   }
 
@@ -225,18 +225,18 @@ class ServiceRegistry {
    * Initialize all services
    * @returns {Promise<void>}
    */
-  async initialize() {
+  async initialize () {
     const logger = this.get('logger')
 
     try {
       // Initialize log repository first
       const logRepository = this.get('logRepository')
       await logRepository.initialize()
-      
+
       // Initialize database service
       const databaseService = this.get('databaseService')
       databaseService.initialize()
-      
+
       // Initialize conversation repository
       const conversationRepository = this.get('conversationRepository')
       if (conversationRepository.initialize) {
@@ -255,7 +255,6 @@ class ServiceRegistry {
       if (!difyConnected) {
         logger.warn('Dify service connection test failed')
       }
-
     } catch (error) {
       logger.error('Service initialization failed', { error: error.message })
       throw error

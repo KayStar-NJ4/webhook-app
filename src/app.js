@@ -34,7 +34,7 @@ const Server = require('./presentation/Server')
  * Application class
  */
 class Application {
-  constructor() {
+  constructor () {
     this.serviceRegistry = new ServiceRegistry()
     this.server = null
   }
@@ -43,7 +43,7 @@ class Application {
    * Initialize the application
    * @returns {Promise<void>}
    */
-  async initialize() {
+  async initialize () {
     try {
       // Initialize services
       await this.serviceRegistry.initialize()
@@ -175,7 +175,6 @@ class Application {
       })
 
       // Application initialized successfully
-
     } catch (error) {
       console.error('Failed to initialize application:', error)
       process.exit(1)
@@ -186,7 +185,7 @@ class Application {
    * Start the application
    * @returns {Promise<void>}
    */
-  async start() {
+  async start () {
     try {
       await this.initialize()
       await this.server.start()
@@ -200,7 +199,7 @@ class Application {
    * Stop the application
    * @returns {Promise<void>}
    */
-  async stop() {
+  async stop () {
     try {
       if (this.server) {
         await this.server.stop()

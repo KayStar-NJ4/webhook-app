@@ -6,7 +6,7 @@ const Validation = require('../middleware/Validation')
  * Defines webhook-related routes
  */
 class WebhookRoutes {
-  constructor({ webhookController, validation, errorHandler }) {
+  constructor ({ webhookController, validation, errorHandler }) {
     this.webhookController = webhookController
     this.validation = validation
     this.errorHandler = errorHandler
@@ -17,14 +17,14 @@ class WebhookRoutes {
   /**
    * Setup routes
    */
-  setupRoutes() {
+  setupRoutes () {
     // Health check
     this.router.get('/health', this.errorHandler.asyncHandler(
       (req, res) => this.webhookController.healthCheck(req, res)
     ))
 
     // Telegram webhook - auto-detect bot ID
-    this.router.post('/telegram', 
+    this.router.post('/telegram',
       this.validation.validate(Validation.schemas.telegramWebhook, 'body'),
       this.errorHandler.asyncHandler(
         (req, res) => this.webhookController.handleTelegramWebhook(req, res)
@@ -40,12 +40,12 @@ class WebhookRoutes {
     )
 
     // Chatwoot webhook - GET for verification, POST for events
-    this.router.get('/chatwoot', 
+    this.router.get('/chatwoot',
       this.errorHandler.asyncHandler(
         (req, res) => this.webhookController.handleChatwootVerification(req, res)
       )
     )
-    
+
     this.router.post('/chatwoot',
       this.validation.validate(Validation.schemas.chatwootWebhook, 'body'),
       this.errorHandler.asyncHandler(
@@ -58,7 +58,7 @@ class WebhookRoutes {
    * Get router instance
    * @returns {express.Router}
    */
-  getRouter() {
+  getRouter () {
     return this.router
   }
 }

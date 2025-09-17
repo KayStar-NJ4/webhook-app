@@ -3,7 +3,7 @@
  * Handles HTTP requests for system logs
  */
 class LogsController {
-  constructor({ logService, logger }) {
+  constructor ({ logService, logger }) {
     this.logService = logService
     this.logger = logger
   }
@@ -12,15 +12,15 @@ class LogsController {
    * Get system logs with pagination and filtering
    * GET /api/logs
    */
-  async getLogs(req, res) {
+  async getLogs (req, res) {
     try {
-      const { 
-        page = 1, 
-        limit = 20, 
-        level, 
+      const {
+        page = 1,
+        limit = 20,
+        level,
         component,
         startDate,
-        endDate 
+        endDate
       } = req.query
 
       const filters = {
@@ -48,7 +48,6 @@ class LogsController {
           }
         }
       })
-
     } catch (error) {
       this.logger.error('Failed to get logs', {
         error: error.message,
@@ -67,14 +66,14 @@ class LogsController {
    * Get error logs with pagination and filtering
    * GET /api/logs/errors
    */
-  async getErrorLogs(req, res) {
+  async getErrorLogs (req, res) {
     try {
-      const { 
-        page = 1, 
-        limit = 20, 
+      const {
+        page = 1,
+        limit = 20,
         component,
         startDate,
-        endDate 
+        endDate
       } = req.query
 
       const filters = {
@@ -102,7 +101,6 @@ class LogsController {
           }
         }
       })
-
     } catch (error) {
       this.logger.error('Failed to get error logs', {
         error: error.message,
@@ -121,7 +119,7 @@ class LogsController {
    * Get log details by ID
    * GET /api/logs/:id
    */
-  async getLogById(req, res) {
+  async getLogById (req, res) {
     try {
       const { id } = req.params
 
@@ -138,7 +136,6 @@ class LogsController {
         success: true,
         data: { log }
       })
-
     } catch (error) {
       this.logger.error('Failed to get log by ID', {
         error: error.message,
@@ -158,7 +155,7 @@ class LogsController {
    * Clear old logs
    * DELETE /api/logs/cleanup
    */
-  async clearOldLogs(req, res) {
+  async clearOldLogs (req, res) {
     try {
       const { days = 30 } = req.body
 
@@ -171,7 +168,6 @@ class LogsController {
           message: `Cleared ${result.deletedCount} logs older than ${days} days`
         }
       })
-
     } catch (error) {
       this.logger.error('Failed to clear old logs', {
         error: error.message,

@@ -2,7 +2,7 @@
  * Message Entity - Domain model for messages
  */
 class Message {
-  constructor({
+  constructor ({
     id,
     content,
     senderId,
@@ -25,14 +25,14 @@ class Message {
   /**
    * Check if message is from group chat
    */
-  isGroupMessage() {
+  isGroupMessage () {
     return this.metadata.isGroupChat || false
   }
 
   /**
    * Get display name for the message
    */
-  getDisplayName() {
+  getDisplayName () {
     if (this.isGroupMessage()) {
       return `[${this.senderName}]`
     }
@@ -42,7 +42,7 @@ class Message {
   /**
    * Get formatted content for AI processing
    */
-  getFormattedContent() {
+  getFormattedContent () {
     if (this.isGroupMessage()) {
       return `${this.getDisplayName()}: ${this.content}`
     }
@@ -52,26 +52,26 @@ class Message {
   /**
    * Validate message data
    */
-  validate() {
+  validate () {
     const errors = []
-    
+
     if (!this.id) errors.push('Message ID is required')
     if (!this.content) errors.push('Message content is required')
     if (!this.senderId) errors.push('Sender ID is required')
     if (!this.conversationId) errors.push('Conversation ID is required')
     if (!this.platform) errors.push('Platform is required')
-    
+
     if (errors.length > 0) {
       throw new Error(`Message validation failed: ${errors.join(', ')}`)
     }
-    
+
     return true
   }
 
   /**
    * Convert to plain object
    */
-  toJSON() {
+  toJSON () {
     return {
       id: this.id,
       content: this.content,

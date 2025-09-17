@@ -3,13 +3,13 @@
  * Handles multi-platform configuration management
  */
 class ConfigurationController {
-  constructor({ 
+  constructor ({
     userRepository,
     chatwootAccountRepository,
     telegramBotRepository,
     difyAppRepository,
     configurationRepository,
-    logger 
+    logger
   }) {
     this.userRepository = userRepository
     this.chatwootAccountRepository = chatwootAccountRepository
@@ -24,7 +24,7 @@ class ConfigurationController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getUserConfigurations(req, res) {
+  async getUserConfigurations (req, res) {
     try {
       const userId = req.user.userId
 
@@ -49,7 +49,7 @@ class ConfigurationController {
       `
 
       const result = await this.userRepository.db.query(query, [userId])
-      
+
       const configurations = result.rows.map(row => ({
         id: row.id,
         userId: row.user_id,
@@ -70,7 +70,6 @@ class ConfigurationController {
         success: true,
         data: configurations
       })
-
     } catch (error) {
       this.logger.error('Get user configurations failed', { error: error.message })
       res.status(500).json({
@@ -85,7 +84,7 @@ class ConfigurationController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async createUserConfiguration(req, res) {
+  async createUserConfiguration (req, res) {
     try {
       const userId = req.user.userId
       const { chatwootAccountId, telegramBotIds = [], difyAppIds = [] } = req.body
@@ -151,7 +150,6 @@ class ConfigurationController {
         message: 'Configuration created successfully',
         data: result.rows[0]
       })
-
     } catch (error) {
       this.logger.error('Create user configuration failed', { error: error.message })
       res.status(500).json({
@@ -166,7 +164,7 @@ class ConfigurationController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async updateUserConfiguration(req, res) {
+  async updateUserConfiguration (req, res) {
     try {
       const { id } = req.params
       const userId = req.user.userId
@@ -206,7 +204,6 @@ class ConfigurationController {
         message: 'Configuration updated successfully',
         data: result.rows[0]
       })
-
     } catch (error) {
       this.logger.error('Update user configuration failed', { error: error.message })
       res.status(500).json({
@@ -221,7 +218,7 @@ class ConfigurationController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async deleteUserConfiguration(req, res) {
+  async deleteUserConfiguration (req, res) {
     try {
       const { id } = req.params
       const userId = req.user.userId
@@ -244,7 +241,6 @@ class ConfigurationController {
         success: true,
         message: 'Configuration deleted successfully'
       })
-
     } catch (error) {
       this.logger.error('Delete user configuration failed', { error: error.message })
       res.status(500).json({
@@ -259,7 +255,7 @@ class ConfigurationController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getAvailableResources(req, res) {
+  async getAvailableResources (req, res) {
     try {
       const [chatwootAccounts, telegramBots, difyApps] = await Promise.all([
         this.chatwootAccountRepository.findAll({ page: 1, limit: 1000 }),
@@ -275,7 +271,6 @@ class ConfigurationController {
           difyApps: difyApps.apps || difyApps
         }
       })
-
     } catch (error) {
       this.logger.error('Get available resources failed', { error: error.message })
       res.status(500).json({
@@ -290,7 +285,7 @@ class ConfigurationController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getSystemConfigurations(req, res) {
+  async getSystemConfigurations (req, res) {
     try {
       const configurations = await this.configurationRepository.findAll()
 
@@ -298,7 +293,6 @@ class ConfigurationController {
         success: true,
         data: configurations
       })
-
     } catch (error) {
       this.logger.error('Get system configurations failed', { error: error.message })
       res.status(500).json({
@@ -313,7 +307,7 @@ class ConfigurationController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getSystemConfigurationByKey(req, res) {
+  async getSystemConfigurationByKey (req, res) {
     try {
       const { key } = req.params
       const configuration = await this.configurationRepository.findByKey(key)
@@ -329,7 +323,6 @@ class ConfigurationController {
         success: true,
         data: configuration
       })
-
     } catch (error) {
       this.logger.error('Get system configuration by key failed', { error: error.message })
       res.status(500).json({
@@ -344,7 +337,7 @@ class ConfigurationController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async updateSystemConfiguration(req, res) {
+  async updateSystemConfiguration (req, res) {
     try {
       const { key, value, type, description } = req.body
 
@@ -394,7 +387,6 @@ class ConfigurationController {
         message: 'Configuration updated successfully',
         data: configuration
       })
-
     } catch (error) {
       this.logger.error('Update system configuration failed', { error: error.message })
       res.status(500).json({
@@ -409,7 +401,7 @@ class ConfigurationController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async deleteSystemConfiguration(req, res) {
+  async deleteSystemConfiguration (req, res) {
     try {
       const { id } = req.params
 
@@ -426,7 +418,6 @@ class ConfigurationController {
         success: true,
         message: 'Configuration deleted successfully'
       })
-
     } catch (error) {
       this.logger.error('Delete system configuration failed', { error: error.message })
       res.status(500).json({
@@ -441,7 +432,7 @@ class ConfigurationController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async testConfiguration(req, res) {
+  async testConfiguration (req, res) {
     try {
       const { type, id } = req.params
 
@@ -486,7 +477,6 @@ class ConfigurationController {
         success: result.success,
         message: result.message
       })
-
     } catch (error) {
       this.logger.error('Test configuration failed', { error: error.message })
       res.status(500).json({

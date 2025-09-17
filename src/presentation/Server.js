@@ -10,11 +10,11 @@ const MetricsMiddleware = require('./middleware/MetricsMiddleware')
  * Express server with clean architecture
  */
 class Server {
-  constructor({ 
-    config, 
-    logger, 
-    webhookRoutes, 
-    apiRoutes, 
+  constructor ({
+    config,
+    logger,
+    webhookRoutes,
+    apiRoutes,
     metricsRoutes,
     logRoutes,
     adminRoutes,
@@ -37,7 +37,7 @@ class Server {
     this.app = express()
     this.port = config.get('server.port')
     this.host = config.get('server.host')
-    
+
     this.setupMiddleware()
     this.setupRoutes()
     this.setupErrorHandling()
@@ -47,7 +47,7 @@ class Server {
   /**
    * Setup middleware
    */
-  setupMiddleware() {
+  setupMiddleware () {
     // Trust proxy (for reverse proxy like nginx)
     this.app.set('trust proxy', 1)
 
@@ -59,7 +59,7 @@ class Server {
 
     // CORS middleware
     this.app.use(cors({
-      origin: this.config.isDevelopment() ? true : false,
+      origin: !!this.config.isDevelopment(),
       credentials: true
     }))
 
@@ -86,22 +86,22 @@ class Server {
   /**
    * Setup routes
    */
-  setupRoutes() {
+  setupRoutes () {
     // Webhook routes with rate limiting
-    this.app.use('/webhook', 
+    this.app.use('/webhook',
       this.securityMiddleware.getWebhookRateLimiter(),
       this.webhookRoutes.getRouter()
     )
-    
+
     // API routes with rate limiting
-    this.app.use('/api', 
+    this.app.use('/api',
       this.securityMiddleware.getApiRateLimiter(),
       this.apiRoutes.getRouter()
     )
 
     // Log routes (protected)
     if (this.logRoutes) {
-      this.app.use('/api/logs', 
+      this.app.use('/api/logs',
         this.securityMiddleware.getApiKeyAuth(this.config.get('admin.apiKey') || 'admin'),
         this.logRoutes.getRouter()
       )
@@ -114,13 +114,13 @@ class Server {
 
     // Serve static files
     this.app.use(express.static('public'))
-    
+
     // Serve node_modules for admin panel
     this.app.use('/node_modules', express.static('node_modules'))
 
     // Metrics routes (protected)
     if (this.metricsRoutes) {
-      this.app.use('/metrics', 
+      this.app.use('/metrics',
         this.securityMiddleware.getApiKeyAuth(this.config.get('admin.apiKey') || 'admin'),
         this.metricsRoutes.getRouter()
       )
@@ -158,13 +158,13 @@ class Server {
   /**
    * Setup error handling
    */
-  setupErrorHandling() {
+  setupErrorHandling () {
     // Error metrics middleware
     this.app.use(this.metricsMiddleware.errorMiddleware.bind(this.metricsMiddleware))
-    
+
     // 404 handler
     this.app.use(this.errorHandler.notFound.bind(this.errorHandler))
-    
+
     // Error handler
     this.app.use(this.errorHandler.handle.bind(this.errorHandler))
   }
@@ -172,7 +172,7 @@ class Server {
   /**
    * Start metrics collection
    */
-  startMetricsCollection() {
+  startMetricsCollection () {
     if (this.metrics) {
       this.metrics.startSystemMetricsCollection()
       // Metrics collection started
@@ -183,7 +183,7 @@ class Server {
    * Start the server
    * @returns {Promise<void>}
    */
-  async start() {
+  async start () {
     try {
       // Ensure logs directory exists
       // No need to create logs directory - using database logging
@@ -195,7 +195,6 @@ class Server {
 
       // Graceful shutdown
       this.setupGracefulShutdown()
-
     } catch (error) {
       this.logger.error('Failed to start server', {
         error: error.message,
@@ -208,34 +207,34 @@ class Server {
   /**
    * Print startup information
    */
-  printStartupInfo() {
+  printStartupInfo () {
     console.log('\n🎉 Turbo Chatwoot Webhook Server v3.0.0 is running!')
     console.log(`📍 Address: http://${this.host}:${this.port}`)
     console.log(`🌍 Environment: ${this.config.get('server.nodeEnv')}`)
-    console.log(`\n📋 Available endpoints:`)
-    console.log(`   GET  / - API information`)
-    console.log(`   GET  /webhook/health - Health check`)
-    console.log(`   POST /webhook/telegram - Telegram webhook`)
-    console.log(`   POST /webhook/chatwoot - Chatwoot webhook`)
-    console.log(`   GET  /api/status - Server status`)
-    console.log(`   GET  /api/conversations - Get conversations`)
-    console.log(`   POST /api/telegram/setup - Setup Telegram webhook`)
-    console.log(`   GET  /api/telegram/bot-info - Get bot info`)
-    console.log(`   POST /api/telegram/test - Test message`)
-    console.log(`\n🔧 To setup Telegram webhook:`)
+    console.log('\n📋 Available endpoints:')
+    console.log('   GET  / - API information')
+    console.log('   GET  /webhook/health - Health check')
+    console.log('   POST /webhook/telegram - Telegram webhook')
+    console.log('   POST /webhook/chatwoot - Chatwoot webhook')
+    console.log('   GET  /api/status - Server status')
+    console.log('   GET  /api/conversations - Get conversations')
+    console.log('   POST /api/telegram/setup - Setup Telegram webhook')
+    console.log('   GET  /api/telegram/bot-info - Get bot info')
+    console.log('   POST /api/telegram/test - Test message')
+    console.log('\n🔧 To setup Telegram webhook:')
     console.log(`   curl -X POST http://${this.host}:${this.port}/api/telegram/setup \\`)
-    console.log(`        -H "Content-Type: application/json" \\`)
-    console.log(`        -d '{"webhookUrl": "https://your-domain.com/webhook/telegram"}'`)
-    console.log(`\n`)
+    console.log('        -H "Content-Type: application/json" \\')
+    console.log('        -d \'{"webhookUrl": "https://your-domain.com/webhook/telegram"}\'')
+    console.log('\n')
   }
 
   /**
    * Setup graceful shutdown
    */
-  setupGracefulShutdown() {
+  setupGracefulShutdown () {
     const shutdown = (signal) => {
       this.logger.info(`Received ${signal}, shutting down gracefully...`)
-      
+
       if (this.server) {
         this.server.close(() => {
           this.logger.info('Server closed successfully')
@@ -254,7 +253,7 @@ class Server {
    * Get Express app instance
    * @returns {express.Application}
    */
-  getApp() {
+  getApp () {
     return this.app
   }
 
@@ -262,7 +261,7 @@ class Server {
    * Stop the server
    * @returns {Promise<void>}
    */
-  async stop() {
+  async stop () {
     return new Promise((resolve) => {
       if (this.server) {
         this.server.close(() => {

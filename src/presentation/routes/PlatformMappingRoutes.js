@@ -6,9 +6,9 @@ const Validation = require('../middleware/Validation')
  * Defines routes for platform mapping operations
  */
 class PlatformMappingRoutes {
-  constructor({ 
-    platformMappingController, 
-    validation, 
+  constructor ({
+    platformMappingController,
+    validation,
     errorHandler,
     authMiddleware,
     permissionMiddleware
@@ -25,7 +25,7 @@ class PlatformMappingRoutes {
   /**
    * Setup routes
    */
-  setupRoutes() {
+  setupRoutes () {
     // Apply authentication middleware to all routes
     this.router.use(this.authMiddleware.authenticate)
 
@@ -124,7 +124,7 @@ class PlatformMappingRoutes {
    * Get router instance
    * @returns {express.Router}
    */
-  getRouter() {
+  getRouter () {
     return this.router
   }
 }

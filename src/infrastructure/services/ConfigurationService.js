@@ -3,7 +3,7 @@
  * Manages application configuration stored in database
  */
 class ConfigurationService {
-  constructor({ configRepository, logger }) {
+  constructor ({ configRepository, logger }) {
     this.configRepository = configRepository
     this.logger = logger
     this.cache = new Map()
@@ -16,7 +16,7 @@ class ConfigurationService {
    * @param {*} defaultValue - Default value if not found
    * @returns {Promise<*>} - Configuration value
    */
-  async get(key, defaultValue = null) {
+  async get (key, defaultValue = null) {
     try {
       // Check cache first
       const cached = this.cache.get(key)
@@ -35,7 +35,6 @@ class ConfigurationService {
       })
 
       return value
-
     } catch (error) {
       this.logger.error('Failed to get configuration', {
         key,
@@ -51,10 +50,10 @@ class ConfigurationService {
    * @param {*} value - Configuration value
    * @returns {Promise<void>}
    */
-  async set(key, value) {
+  async set (key, value) {
     try {
       await this.configRepository.upsert(key, value)
-      
+
       // Update cache
       this.cache.set(key, {
         value,
@@ -62,7 +61,6 @@ class ConfigurationService {
       })
 
       this.logger.info('Configuration updated', { key, value })
-
     } catch (error) {
       this.logger.error('Failed to set configuration', {
         key,
@@ -77,7 +75,7 @@ class ConfigurationService {
    * Get Dify configuration
    * @returns {Promise<Object>} - Dify configuration
    */
-  async getDifyConfig() {
+  async getDifyConfig () {
     return {
       apiUrl: await this.get('dify.apiUrl', 'https://api.dify.ai/v1'),
       apiKey: await this.get('dify.apiKey', ''),
@@ -94,7 +92,7 @@ class ConfigurationService {
    * Get Telegram configuration
    * @returns {Promise<Object>} - Telegram configuration
    */
-  async getTelegramConfig() {
+  async getTelegramConfig () {
     return {
       botToken: await this.get('telegram.botToken', ''),
       webhookUrl: await this.get('telegram.webhookUrl', ''),
@@ -108,7 +106,7 @@ class ConfigurationService {
    * Get Chatwoot configuration
    * @returns {Promise<Object>} - Chatwoot configuration
    */
-  async getChatwootConfig() {
+  async getChatwootConfig () {
     return {
       baseUrl: await this.get('chatwoot.baseUrl', ''),
       accessToken: await this.get('chatwoot.accessToken', ''),
@@ -124,7 +122,7 @@ class ConfigurationService {
    * Get Server configuration
    * @returns {Promise<Object>} - Server configuration
    */
-  async getServerConfig() {
+  async getServerConfig () {
     return {
       port: await this.get('server.port', 3000),
       nodeEnv: await this.get('server.nodeEnv', 'development')
@@ -135,7 +133,7 @@ class ConfigurationService {
    * Get Database configuration
    * @returns {Promise<Object>} - Database configuration
    */
-  async getDatabaseConfig() {
+  async getDatabaseConfig () {
     return {
       host: await this.get('database.host', 'localhost'),
       port: await this.get('database.port', 5432),
@@ -149,7 +147,7 @@ class ConfigurationService {
    * Get Security configuration
    * @returns {Promise<Object>} - Security configuration
    */
-  async getSecurityConfig() {
+  async getSecurityConfig () {
     return {
       adminApiKey: await this.get('security.adminApiKey', ''),
       corsOrigins: await this.get('security.corsOrigins', '')
@@ -160,7 +158,7 @@ class ConfigurationService {
    * Get Rate Limit configuration
    * @returns {Promise<Object>} - Rate limit configuration
    */
-  async getRateLimitConfig() {
+  async getRateLimitConfig () {
     return {
       windowMs: await this.get('rateLimit.windowMs', 900000),
       max: await this.get('rateLimit.max', 100)
@@ -171,7 +169,7 @@ class ConfigurationService {
    * Get Logging configuration
    * @returns {Promise<Object>} - Logging configuration
    */
-  async getLoggingConfig() {
+  async getLoggingConfig () {
     return {
       level: await this.get('logging.level', 'info'),
       format: await this.get('logging.format', 'json')
@@ -181,7 +179,7 @@ class ConfigurationService {
   /**
    * Clear cache
    */
-  clearCache() {
+  clearCache () {
     this.cache.clear()
     this.logger.info('Configuration cache cleared')
   }
@@ -190,17 +188,16 @@ class ConfigurationService {
    * Get all configurations
    * @returns {Promise<Object>} - All configurations
    */
-  async getAll() {
+  async getAll () {
     try {
       const configs = await this.configRepository.findAll()
       const result = {}
-      
+
       for (const config of configs) {
         result[config.key] = config.value
       }
 
       return result
-
     } catch (error) {
       this.logger.error('Failed to get all configurations', {
         error: error.message
@@ -214,7 +211,7 @@ class ConfigurationService {
    * @param {number} difyAppId - Dify app ID
    * @returns {Promise<Object|null>} - Dify app configuration
    */
-  async getDifyAppById(difyAppId) {
+  async getDifyAppById (difyAppId) {
     try {
       // This would need to be implemented in the repository
       // For now, we'll use a simple approach

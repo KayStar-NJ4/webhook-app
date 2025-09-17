@@ -3,7 +3,7 @@
  * Handles HTTP requests for platform mapping operations
  */
 class PlatformMappingController {
-  constructor({
+  constructor ({
     platformMappingService,
     logger
   }) {
@@ -16,7 +16,7 @@ class PlatformMappingController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async createMapping(req, res) {
+  async createMapping (req, res) {
     try {
       const mappingData = req.body
       const user = req.user
@@ -36,7 +36,6 @@ class PlatformMappingController {
         data: mapping,
         message: 'Platform mapping created successfully'
       })
-
     } catch (error) {
       this.logger.error('Failed to create platform mapping', {
         error: error.message,
@@ -56,7 +55,7 @@ class PlatformMappingController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getAllMappings(req, res) {
+  async getAllMappings (req, res) {
     try {
       const filters = {
         isActive: req.query.isActive !== undefined ? req.query.isActive === 'true' : undefined,
@@ -74,7 +73,6 @@ class PlatformMappingController {
         data: mappings,
         count: mappings.length
       })
-
     } catch (error) {
       this.logger.error('Failed to get platform mappings', {
         error: error.message,
@@ -94,7 +92,7 @@ class PlatformMappingController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getMappingsByTelegramBot(req, res) {
+  async getMappingsByTelegramBot (req, res) {
     try {
       const telegramBotId = parseInt(req.params.telegramBotId)
 
@@ -112,7 +110,6 @@ class PlatformMappingController {
         data: mappings,
         count: mappings.length
       })
-
     } catch (error) {
       this.logger.error('Failed to get mappings by Telegram bot', {
         error: error.message,
@@ -132,7 +129,7 @@ class PlatformMappingController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getMappingsByChatwootAccount(req, res) {
+  async getMappingsByChatwootAccount (req, res) {
     try {
       const chatwootAccountId = parseInt(req.params.chatwootAccountId)
 
@@ -150,7 +147,6 @@ class PlatformMappingController {
         data: mappings,
         count: mappings.length
       })
-
     } catch (error) {
       this.logger.error('Failed to get mappings by Chatwoot account', {
         error: error.message,
@@ -170,7 +166,7 @@ class PlatformMappingController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getMappingsByDifyApp(req, res) {
+  async getMappingsByDifyApp (req, res) {
     try {
       const difyAppId = parseInt(req.params.difyAppId)
 
@@ -188,7 +184,6 @@ class PlatformMappingController {
         data: mappings,
         count: mappings.length
       })
-
     } catch (error) {
       this.logger.error('Failed to get mappings by Dify app', {
         error: error.message,
@@ -208,7 +203,7 @@ class PlatformMappingController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getRoutingConfiguration(req, res) {
+  async getRoutingConfiguration (req, res) {
     try {
       const telegramBotId = parseInt(req.params.telegramBotId)
 
@@ -225,7 +220,6 @@ class PlatformMappingController {
         success: true,
         data: routingConfig
       })
-
     } catch (error) {
       this.logger.error('Failed to get routing configuration', {
         error: error.message,
@@ -245,7 +239,7 @@ class PlatformMappingController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async updateMapping(req, res) {
+  async updateMapping (req, res) {
     try {
       const mappingId = parseInt(req.params.id)
       const updateData = req.body
@@ -265,7 +259,6 @@ class PlatformMappingController {
         data: mapping,
         message: 'Platform mapping updated successfully'
       })
-
     } catch (error) {
       this.logger.error('Failed to update platform mapping', {
         error: error.message,
@@ -286,7 +279,7 @@ class PlatformMappingController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async deleteMapping(req, res) {
+  async deleteMapping (req, res) {
     try {
       const mappingId = parseInt(req.params.id)
       const user = req.user
@@ -311,7 +304,6 @@ class PlatformMappingController {
           error: 'Platform mapping not found'
         })
       }
-
     } catch (error) {
       this.logger.error('Failed to delete platform mapping', {
         error: error.message,
@@ -331,7 +323,7 @@ class PlatformMappingController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getAvailablePlatforms(req, res) {
+  async getAvailablePlatforms (req, res) {
     try {
       const platforms = await this.platformMappingService.getAvailablePlatforms()
 
@@ -339,7 +331,6 @@ class PlatformMappingController {
         success: true,
         data: platforms
       })
-
     } catch (error) {
       this.logger.error('Failed to get available platforms', {
         error: error.message,
@@ -358,7 +349,7 @@ class PlatformMappingController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async testConnection(req, res) {
+  async testConnection (req, res) {
     try {
       const mappingId = parseInt(req.params.id)
 
@@ -376,7 +367,6 @@ class PlatformMappingController {
         data: testResult,
         message: 'Connection test completed'
       })
-
     } catch (error) {
       this.logger.error('Failed to test platform mapping connection', {
         error: error.message,
@@ -396,7 +386,7 @@ class PlatformMappingController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async testPlatformConnection(req, res) {
+  async testPlatformConnection (req, res) {
     try {
       const { platform, component } = req.params
       const testData = req.body
@@ -408,7 +398,6 @@ class PlatformMappingController {
         data: testResult,
         message: `${platform} ${component} connection test completed`
       })
-
     } catch (error) {
       this.logger.error('Failed to test platform connection', {
         error: error.message,

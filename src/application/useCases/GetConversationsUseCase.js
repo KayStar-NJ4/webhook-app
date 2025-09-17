@@ -3,7 +3,7 @@
  * Handles retrieving conversation data
  */
 class GetConversationsUseCase {
-  constructor({ conversationRepository, logger }) {
+  constructor ({ conversationRepository, logger }) {
     this.conversationRepository = conversationRepository
     this.logger = logger
   }
@@ -13,7 +13,7 @@ class GetConversationsUseCase {
    * @param {Object} options - Query options
    * @returns {Promise<Object>} - Conversations data
    */
-  async execute(options = {}) {
+  async execute (options = {}) {
     try {
       this.logger.info('Getting conversations', { options })
 
@@ -37,7 +37,6 @@ class GetConversationsUseCase {
       })
 
       return result
-
     } catch (error) {
       this.logger.error('Failed to get conversations', {
         error: error.message,

@@ -2,7 +2,7 @@
  * Metrics Collection for Application Monitoring
  */
 class Metrics {
-  constructor({ logger }) {
+  constructor ({ logger }) {
     this.logger = logger
     this.metrics = {
       requests: {
@@ -36,9 +36,9 @@ class Metrics {
    * @param {Object} res - Express response
    * @param {number} responseTime - Response time in ms
    */
-  recordRequest(req, res, responseTime) {
+  recordRequest (req, res, responseTime) {
     this.metrics.requests.total++
-    
+
     if (res.statusCode >= 400) {
       this.metrics.requests.failed++
     } else {
@@ -66,9 +66,9 @@ class Metrics {
    * @param {string} platform - Platform name
    * @param {number} processingTime - Processing time in ms
    */
-  recordMessage(platform, processingTime) {
+  recordMessage (platform, processingTime) {
     this.metrics.messages.processed++
-    
+
     const platformCount = this.metrics.messages.byPlatform.get(platform) || 0
     this.metrics.messages.byPlatform.set(platform, platformCount + 1)
 
@@ -83,9 +83,9 @@ class Metrics {
    * @param {Error} error - Error object
    * @param {string} endpoint - Endpoint where error occurred
    */
-  recordError(error, endpoint) {
+  recordError (error, endpoint) {
     this.metrics.errors.total++
-    
+
     const errorType = error.constructor.name
     const typeCount = this.metrics.errors.byType.get(errorType) || 0
     this.metrics.errors.byType.set(errorType, typeCount + 1)
@@ -97,7 +97,7 @@ class Metrics {
   /**
    * Record system metrics
    */
-  recordSystemMetrics() {
+  recordSystemMetrics () {
     const memUsage = process.memoryUsage()
     const cpuUsage = process.cpuUsage()
 
@@ -128,7 +128,7 @@ class Metrics {
    * Get metrics summary
    * @returns {Object} - Metrics summary
    */
-  getSummary() {
+  getSummary () {
     const responseTimes = this.metrics.performance.responseTime
     const processingTimes = this.metrics.messages.processingTime
 
@@ -137,7 +137,7 @@ class Metrics {
         total: this.metrics.requests.total,
         successful: this.metrics.requests.successful,
         failed: this.metrics.requests.failed,
-        successRate: this.metrics.requests.total > 0 
+        successRate: this.metrics.requests.total > 0
           ? (this.metrics.requests.successful / this.metrics.requests.total * 100).toFixed(2) + '%'
           : '0%',
         byEndpoint: Object.fromEntries(this.metrics.requests.byEndpoint),
@@ -146,7 +146,7 @@ class Metrics {
       messages: {
         processed: this.metrics.messages.processed,
         byPlatform: Object.fromEntries(this.metrics.messages.byPlatform),
-        avgProcessingTime: processingTimes.length > 0 
+        avgProcessingTime: processingTimes.length > 0
           ? (processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length).toFixed(2) + 'ms'
           : '0ms'
       },
@@ -156,10 +156,10 @@ class Metrics {
         byEndpoint: Object.fromEntries(this.metrics.errors.byEndpoint)
       },
       performance: {
-        avgResponseTime: responseTimes.length > 0 
+        avgResponseTime: responseTimes.length > 0
           ? (responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length).toFixed(2) + 'ms'
           : '0ms',
-        p95ResponseTime: responseTimes.length > 0 
+        p95ResponseTime: responseTimes.length > 0
           ? this.percentile(responseTimes, 95).toFixed(2) + 'ms'
           : '0ms',
         memoryUsage: this.metrics.performance.memoryUsage.slice(-1)[0] || {},
@@ -174,7 +174,7 @@ class Metrics {
    * @param {number} p - Percentile (0-100)
    * @returns {number} - Percentile value
    */
-  percentile(arr, p) {
+  percentile (arr, p) {
     const sorted = [...arr].sort((a, b) => a - b)
     const index = Math.ceil((p / 100) * sorted.length) - 1
     return sorted[index] || 0
@@ -183,7 +183,7 @@ class Metrics {
   /**
    * Reset metrics
    */
-  reset() {
+  reset () {
     this.metrics = {
       requests: {
         total: 0,
@@ -214,7 +214,7 @@ class Metrics {
    * Start system metrics collection
    * @param {number} interval - Collection interval in ms
    */
-  startSystemMetricsCollection(interval = 30000) {
+  startSystemMetricsCollection (interval = 30000) {
     setInterval(() => {
       this.recordSystemMetrics()
     }, interval)

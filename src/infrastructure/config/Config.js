@@ -5,7 +5,7 @@ const Joi = require('joi')
  * Configuration class with validation
  */
 class Config {
-  constructor() {
+  constructor () {
     this.schema = this.createValidationSchema()
     this.config = this.loadAndValidateConfig()
   }
@@ -13,7 +13,7 @@ class Config {
   /**
    * Create Joi validation schema
    */
-  createValidationSchema() {
+  createValidationSchema () {
     return Joi.object({
       server: Joi.object({
         port: Joi.number().port().default(3000),
@@ -47,7 +47,7 @@ class Config {
   /**
    * Load and validate configuration
    */
-  loadAndValidateConfig() {
+  loadAndValidateConfig () {
     const rawConfig = {
       server: {
         port: process.env.PORT,
@@ -91,7 +91,7 @@ class Config {
    * @param {string} path - Dot notation path (e.g., 'server.port')
    * @returns {any} - Configuration value
    */
-  get(path) {
+  get (path) {
     return path.split('.').reduce((obj, key) => obj?.[key], this.config)
   }
 
@@ -99,7 +99,7 @@ class Config {
    * Get all configuration
    * @returns {Object} - Complete configuration
    */
-  getAll() {
+  getAll () {
     return { ...this.config }
   }
 
@@ -107,7 +107,7 @@ class Config {
    * Check if running in development mode
    * @returns {boolean}
    */
-  isDevelopment() {
+  isDevelopment () {
     return this.config.server.nodeEnv === 'development'
   }
 
@@ -115,7 +115,7 @@ class Config {
    * Check if running in production mode
    * @returns {boolean}
    */
-  isProduction() {
+  isProduction () {
     return this.config.server.nodeEnv === 'production'
   }
 
@@ -123,7 +123,7 @@ class Config {
    * Check if running in test mode
    * @returns {boolean}
    */
-  isTest() {
+  isTest () {
     return this.config.server.nodeEnv === 'test'
   }
 
@@ -131,13 +131,13 @@ class Config {
    * Get database connection configuration
    * @returns {Object} - Database configuration
    */
-  getDatabase() {
+  getDatabase () {
     const dbConfig = this.config.database
-    
+
     if (dbConfig.connectionString) {
       return { connectionString: dbConfig.connectionString }
     }
-    
+
     return {
       host: dbConfig.host,
       port: dbConfig.port,
@@ -152,7 +152,7 @@ class Config {
    * Get JWT configuration
    * @returns {Object} - JWT configuration
    */
-  getJWT() {
+  getJWT () {
     return this.config.jwt
   }
 }

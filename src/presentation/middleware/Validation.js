@@ -5,7 +5,7 @@ const Joi = require('joi')
  * Validates request data using Joi schemas
  */
 class Validation {
-  constructor({ logger }) {
+  constructor ({ logger }) {
     this.logger = logger
   }
 
@@ -15,10 +15,10 @@ class Validation {
    * @param {string} source - Data source ('body', 'query', 'params')
    * @returns {Function} - Express middleware
    */
-  validate(schema, source = 'body') {
+  validate (schema, source = 'body') {
     return (req, res, next) => {
       const data = req[source]
-      
+
       const { error, value } = schema.validate(data, {
         abortEarly: false,
         stripUnknown: true
@@ -55,7 +55,7 @@ class Validation {
    * @param {Object} data - Data to sanitize
    * @returns {Object} - Sanitized data
    */
-  sanitizeData(data) {
+  sanitizeData (data) {
     if (!data) return data
 
     const sanitized = { ...data }
@@ -98,7 +98,7 @@ class Validation {
       // Chatwoot webhook có nhiều loại event khác nhau
       event: Joi.string().optional(),
       id: Joi.number().optional(),
-      
+
       // Message object (có thể có hoặc không tùy event)
       message: Joi.object({
         id: Joi.number().required(),
@@ -112,13 +112,13 @@ class Validation {
           name: Joi.string().required()
         }).required()
       }).optional(),
-      
+
       // Conversation object (có thể có hoặc không tùy event)
       conversation: Joi.object({
         id: Joi.number().required(),
         inbox_id: Joi.number().required()
       }).optional(),
-      
+
       // Các field khác có thể có
       user: Joi.object().optional(),
       account: Joi.object().optional(),

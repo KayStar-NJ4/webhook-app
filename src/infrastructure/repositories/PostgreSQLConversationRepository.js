@@ -7,7 +7,7 @@ const { Pool } = require('pg')
  * Stores conversations in PostgreSQL database with detailed information
  */
 class PostgreSQLConversationRepository extends ConversationRepository {
-  constructor({ config, logger }) {
+  constructor ({ config, logger }) {
     super()
     this.config = config
     this.logger = logger
@@ -17,7 +17,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
   /**
    * Initialize PostgreSQL connection
    */
-  async initialize() {
+  async initialize () {
     try {
       this.pool = new Pool({
         host: this.config.get('database.host'),
@@ -41,7 +41,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
       client.release()
 
       // PostgreSQL connected successfully
-      
+
       // Create table if not exists
       await this.createTable()
     } catch (error) {
@@ -53,7 +53,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
   /**
    * Create conversations table if not exists
    */
-  async createTable() {
+  async createTable () {
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS conversations (
         id VARCHAR(255) PRIMARY KEY,
@@ -131,13 +131,13 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * @param {string} id - Conversation ID
    * @returns {Promise<Conversation|null>}
    */
-  async findById(id) {
+  async findById (id) {
     try {
       const query = 'SELECT * FROM conversations WHERE id = $1'
       const result = await this.pool.query(query, [id])
-      
+
       if (result.rows.length === 0) return null
-      
+
       const row = result.rows[0]
       return this.mapRowToConversation(row)
     } catch (error) {
@@ -155,13 +155,13 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * @param {string} chatId - Chat ID
    * @returns {Promise<Conversation|null>}
    */
-  async findByPlatformChatId(platform, chatId) {
+  async findByPlatformChatId (platform, chatId) {
     try {
       const query = 'SELECT * FROM conversations WHERE platform = $1 AND chat_id = $2'
       const result = await this.pool.query(query, [platform, chatId])
-      
+
       if (result.rows.length === 0) return null
-      
+
       const row = result.rows[0]
       return this.mapRowToConversation(row)
     } catch (error) {
@@ -179,13 +179,13 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * @param {string} chatwootId - Chatwoot conversation ID
    * @returns {Promise<Conversation|null>}
    */
-  async findByChatwootId(chatwootId) {
+  async findByChatwootId (chatwootId) {
     try {
       const query = 'SELECT * FROM conversations WHERE chatwoot_id = $1'
       const result = await this.pool.query(query, [chatwootId])
-      
+
       if (result.rows.length === 0) return null
-      
+
       const row = result.rows[0]
       return this.mapRowToConversation(row)
     } catch (error) {
@@ -202,10 +202,10 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * @param {Conversation} conversation - Conversation entity
    * @returns {Promise<Conversation>}
    */
-  async save(conversation) {
+  async save (conversation) {
     try {
       conversation.validate()
-      
+
       const query = `
         INSERT INTO conversations (
           id, platform, chat_type, chat_id, chat_title, chat_username, chat_description,
@@ -248,7 +248,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
           last_message_at = EXCLUDED.last_message_at
         RETURNING *
       `
-      
+
       const values = [
         conversation.id,
         conversation.platform,
@@ -282,17 +282,17 @@ class PostgreSQLConversationRepository extends ConversationRepository {
         conversation.updatedAt,
         conversation.lastMessageAt
       ]
-      
+
       const result = await this.pool.query(query, values)
       const savedConversation = this.mapRowToConversation(result.rows[0])
-      
+
       this.logger.info('Conversation saved to PostgreSQL', {
         conversationId: conversation.id,
         platform: conversation.platform,
         chatType: conversation.chatType,
         chatDisplayName: conversation.getChatDisplayName()
       })
-      
+
       return savedConversation
     } catch (error) {
       this.logger.error('Failed to save conversation', {
@@ -308,7 +308,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * @param {Conversation} conversation - Conversation entity
    * @returns {Promise<Conversation>}
    */
-  async update(conversation) {
+  async update (conversation) {
     try {
       const existing = await this.findById(conversation.id)
       if (!existing) {
@@ -316,7 +316,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
       }
 
       conversation.validate()
-      
+
       const query = `
         UPDATE conversations 
         SET 
@@ -329,7 +329,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
         WHERE id = $1
         RETURNING *
       `
-      
+
       const values = [
         conversation.id,
         conversation.platform,
@@ -362,14 +362,14 @@ class PostgreSQLConversationRepository extends ConversationRepository {
         new Date(),
         conversation.lastMessageAt
       ]
-      
+
       const result = await this.pool.query(query, values)
       const updatedConversation = this.mapRowToConversation(result.rows[0])
-      
+
       this.logger.info('Conversation updated in PostgreSQL', {
         conversationId: conversation.id
       })
-      
+
       return updatedConversation
     } catch (error) {
       this.logger.error('Failed to update conversation', {
@@ -385,16 +385,16 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * @param {string} id - Conversation ID
    * @returns {Promise<boolean>}
    */
-  async delete(id) {
+  async delete (id) {
     try {
       const query = 'DELETE FROM conversations WHERE id = $1'
       const result = await this.pool.query(query, [id])
-      
+
       const deleted = result.rowCount > 0
       if (deleted) {
         this.logger.info('Conversation deleted from PostgreSQL', { conversationId: id })
       }
-      
+
       return deleted
     } catch (error) {
       this.logger.error('Failed to delete conversation', {
@@ -410,7 +410,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * @param {Object} options - Query options
    * @returns {Promise<Conversation[]>}
    */
-  async findAll(options = {}) {
+  async findAll (options = {}) {
     try {
       let query = 'SELECT * FROM conversations'
       const values = []
@@ -463,7 +463,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * @param {Object} options - Query options
    * @returns {Promise<Conversation[]>}
    */
-  async findByPlatform(platform, options = {}) {
+  async findByPlatform (platform, options = {}) {
     return await this.findAll({ ...options, platform })
   }
 
@@ -473,7 +473,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * @param {Object} options - Query options
    * @returns {Promise<Conversation[]>}
    */
-  async findByChatType(chatType, options = {}) {
+  async findByChatType (chatType, options = {}) {
     return await this.findAll({ ...options, chatType })
   }
 
@@ -482,7 +482,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * @param {Object} options - Query options
    * @returns {Promise<Conversation[]>}
    */
-  async findActive(options = {}) {
+  async findActive (options = {}) {
     return await this.findAll({ ...options, isActive: true, status: 'active' })
   }
 
@@ -492,7 +492,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * @param {Date} timestamp - Last message timestamp
    * @returns {Promise<boolean>}
    */
-  async updateLastMessageAt(id, timestamp = new Date()) {
+  async updateLastMessageAt (id, timestamp = new Date()) {
     try {
       const query = `
         UPDATE conversations 
@@ -500,7 +500,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
         WHERE id = $1
       `
       const result = await this.pool.query(query, [id, timestamp, new Date()])
-      
+
       return result.rowCount > 0
     } catch (error) {
       this.logger.error('Failed to update last message timestamp', {
@@ -516,7 +516,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * @param {Object} row - Database row
    * @returns {Conversation}
    */
-  mapRowToConversation(row) {
+  mapRowToConversation (row) {
     return new Conversation({
       id: row.id,
       platform: row.platform,
@@ -555,7 +555,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
   /**
    * Close database connection
    */
-  async close() {
+  async close () {
     if (this.pool) {
       await this.pool.end()
       this.logger.info('PostgreSQL connection closed')

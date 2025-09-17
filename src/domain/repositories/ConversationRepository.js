@@ -8,7 +8,7 @@ class ConversationRepository {
    * @param {string} id - Conversation ID
    * @returns {Promise<Conversation|null>}
    */
-  async findById(id) {
+  async findById (id) {
     throw new Error('findById method must be implemented')
   }
 
@@ -18,7 +18,7 @@ class ConversationRepository {
    * @param {string} externalId - External platform ID
    * @returns {Promise<Conversation|null>}
    */
-  async findByPlatformId(platform, externalId) {
+  async findByPlatformId (platform, externalId) {
     throw new Error('findByPlatformId method must be implemented')
   }
 
@@ -27,7 +27,7 @@ class ConversationRepository {
    * @param {Conversation} conversation - Conversation entity
    * @returns {Promise<Conversation>}
    */
-  async save(conversation) {
+  async save (conversation) {
     throw new Error('save method must be implemented')
   }
 
@@ -36,7 +36,7 @@ class ConversationRepository {
    * @param {Conversation} conversation - Conversation entity
    * @returns {Promise<Conversation>}
    */
-  async update(conversation) {
+  async update (conversation) {
     throw new Error('update method must be implemented')
   }
 
@@ -45,7 +45,7 @@ class ConversationRepository {
    * @param {string} id - Conversation ID
    * @returns {Promise<boolean>}
    */
-  async delete(id) {
+  async delete (id) {
     throw new Error('delete method must be implemented')
   }
 
@@ -53,7 +53,7 @@ class ConversationRepository {
    * Get all conversations
    * @returns {Promise<Conversation[]>}
    */
-  async findAll() {
+  async findAll () {
     throw new Error('findAll method must be implemented')
   }
 
@@ -62,7 +62,7 @@ class ConversationRepository {
    * @param {string} platform - Platform name
    * @returns {Promise<Conversation[]>}
    */
-  async findByPlatform(platform) {
+  async findByPlatform (platform) {
     throw new Error('findByPlatform method must be implemented')
   }
 }

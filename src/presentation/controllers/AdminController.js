@@ -3,12 +3,12 @@
  * Handles admin panel operations
  */
 class AdminController {
-  constructor({ 
-    userRepository, 
-    telegramBotRepository, 
-    chatwootAccountRepository, 
+  constructor ({
+    userRepository,
+    telegramBotRepository,
+    chatwootAccountRepository,
     difyAppRepository,
-    logger 
+    logger
   }) {
     this.userRepository = userRepository
     this.telegramBotRepository = telegramBotRepository
@@ -22,7 +22,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getDashboard(req, res) {
+  async getDashboard (req, res) {
     try {
       const [
         usersResult,
@@ -53,7 +53,6 @@ class AdminController {
           }
         }
       })
-
     } catch (error) {
       this.logger.error('Get dashboard failed', { error: error.message })
       res.status(500).json({
@@ -68,7 +67,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getUsers(req, res) {
+  async getUsers (req, res) {
     try {
       const { page = 1, limit = 10, search = '' } = req.query
       const result = await this.userRepository.findAll({ page: parseInt(page), limit: parseInt(limit), search })
@@ -77,7 +76,6 @@ class AdminController {
         success: true,
         data: result
       })
-
     } catch (error) {
       this.logger.error('Get users failed', { error: error.message })
       res.status(500).json({
@@ -92,7 +90,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async createUser(req, res) {
+  async createUser (req, res) {
     try {
       const { username, email, password, fullName } = req.body
 
@@ -115,7 +113,6 @@ class AdminController {
         message: 'User created successfully',
         data: user
       })
-
     } catch (error) {
       this.logger.error('Create user failed', { error: error.message })
       res.status(500).json({
@@ -130,12 +127,12 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getTelegramBots(req, res) {
+  async getTelegramBots (req, res) {
     try {
       const { page = 1, limit = 10, search = '', isActive, sort_by = 'created_at.desc' } = req.query
-      const result = await this.telegramBotRepository.findAll({ 
-        page: parseInt(page), 
-        limit: parseInt(limit), 
+      const result = await this.telegramBotRepository.findAll({
+        page: parseInt(page),
+        limit: parseInt(limit),
         search,
         isActive: isActive ? isActive === 'true' : null,
         sortBy: sort_by
@@ -145,7 +142,6 @@ class AdminController {
         success: true,
         data: result
       })
-
     } catch (error) {
       this.logger.error('Get telegram bots failed', { error: error.message })
       res.status(500).json({
@@ -160,7 +156,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async createTelegramBot(req, res) {
+  async createTelegramBot (req, res) {
     try {
       const { name, botToken, secretToken, webhookUrl, apiUrl, isActive = true } = req.body
 
@@ -177,7 +173,7 @@ class AdminController {
         secretToken,
         webhookUrl,
         apiUrl: apiUrl || 'https://api.telegram.org',
-        isActive: isActive,
+        isActive,
         createdBy: req.user.userId
       })
 
@@ -186,7 +182,6 @@ class AdminController {
         message: 'Telegram bot created successfully',
         data: bot
       })
-
     } catch (error) {
       this.logger.error('Create telegram bot failed', { error: error.message })
       res.status(500).json({
@@ -201,7 +196,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getTelegramBotById(req, res) {
+  async getTelegramBotById (req, res) {
     try {
       const { id } = req.params
       const bot = await this.telegramBotRepository.findById(id)
@@ -223,7 +218,6 @@ class AdminController {
           mappings
         }
       })
-
     } catch (error) {
       this.logger.error('Get telegram bot by ID failed', { error: error.message })
       res.status(500).json({
@@ -238,7 +232,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async updateTelegramBot(req, res) {
+  async updateTelegramBot (req, res) {
     try {
       const { id } = req.params
       const { name, botToken, webhookUrl, apiUrl, isActive, secretToken } = req.body
@@ -257,7 +251,6 @@ class AdminController {
         message: 'Telegram bot updated successfully',
         data: bot
       })
-
     } catch (error) {
       this.logger.error('Update telegram bot failed', { error: error.message })
       res.status(500).json({
@@ -272,7 +265,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async deleteTelegramBot(req, res) {
+  async deleteTelegramBot (req, res) {
     try {
       const { id } = req.params
       const deleted = await this.telegramBotRepository.delete(id)
@@ -288,7 +281,6 @@ class AdminController {
         success: true,
         message: 'Telegram bot deleted successfully'
       })
-
     } catch (error) {
       this.logger.error('Delete telegram bot failed', { error: error.message })
       res.status(500).json({
@@ -303,7 +295,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getActiveTelegramBots(req, res) {
+  async getActiveTelegramBots (req, res) {
     try {
       const bots = await this.telegramBotRepository.findActive()
 
@@ -311,7 +303,6 @@ class AdminController {
         success: true,
         data: bots
       })
-
     } catch (error) {
       this.logger.error('Get active telegram bots failed', { error: error.message })
       res.status(500).json({
@@ -326,12 +317,12 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getChatwootAccounts(req, res) {
+  async getChatwootAccounts (req, res) {
     try {
       const { page = 1, limit = 10, search = '', isActive, sort_by } = req.query
-      const result = await this.chatwootAccountRepository.findAll({ 
-        page: parseInt(page), 
-        limit: parseInt(limit), 
+      const result = await this.chatwootAccountRepository.findAll({
+        page: parseInt(page),
+        limit: parseInt(limit),
         search,
         sort_by,
         isActive: isActive ? isActive === 'true' : null
@@ -345,7 +336,6 @@ class AdminController {
           total_page: result.pagination?.pages || 0
         }
       })
-
     } catch (error) {
       this.logger.error('Get chatwoot accounts failed', { error: error.message })
       res.status(500).json({
@@ -360,7 +350,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async createChatwootAccount(req, res) {
+  async createChatwootAccount (req, res) {
     try {
       const { name, baseUrl, accessToken, accountId, inboxId } = req.body
 
@@ -385,7 +375,6 @@ class AdminController {
         message: 'Chatwoot account created successfully',
         data: account
       })
-
     } catch (error) {
       this.logger.error('Create chatwoot account failed', { error: error.message })
       res.status(500).json({
@@ -400,7 +389,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async updateChatwootAccount(req, res) {
+  async updateChatwootAccount (req, res) {
     try {
       const { id } = req.params
       const { name, baseUrl, accessToken, accountId, inboxId, isActive } = req.body
@@ -433,7 +422,6 @@ class AdminController {
         message: 'Chatwoot account updated successfully',
         data: account
       })
-
     } catch (error) {
       this.logger.error('Update chatwoot account failed', { error: error.message })
       res.status(500).json({
@@ -448,7 +436,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async deleteChatwootAccount(req, res) {
+  async deleteChatwootAccount (req, res) {
     try {
       const { id } = req.params
 
@@ -465,7 +453,6 @@ class AdminController {
         success: true,
         message: 'Chatwoot account deleted successfully'
       })
-
     } catch (error) {
       this.logger.error('Delete chatwoot account failed', { error: error.message })
       res.status(500).json({
@@ -480,12 +467,12 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getDifyApps(req, res) {
+  async getDifyApps (req, res) {
     try {
       const { page = 1, limit = 10, search = '', isActive, sort_by = 'created_at.desc' } = req.query
-      const result = await this.difyAppRepository.findAll({ 
-        page: parseInt(page), 
-        limit: parseInt(limit), 
+      const result = await this.difyAppRepository.findAll({
+        page: parseInt(page),
+        limit: parseInt(limit),
         search,
         isActive: isActive ? isActive === 'true' : null,
         sortBy: sort_by
@@ -495,7 +482,6 @@ class AdminController {
         success: true,
         data: result
       })
-
     } catch (error) {
       this.logger.error('Get dify apps failed', { error: error.message })
       res.status(500).json({
@@ -510,7 +496,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async createDifyApp(req, res) {
+  async createDifyApp (req, res) {
     try {
       const { name, apiUrl, apiKey, appId, timeout, isActive } = req.body
 
@@ -536,7 +522,6 @@ class AdminController {
         message: 'Dify app created successfully',
         data: app
       })
-
     } catch (error) {
       this.logger.error('Create dify app failed', { error: error.message })
       res.status(500).json({
@@ -551,7 +536,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getDifyAppById(req, res) {
+  async getDifyAppById (req, res) {
     try {
       const { id } = req.params
       const app = await this.difyAppRepository.findById(id)
@@ -573,7 +558,6 @@ class AdminController {
           mappings
         }
       })
-
     } catch (error) {
       this.logger.error('Get Dify app by ID failed', { error: error.message })
       res.status(500).json({
@@ -588,7 +572,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async updateDifyApp(req, res) {
+  async updateDifyApp (req, res) {
     try {
       const { id } = req.params
       const { name, apiUrl, apiKey, appId, timeout, isActive } = req.body
@@ -628,7 +612,6 @@ class AdminController {
         message: 'Dify app updated successfully',
         data: app
       })
-
     } catch (error) {
       this.logger.error('Update Dify app failed', { error: error.message })
       res.status(500).json({
@@ -643,7 +626,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async deleteDifyApp(req, res) {
+  async deleteDifyApp (req, res) {
     try {
       const { id } = req.params
 
@@ -669,7 +652,6 @@ class AdminController {
         success: true,
         message: 'Dify app deleted successfully'
       })
-
     } catch (error) {
       this.logger.error('Delete Dify app failed', { error: error.message })
       res.status(500).json({
@@ -684,7 +666,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getActiveDifyApps(req, res) {
+  async getActiveDifyApps (req, res) {
     try {
       const apps = await this.difyAppRepository.findActive()
 
@@ -692,7 +674,6 @@ class AdminController {
         success: true,
         data: apps
       })
-
     } catch (error) {
       this.logger.error('Get active Dify apps failed', { error: error.message })
       res.status(500).json({
@@ -702,13 +683,12 @@ class AdminController {
     }
   }
 
-
   /**
    * Create Dify-Chatwoot mapping
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async createMapping(req, res) {
+  async createMapping (req, res) {
     try {
       const userId = req.user.userId
       const { difyAppId, chatwootAccountId, isActive = true } = req.body
@@ -755,7 +735,6 @@ class AdminController {
         message: 'Mapping created successfully',
         data: mapping
       })
-
     } catch (error) {
       this.logger.error('Create Dify mapping failed', { error: error.message })
       res.status(500).json({
@@ -770,7 +749,7 @@ class AdminController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async deleteMapping(req, res) {
+  async deleteMapping (req, res) {
     try {
       const { mappingId } = req.params
 
@@ -787,7 +766,6 @@ class AdminController {
         success: true,
         message: 'Mapping deleted successfully'
       })
-
     } catch (error) {
       this.logger.error('Delete Dify mapping failed', { error: error.message })
       res.status(500).json({

@@ -2,7 +2,7 @@
  * Conversation Entity - Domain model for conversations
  */
 class Conversation {
-  constructor({
+  constructor ({
     id,
     platform,
     chatType,
@@ -71,7 +71,7 @@ class Conversation {
   /**
    * Add participant to conversation
    */
-  addParticipant(participant) {
+  addParticipant (participant) {
     const existing = this.participants.find(p => p.id === participant.id)
     if (!existing) {
       this.participants.push(participant)
@@ -82,7 +82,7 @@ class Conversation {
   /**
    * Remove participant from conversation
    */
-  removeParticipant(participantId) {
+  removeParticipant (participantId) {
     this.participants = this.participants.filter(p => p.id !== participantId)
     this.updatedAt = new Date()
   }
@@ -90,21 +90,21 @@ class Conversation {
   /**
    * Check if conversation has participant
    */
-  hasParticipant(participantId) {
+  hasParticipant (participantId) {
     return this.participants.some(p => p.id === participantId)
   }
 
   /**
    * Get primary participant (for private chats)
    */
-  getPrimaryParticipant() {
+  getPrimaryParticipant () {
     return this.participants.find(p => p.role === 'user') || this.participants[0]
   }
 
   /**
    * Get sender display name
    */
-  getSenderDisplayName() {
+  getSenderDisplayName () {
     if (this.senderFirstName && this.senderLastName) {
       return `${this.senderFirstName} ${this.senderLastName}`.trim()
     }
@@ -120,7 +120,7 @@ class Conversation {
   /**
    * Get chat display name
    */
-  getChatDisplayName() {
+  getChatDisplayName () {
     if (this.chatType === 'private') {
       return this.getSenderDisplayName()
     }
@@ -136,28 +136,28 @@ class Conversation {
   /**
    * Check if conversation is active
    */
-  isActive() {
+  isActive () {
     return this.isActive && this.status === 'active'
   }
 
   /**
    * Check if conversation is a group chat
    */
-  isGroupChat() {
+  isGroupChat () {
     return ['group', 'supergroup', 'channel'].includes(this.chatType)
   }
 
   /**
    * Check if conversation is private chat
    */
-  isPrivateChat() {
+  isPrivateChat () {
     return this.chatType === 'private'
   }
 
   /**
    * Update conversation metadata
    */
-  updateMetadata(metadata) {
+  updateMetadata (metadata) {
     this.platformMetadata = { ...this.platformMetadata, ...metadata }
     this.updatedAt = new Date()
   }
@@ -165,7 +165,7 @@ class Conversation {
   /**
    * Update Chatwoot metadata
    */
-  updateChatwootMetadata(metadata) {
+  updateChatwootMetadata (metadata) {
     this.chatwootMetadata = { ...this.chatwootMetadata, ...metadata }
     this.updatedAt = new Date()
   }
@@ -173,7 +173,7 @@ class Conversation {
   /**
    * Update last message timestamp
    */
-  updateLastMessageAt() {
+  updateLastMessageAt () {
     this.lastMessageAt = new Date()
     this.updatedAt = new Date()
   }
@@ -181,35 +181,35 @@ class Conversation {
   /**
    * Validate conversation data
    */
-  validate() {
+  validate () {
     const errors = []
-    
+
     if (!this.id) errors.push('Conversation ID is required')
     if (!this.platform) errors.push('Platform is required')
     if (!this.chatType) errors.push('Chat type is required')
     if (!this.chatId) errors.push('Chat ID is required')
-    
+
     const validChatTypes = ['private', 'group', 'supergroup', 'channel']
     if (!validChatTypes.includes(this.chatType)) {
       errors.push(`Invalid chat type: ${this.chatType}`)
     }
-    
+
     const validStatuses = ['active', 'archived', 'blocked', 'deleted']
     if (!validStatuses.includes(this.status)) {
       errors.push(`Invalid status: ${this.status}`)
     }
-    
+
     if (errors.length > 0) {
       throw new Error(`Conversation validation failed: ${errors.join(', ')}`)
     }
-    
+
     return true
   }
 
   /**
    * Convert to plain object
    */
-  toJSON() {
+  toJSON () {
     return {
       id: this.id,
       platform: this.platform,

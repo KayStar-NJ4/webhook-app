@@ -3,7 +3,7 @@
  * Centralized error handling for the application
  */
 class ErrorHandler {
-  constructor({ logger }) {
+  constructor ({ logger }) {
     this.logger = logger
   }
 
@@ -14,7 +14,7 @@ class ErrorHandler {
    * @param {Object} res - Express response
    * @param {Function} next - Express next function
    */
-  handle(error, req, res, next) {
+  handle (error, req, res, next) {
     this.logger.error('Unhandled error', {
       error: error.message,
       stack: error.stack,
@@ -27,7 +27,7 @@ class ErrorHandler {
 
     // Don't leak error details in production
     const isDevelopment = process.env.NODE_ENV === 'development'
-    
+
     const errorResponse = {
       success: false,
       error: isDevelopment ? error.message : 'Internal server error',
@@ -62,7 +62,7 @@ class ErrorHandler {
    * @param {Object} res - Express response
    * @param {Function} next - Express next function
    */
-  notFound(req, res, next) {
+  notFound (req, res, next) {
     const error = new Error(`Route not found: ${req.method} ${req.url}`)
     error.statusCode = 404
     error.name = 'NotFoundError'
@@ -74,7 +74,7 @@ class ErrorHandler {
    * @param {Function} fn - Async function to wrap
    * @returns {Function} - Wrapped function
    */
-  asyncHandler(fn) {
+  asyncHandler (fn) {
     return (req, res, next) => {
       Promise.resolve(fn(req, res, next)).catch(next)
     }

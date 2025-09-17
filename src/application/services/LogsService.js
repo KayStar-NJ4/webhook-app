@@ -3,7 +3,7 @@
  * Handles business logic for system logs
  */
 class LogsService {
-  constructor({ logRepository, logger }) {
+  constructor ({ logRepository, logger }) {
     this.logRepository = logRepository
     this.logger = logger
   }
@@ -13,10 +13,10 @@ class LogsService {
    * @param {Object} options - Query options
    * @returns {Promise<Object>} - Paginated logs result
    */
-  async getLogs({ page = 1, limit = 20, filters = {} }) {
+  async getLogs ({ page = 1, limit = 20, filters = {} }) {
     try {
       const offset = (page - 1) * limit
-      
+
       const result = await this.logRepository.findWithPagination({
         offset,
         limit,
@@ -32,7 +32,6 @@ class LogsService {
         total: result.total,
         totalPages
       }
-
     } catch (error) {
       this.logger.error('Failed to get logs', {
         error: error.message,
@@ -47,7 +46,7 @@ class LogsService {
    * @param {string} id - Log ID
    * @returns {Promise<Object|null>} - Log object or null
    */
-  async getLogById(id) {
+  async getLogById (id) {
     try {
       return await this.logRepository.findById(id)
     } catch (error) {
@@ -64,7 +63,7 @@ class LogsService {
    * @param {number} days - Number of days to keep
    * @returns {Promise<Object>} - Cleanup result
    */
-  async clearOldLogs(days = 30) {
+  async clearOldLogs (days = 30) {
     try {
       const cutoffDate = new Date()
       cutoffDate.setDate(cutoffDate.getDate() - days)
@@ -77,7 +76,6 @@ class LogsService {
       })
 
       return result
-
     } catch (error) {
       this.logger.error('Failed to clear old logs', {
         error: error.message,
@@ -91,7 +89,7 @@ class LogsService {
    * Get log statistics
    * @returns {Promise<Object>} - Log statistics
    */
-  async getLogStatistics() {
+  async getLogStatistics () {
     try {
       const stats = await this.logRepository.getStatistics()
 
@@ -104,7 +102,6 @@ class LogsService {
         last24Hours: stats.last24Hours,
         last7Days: stats.last7Days
       }
-
     } catch (error) {
       this.logger.error('Failed to get log statistics', {
         error: error.message
@@ -118,7 +115,7 @@ class LogsService {
    * @param {Object} filters - Export filters
    * @returns {Promise<string>} - CSV content
    */
-  async exportLogs(filters = {}) {
+  async exportLogs (filters = {}) {
     try {
       const logs = await this.logRepository.findWithPagination({
         offset: 0,
@@ -133,12 +130,11 @@ class LogsService {
         const component = log.component || ''
         const message = (log.message || '').replace(/"/g, '""')
         const metadata = JSON.stringify(log.metadata || {}).replace(/"/g, '""')
-        
+
         return `"${timestamp}","${level}","${component}","${message}","${metadata}"`
       }).join('\n')
 
       return csvHeader + csvRows
-
     } catch (error) {
       this.logger.error('Failed to export logs', {
         error: error.message,

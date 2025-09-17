@@ -8,7 +8,7 @@ class MessageRepository {
    * @param {string} id - Message ID
    * @returns {Promise<Message|null>}
    */
-  async findById(id) {
+  async findById (id) {
     throw new Error('findById method must be implemented')
   }
 
@@ -17,7 +17,7 @@ class MessageRepository {
    * @param {Message} message - Message entity
    * @returns {Promise<Message>}
    */
-  async save(message) {
+  async save (message) {
     throw new Error('save method must be implemented')
   }
 
@@ -27,7 +27,7 @@ class MessageRepository {
    * @param {Object} options - Query options
    * @returns {Promise<Message[]>}
    */
-  async findByConversationId(conversationId, options = {}) {
+  async findByConversationId (conversationId, options = {}) {
     throw new Error('findByConversationId method must be implemented')
   }
 
@@ -36,7 +36,7 @@ class MessageRepository {
    * @param {string} id - Message ID
    * @returns {Promise<boolean>}
    */
-  async exists(id) {
+  async exists (id) {
     throw new Error('exists method must be implemented')
   }
 
@@ -45,7 +45,7 @@ class MessageRepository {
    * @param {string} conversationId - Conversation ID
    * @returns {Promise<number>}
    */
-  async countByConversationId(conversationId) {
+  async countByConversationId (conversationId) {
     throw new Error('countByConversationId method must be implemented')
   }
 }

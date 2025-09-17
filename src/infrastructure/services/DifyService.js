@@ -5,7 +5,7 @@ const axios = require('axios')
  * Handles communication with Dify AI API
  */
 class DifyService {
-  constructor({ config, configurationService, difyAppRepository, logger }) {
+  constructor ({ config, configurationService, difyAppRepository, logger }) {
     this.config = config
     this.configurationService = configurationService
     this.difyAppRepository = difyAppRepository
@@ -26,7 +26,7 @@ class DifyService {
   /**
    * Initialize service - no global config, will be set per request
    */
-  async initialize() {
+  async initialize () {
     this.logger.info('Dify service initialized (per-request configuration)')
   }
 
@@ -34,7 +34,7 @@ class DifyService {
    * Initialize service with specific Dify app ID
    * @param {number} difyAppId - Dify app ID
    */
-  async initializeWithAppId(difyAppId) {
+  async initializeWithAppId (difyAppId) {
     try {
       const difyApp = await this.difyAppRepository.findById(difyAppId)
       if (!difyApp) throw new Error(`Dify app with ID ${difyAppId} not found`)
@@ -59,7 +59,7 @@ class DifyService {
     }
   }
 
-  getHeaders() {
+  getHeaders () {
     return {
       Authorization: `Bearer ${this.apiKey}`,
       'Content-Type': 'application/json'
@@ -69,7 +69,7 @@ class DifyService {
   /**
    * Send message to Dify
    */
-  async sendMessage(conversation, content, options = {}) {
+  async sendMessage (conversation, content, options = {}) {
     try {
       if (options.difyAppId) {
         await this.initializeWithAppId(options.difyAppId)
@@ -163,14 +163,13 @@ class DifyService {
         responseText = 'Xin lỗi, tôi không thể xử lý tin nhắn này lúc này. Vui lòng thử lại sau.'
       }
 
-
       // Get conversation_id from Dify API response (this is the correct one to use)
       const difyConversationId = response.data.conversation_id || `fallback-${Date.now()}`
-      
+
       this.logger.info('Dify conversation_id', {
-        difyConversationId: difyConversationId
+        difyConversationId
       })
-      
+
       const result = {
         conversationId: difyConversationId, // This is the Dify conversation_id
         response: responseText,
@@ -201,7 +200,7 @@ class DifyService {
   }
 
   // === HISTORY / INFO / RENAME / DELETE ===
-  async getConversationHistory(conversationId, options = {}) {
+  async getConversationHistory (conversationId, options = {}) {
     try {
       const params = new URLSearchParams({ conversation_id: conversationId, ...options })
       const res = await axios.get(`${this.apiUrl}/v1/messages?${params}`, {
@@ -218,7 +217,7 @@ class DifyService {
     }
   }
 
-  async getConversationInfo(conversationId) {
+  async getConversationInfo (conversationId) {
     try {
       const res = await axios.get(`${this.apiUrl}/v1/conversations/${conversationId}`, {
         headers: this.getHeaders()
@@ -234,7 +233,7 @@ class DifyService {
     }
   }
 
-  async renameConversation(conversationId, name) {
+  async renameConversation (conversationId, name) {
     try {
       const res = await axios.post(
         `${this.apiUrl}/v1/conversations/${conversationId}/name`,
@@ -254,7 +253,7 @@ class DifyService {
     }
   }
 
-  async deleteConversation(conversationId) {
+  async deleteConversation (conversationId) {
     try {
       const res = await axios.delete(`${this.apiUrl}/v1/conversations/${conversationId}`, {
         headers: this.getHeaders()
@@ -271,7 +270,7 @@ class DifyService {
     }
   }
 
-  async testConnection() {
+  async testConnection () {
     try {
       if (!this.apiUrl || !this.apiKey || !this.appId) {
         this.logger.info('Dify service not configured, skip connection test')

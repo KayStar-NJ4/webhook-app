@@ -3,11 +3,11 @@
  * Handles permission and role management business logic
  */
 class PermissionService {
-  constructor({ 
-    userRepository, 
-    roleRepository, 
-    permissionRepository, 
-    logger 
+  constructor ({
+    userRepository,
+    roleRepository,
+    permissionRepository,
+    logger
   }) {
     this.userRepository = userRepository
     this.roleRepository = roleRepository
@@ -22,7 +22,7 @@ class PermissionService {
    * @param {string} action - Action name
    * @returns {Promise<boolean>} - Has permission
    */
-  async hasPermission(userId, resource, action) {
+  async hasPermission (userId, resource, action) {
     try {
       return await this.permissionRepository.userHasPermission(userId, resource, action)
     } catch (error) {
@@ -36,7 +36,7 @@ class PermissionService {
    * @param {number} userId - User ID
    * @returns {Promise<Array>} - User permissions
    */
-  async getUserPermissions(userId) {
+  async getUserPermissions (userId) {
     try {
       return await this.permissionRepository.getUserPermissions(userId)
     } catch (error) {
@@ -50,10 +50,10 @@ class PermissionService {
    * @param {number} userId - User ID
    * @returns {Promise<Object>} - Permissions grouped by resource
    */
-  async getUserPermissionsGrouped(userId) {
+  async getUserPermissionsGrouped (userId) {
     try {
       const permissions = await this.getUserPermissions(userId)
-      
+
       const grouped = permissions.reduce((acc, permission) => {
         if (!acc[permission.resource]) {
           acc[permission.resource] = []
@@ -61,7 +61,7 @@ class PermissionService {
         acc[permission.resource].push(permission)
         return acc
       }, {})
-      
+
       return grouped
     } catch (error) {
       this.logger.error('Failed to get user permissions grouped', { userId, error: error.message })
@@ -75,7 +75,7 @@ class PermissionService {
    * @param {number} roleId - Role ID
    * @returns {Promise<void>}
    */
-  async assignRoleToUser(userId, roleId) {
+  async assignRoleToUser (userId, roleId) {
     try {
       // Check if user exists
       const user = await this.userRepository.findById(userId)
@@ -95,11 +95,10 @@ class PermissionService {
         VALUES ($1, $2)
         ON CONFLICT (user_id, role_id) DO NOTHING
       `
-      
+
       await this.userRepository.db.query(query, [userId, roleId])
-      
+
       this.logger.info('Role assigned to user', { userId, roleId, roleName: role.name })
-      
     } catch (error) {
       this.logger.error('Failed to assign role to user', { userId, roleId, error: error.message })
       throw error
@@ -112,13 +111,12 @@ class PermissionService {
    * @param {number} roleId - Role ID
    * @returns {Promise<void>}
    */
-  async removeRoleFromUser(userId, roleId) {
+  async removeRoleFromUser (userId, roleId) {
     try {
       const query = 'DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2'
       await this.userRepository.db.query(query, [userId, roleId])
-      
+
       this.logger.info('Role removed from user', { userId, roleId })
-      
     } catch (error) {
       this.logger.error('Failed to remove role from user', { userId, roleId, error: error.message })
       throw error
@@ -129,7 +127,7 @@ class PermissionService {
    * Get all roles
    * @returns {Promise<Array>} - All roles
    */
-  async getAllRoles() {
+  async getAllRoles () {
     try {
       return await this.roleRepository.findAll()
     } catch (error) {
@@ -142,7 +140,7 @@ class PermissionService {
    * Get all permissions
    * @returns {Promise<Array>} - All permissions
    */
-  async getAllPermissions() {
+  async getAllPermissions () {
     try {
       return await this.permissionRepository.findAll()
     } catch (error) {
@@ -155,7 +153,7 @@ class PermissionService {
    * Get permissions grouped by resource
    * @returns {Promise<Object>} - Permissions grouped by resource
    */
-  async getPermissionsGrouped() {
+  async getPermissionsGrouped () {
     try {
       return await this.permissionRepository.getGroupedByResource()
     } catch (error) {
@@ -169,7 +167,7 @@ class PermissionService {
    * @param {Object} roleData - Role data
    * @returns {Promise<Object>} - Created role
    */
-  async createRole(roleData) {
+  async createRole (roleData) {
     try {
       return await this.roleRepository.create(roleData)
     } catch (error) {
@@ -184,7 +182,7 @@ class PermissionService {
    * @param {Object} updateData - Update data
    * @returns {Promise<Object>} - Updated role
    */
-  async updateRole(roleId, updateData) {
+  async updateRole (roleId, updateData) {
     try {
       return await this.roleRepository.update(roleId, updateData)
     } catch (error) {
@@ -198,7 +196,7 @@ class PermissionService {
    * @param {number} roleId - Role ID
    * @returns {Promise<boolean>} - Success status
    */
-  async deleteRole(roleId) {
+  async deleteRole (roleId) {
     try {
       return await this.roleRepository.delete(roleId)
     } catch (error) {
@@ -213,7 +211,7 @@ class PermissionService {
    * @param {number} permissionId - Permission ID
    * @returns {Promise<void>}
    */
-  async assignPermissionToRole(roleId, permissionId) {
+  async assignPermissionToRole (roleId, permissionId) {
     try {
       await this.roleRepository.assignPermission(roleId, permissionId)
     } catch (error) {
@@ -228,7 +226,7 @@ class PermissionService {
    * @param {number} permissionId - Permission ID
    * @returns {Promise<void>}
    */
-  async removePermissionFromRole(roleId, permissionId) {
+  async removePermissionFromRole (roleId, permissionId) {
     try {
       await this.roleRepository.removePermission(roleId, permissionId)
     } catch (error) {
@@ -242,7 +240,7 @@ class PermissionService {
    * @param {number} roleId - Role ID
    * @returns {Promise<Array>} - Role permissions
    */
-  async getRolePermissions(roleId) {
+  async getRolePermissions (roleId) {
     try {
       return await this.roleRepository.getPermissions(roleId)
     } catch (error) {
@@ -256,11 +254,11 @@ class PermissionService {
    * @param {number} userId - User ID
    * @returns {Promise<boolean>} - Is super admin
    */
-  async isSuperAdmin(userId) {
+  async isSuperAdmin (userId) {
     try {
       const user = await this.userRepository.findWithRolesAndPermissions(userId)
       if (!user) return false
-      
+
       return user.roles.some(role => role.name === 'super_admin')
     } catch (error) {
       this.logger.error('Failed to check if user is super admin', { userId, error: error.message })
@@ -273,11 +271,11 @@ class PermissionService {
    * @param {number} userId - User ID
    * @returns {Promise<boolean>} - Is admin
    */
-  async isAdmin(userId) {
+  async isAdmin (userId) {
     try {
       const user = await this.userRepository.findWithRolesAndPermissions(userId)
       if (!user) return false
-      
+
       return user.roles.some(role => ['super_admin', 'admin'].includes(role.name))
     } catch (error) {
       this.logger.error('Failed to check if user is admin', { userId, error: error.message })
@@ -290,11 +288,11 @@ class PermissionService {
    * @param {number} userId - User ID
    * @returns {Promise<Array>} - User role names
    */
-  async getUserRoleNames(userId) {
+  async getUserRoleNames (userId) {
     try {
       const user = await this.userRepository.findWithRolesAndPermissions(userId)
       if (!user) return []
-      
+
       return user.roles.map(role => role.name)
     } catch (error) {
       this.logger.error('Failed to get user role names', { userId, error: error.message })
@@ -307,7 +305,7 @@ class PermissionService {
    * @param {number} roleId - Role ID
    * @returns {Promise<Object|null>} - Role object or null
    */
-  async getRoleById(roleId) {
+  async getRoleById (roleId) {
     try {
       return await this.roleRepository.findById(roleId)
     } catch (error) {
@@ -322,7 +320,7 @@ class PermissionService {
    * @param {Array} permissionNames - Array of permission names
    * @returns {Promise<void>}
    */
-  async updateRolePermissions(roleId, permissionNames) {
+  async updateRolePermissions (roleId, permissionNames) {
     try {
       return await this.roleRepository.updatePermissions(roleId, permissionNames)
     } catch (error) {
@@ -330,7 +328,6 @@ class PermissionService {
       throw error
     }
   }
-
 }
 
 module.exports = PermissionService

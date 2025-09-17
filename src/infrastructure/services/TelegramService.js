@@ -5,7 +5,7 @@ const axios = require('axios')
  * Handles communication with Telegram Bot API
  */
 class TelegramService {
-  constructor({ config, configurationService, logger }) {
+  constructor ({ config, configurationService, logger }) {
     this.config = config
     this.configurationService = configurationService
     this.logger = logger
@@ -16,7 +16,7 @@ class TelegramService {
   /**
    * Initialize service - no global config, will be set per request
    */
-  async initialize() {
+  async initialize () {
     // Telegram service will be initialized per request based on platform mapping
     this.logger.info('Telegram service initialized (per-request configuration)')
   }
@@ -25,7 +25,7 @@ class TelegramService {
    * Initialize service with specific Telegram bot ID
    * @param {number} botId - Telegram bot ID
    */
-  async initializeWithBotId(botId) {
+  async initializeWithBotId (botId) {
     try {
       // Get bot configuration from telegram_bots table
       const { Pool } = require('pg')
@@ -37,27 +37,27 @@ class TelegramService {
         password: process.env.DB_PASSWORD,
         ssl: process.env.DB_SSL === 'true'
       })
-      
+
       const result = await pool.query('SELECT * FROM telegram_bots WHERE id = $1', [botId])
       await pool.end()
-      
+
       if (result.rows.length === 0) {
         throw new Error(`Telegram bot with ID ${botId} not found`)
       }
-      
+
       const bot = result.rows[0]
       this.botToken = bot.bot_token
       this.apiUrl = `${bot.api_url || 'https://api.telegram.org'}/bot${this.botToken}`
-      
-      this.logger.info('Telegram service initialized with bot', { 
-        botId, 
+
+      this.logger.info('Telegram service initialized with bot', {
+        botId,
         apiUrl: this.apiUrl,
         hasBotToken: !!this.botToken
       })
     } catch (error) {
-      this.logger.warn('Failed to initialize Telegram service with bot ID', { 
-        error: error.message, 
-        botId 
+      this.logger.warn('Failed to initialize Telegram service with bot ID', {
+        error: error.message,
+        botId
       })
       this.apiUrl = null
       this.botToken = null
@@ -71,7 +71,7 @@ class TelegramService {
    * @param {Object} options - Additional options
    * @returns {Promise<Object>} - API response
    */
-  async sendMessage(chatId, text, options = {}) {
+  async sendMessage (chatId, text, options = {}) {
     try {
       // Support per-bot token override for multi-bot setups
       let requestApiUrl = this.apiUrl
@@ -82,7 +82,7 @@ class TelegramService {
         await this.initialize()
         requestApiUrl = this.apiUrl
       }
-      
+
       // If still no API URL after initialization, try to get bot token from database
       if (!requestApiUrl) {
         this.logger.warn('No Telegram API URL configured, trying to get from database')
@@ -93,20 +93,20 @@ class TelegramService {
           this.logger.info('Using bot token from database for Telegram API')
         }
       }
-      
+
       if (!requestApiUrl) {
         throw new Error('No Telegram bot token configured')
       }
-      
-      this.logger.info('Sending message to Telegram', { 
-        chatId, 
+
+      this.logger.info('Sending message to Telegram', {
+        chatId,
         text: text.substring(0, 100),
         hasApiUrl: !!requestApiUrl
       })
 
       // Ensure chat_id is a number for private chats, string for group chats
       const chatIdFormatted = typeof chatId === 'string' && !isNaN(chatId) ? parseInt(chatId) : chatId
-      
+
       const payload = {
         chat_id: chatIdFormatted,
         text,
@@ -124,7 +124,6 @@ class TelegramService {
       })
 
       return response.data.result
-
     } catch (error) {
       this.logger.error('Failed to send message to Telegram', {
         error: error.message,
@@ -141,7 +140,7 @@ class TelegramService {
    * @param {string} webhookUrl - Webhook URL
    * @returns {Promise<Object>} - API response
    */
-  async setWebhook(webhookUrl) {
+  async setWebhook (webhookUrl) {
     try {
       this.logger.info('Setting Telegram webhook', { webhookUrl })
 
@@ -155,7 +154,6 @@ class TelegramService {
 
       this.logger.info('Telegram webhook set successfully', { webhookUrl })
       return response.data
-
     } catch (error) {
       this.logger.error('Failed to set Telegram webhook', {
         error: error.message,
@@ -169,11 +167,10 @@ class TelegramService {
    * Get webhook info
    * @returns {Promise<Object>} - Webhook info
    */
-  async getWebhookInfo() {
+  async getWebhookInfo () {
     try {
       const response = await axios.get(`${this.apiUrl}/getWebhookInfo`)
       return response.data.result
-
     } catch (error) {
       this.logger.error('Failed to get Telegram webhook info', {
         error: error.message
@@ -186,7 +183,7 @@ class TelegramService {
    * Delete webhook
    * @returns {Promise<Object>} - API response
    */
-  async deleteWebhook() {
+  async deleteWebhook () {
     try {
       this.logger.info('Deleting Telegram webhook')
 
@@ -194,7 +191,6 @@ class TelegramService {
 
       this.logger.info('Telegram webhook deleted successfully')
       return response.data
-
     } catch (error) {
       this.logger.error('Failed to delete Telegram webhook', {
         error: error.message
@@ -209,7 +205,7 @@ class TelegramService {
    * @param {string} webhookUrl - Fully qualified webhook URL
    * @param {string} secretToken - Optional secret token
    */
-  async setWebhookForBot(botToken, webhookUrl, secretToken) {
+  async setWebhookForBot (botToken, webhookUrl, secretToken) {
     const baseApiUrl = await this.configurationService.get('telegram.apiUrl', 'https://api.telegram.org')
     const url = `${baseApiUrl}/bot${botToken}/setWebhook`
     const payload = {
@@ -225,7 +221,7 @@ class TelegramService {
    * Set webhook for all active bots using base URL
    * @param {string} baseUrl - e.g. https://<ngrok>.ngrok-free.app
    */
-  async setWebhookForAllBots(baseUrl) {
+  async setWebhookForAllBots (baseUrl) {
     // lazy import to avoid circular dep
     const { Pool } = require('pg')
     const pool = new Pool({
@@ -268,13 +264,13 @@ class TelegramService {
    * Get bot info
    * @returns {Promise<Object>} - Bot info
    */
-  async getBotInfo() {
+  async getBotInfo () {
     try {
       // Initialize if not already done
       if (!this.apiUrl) {
         await this.initialize()
       }
-      
+
       // Skip if no token configured
       if (!this.botToken || this.botToken === 'your-telegram-bot-token') {
         this.logger.warn('Telegram bot token not configured, skipping bot info check')
@@ -283,7 +279,6 @@ class TelegramService {
 
       const response = await axios.get(`${this.apiUrl}/getMe`)
       return response.data.result
-
     } catch (error) {
       this.logger.warn('Failed to get bot info, continuing without Telegram service', {
         error: error.message
@@ -297,7 +292,7 @@ class TelegramService {
    * @param {Object} data - Webhook data
    * @returns {boolean} - Is valid
    */
-  validateWebhookData(data) {
+  validateWebhookData (data) {
     return data && data.message && data.message.chat && data.message.from
   }
 }

@@ -3,7 +3,7 @@
  * Handles conversation-related HTTP requests
  */
 class ConversationController {
-  constructor({ getConversationsUseCase, logger }) {
+  constructor ({ getConversationsUseCase, logger }) {
     this.getConversationsUseCase = getConversationsUseCase
     this.logger = logger
   }
@@ -13,10 +13,10 @@ class ConversationController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getConversations(req, res) {
+  async getConversations (req, res) {
     try {
       const { platform } = req.query
-      
+
       this.logger.info('Getting conversations', { platform })
 
       const result = await this.getConversationsUseCase.execute({ platform })
@@ -25,7 +25,6 @@ class ConversationController {
         success: true,
         data: result
       })
-
     } catch (error) {
       this.logger.error('Failed to get conversations', {
         error: error.message,
@@ -44,10 +43,10 @@ class ConversationController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getConversationById(req, res) {
+  async getConversationById (req, res) {
     try {
       const { id } = req.params
-      
+
       this.logger.info('Getting conversation by ID', { id })
 
       // This would need a new use case for getting single conversation
@@ -55,7 +54,6 @@ class ConversationController {
         success: false,
         error: 'Not implemented yet'
       })
-
     } catch (error) {
       this.logger.error('Failed to get conversation by ID', {
         error: error.message,

@@ -6,11 +6,11 @@ const Validation = require('../middleware/Validation')
  * Defines API-related routes
  */
 class ApiRoutes {
-  constructor({ 
-    conversationController, 
-    telegramController, 
-    validation, 
-    errorHandler 
+  constructor ({
+    conversationController,
+    telegramController,
+    validation,
+    errorHandler
   }) {
     this.conversationController = conversationController
     this.telegramController = telegramController
@@ -23,7 +23,7 @@ class ApiRoutes {
   /**
    * Setup routes
    */
-  setupRoutes() {
+  setupRoutes () {
     // Status endpoint
     this.router.get('/status', (req, res) => {
       res.json({
@@ -104,7 +104,7 @@ class ApiRoutes {
    * Get router instance
    * @returns {express.Router}
    */
-  getRouter() {
+  getRouter () {
     return this.router
   }
 }

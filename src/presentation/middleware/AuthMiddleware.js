@@ -7,14 +7,14 @@ require('dotenv').config()
  * Handles JWT authentication
  */
 class AuthMiddleware {
-  constructor({ logger, configurationService }) {
+  constructor ({ logger, configurationService }) {
     this.logger = logger
     this.configurationService = configurationService
     this.jwtSecret = process.env.JWT_SECRET || 'your-secret-key'
     this.jwtExpiry = process.env.JWT_EXPIRY || '24h'
   }
 
-  async initialize() {
+  async initialize () {
     // JWT secret priority: ENV > Database > Default
     if (process.env.JWT_SECRET) {
       this.jwtSecret = process.env.JWT_SECRET
@@ -40,10 +40,10 @@ class AuthMiddleware {
    * @param {Object} res - Express response
    * @param {Function} next - Next middleware
    */
-  verifyToken(req, res, next) {
+  verifyToken (req, res, next) {
     try {
       const authHeader = req.headers.authorization
-      
+
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({
           success: false,
@@ -52,7 +52,7 @@ class AuthMiddleware {
       }
 
       const token = authHeader.substring(7) // Remove 'Bearer ' prefix
-      
+
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET)
         req.user = decoded
@@ -63,7 +63,6 @@ class AuthMiddleware {
           message: 'Invalid or expired token'
         })
       }
-
     } catch (error) {
       this.logger.error('Token verification failed', { error: error.message })
       res.status(500).json({
@@ -78,7 +77,7 @@ class AuthMiddleware {
    * @param {string} permission - Required permission
    * @returns {Function} - Middleware function
    */
-  requirePermission(permission) {
+  requirePermission (permission) {
     return async (req, res, next) => {
       try {
         // This would need to be implemented with actual permission checking
@@ -93,9 +92,8 @@ class AuthMiddleware {
         // TODO: Implement actual permission checking
         // const user = await this.userRepository.findWithRolesAndPermissions(req.user.userId)
         // const hasPermission = user.permissions.some(p => p.name === permission)
-        
-        next()
 
+        next()
       } catch (error) {
         this.logger.error('Permission check failed', { error: error.message })
         res.status(500).json({
@@ -111,7 +109,7 @@ class AuthMiddleware {
    * @param {string} role - Required role
    * @returns {Function} - Middleware function
    */
-  requireRole(role) {
+  requireRole (role) {
     return (req, res, next) => {
       try {
         if (!req.user) {
@@ -129,7 +127,6 @@ class AuthMiddleware {
         }
 
         next()
-
       } catch (error) {
         this.logger.error('Role check failed', { error: error.message })
         res.status(500).json({

@@ -3,7 +3,7 @@
  * Collects application metrics for monitoring
  */
 class MetricsMiddleware {
-  constructor({ metrics, logger }) {
+  constructor ({ metrics, logger }) {
     this.metrics = metrics
     this.logger = logger
   }
@@ -14,7 +14,7 @@ class MetricsMiddleware {
    * @param {Object} res - Express response
    * @param {Function} next - Express next function
    */
-  middleware(req, res, next) {
+  middleware (req, res, next) {
     const startTime = Date.now()
     const endpoint = `${req.method} ${req.route?.path || req.path}`
 
@@ -22,7 +22,7 @@ class MetricsMiddleware {
     const originalEnd = res.end
     res.end = (chunk, encoding) => {
       const responseTime = Date.now() - startTime
-      
+
       try {
         this.metrics.recordRequest(req, res, responseTime)
       } catch (error) {
@@ -45,9 +45,9 @@ class MetricsMiddleware {
    * @param {Object} res - Express response
    * @param {Function} next - Express next function
    */
-  errorMiddleware(error, req, res, next) {
+  errorMiddleware (error, req, res, next) {
     const endpoint = `${req.method} ${req.route?.path || req.path}`
-    
+
     try {
       this.metrics.recordError(error, endpoint)
     } catch (metricsError) {
@@ -66,7 +66,7 @@ class MetricsMiddleware {
    * @param {string} platform - Platform name
    * @param {number} processingTime - Processing time in ms
    */
-  recordMessageProcessing(platform, processingTime) {
+  recordMessageProcessing (platform, processingTime) {
     try {
       this.metrics.recordMessage(platform, processingTime)
     } catch (error) {

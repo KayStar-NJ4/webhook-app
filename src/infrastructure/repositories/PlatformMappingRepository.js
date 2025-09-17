@@ -5,7 +5,7 @@ const BaseRepository = require('./BaseRepository')
  * Handles database operations for platform mappings
  */
 class PlatformMappingRepository extends BaseRepository {
-  constructor({ db, logger }) {
+  constructor ({ db, logger }) {
     super({ db, logger, tableName: 'platform_mappings' })
     this.db = db
     this.logger = logger
@@ -15,7 +15,7 @@ class PlatformMappingRepository extends BaseRepository {
    * Get all selectable fields for queries
    * @returns {Array} - Array of selectable fields
    */
-  getSelectableFields() {
+  getSelectableFields () {
     return [
       'id', 'platform_type', 'platform_id', 'telegram_bot_id', 'chatwoot_account_id', 'dify_app_id',
       'enable_telegram_to_chatwoot', 'enable_telegram_to_dify',
@@ -31,7 +31,7 @@ class PlatformMappingRepository extends BaseRepository {
    * @param {Object} user - User object (optional)
    * @returns {Promise<Object>} - Created mapping
    */
-  async create(mappingData, user = null) {
+  async create (mappingData, user = null) {
     const {
       platformType = 'telegram',
       platformId,
@@ -47,7 +47,7 @@ class PlatformMappingRepository extends BaseRepository {
       autoConnectTelegramDify = true,
       isActive = true
     } = mappingData
-    
+
     const data = {
       platform_type: platformType,
       platform_id: platformId,
@@ -63,7 +63,7 @@ class PlatformMappingRepository extends BaseRepository {
       auto_connect_telegram_dify: autoConnectTelegramDify,
       is_active: isActive
     }
-    
+
     return super.create(data, user)
   }
 
@@ -72,7 +72,7 @@ class PlatformMappingRepository extends BaseRepository {
    * @param {number} telegramBotId - Telegram bot ID
    * @returns {Promise<Array>} - Array of mappings
    */
-  async findByTelegramBotId(telegramBotId) {
+  async findByTelegramBotId (telegramBotId) {
     try {
       const query = `
         SELECT pm.*, 
@@ -86,7 +86,7 @@ class PlatformMappingRepository extends BaseRepository {
         WHERE pm.telegram_bot_id = $1 AND pm.is_active = true
         ORDER BY pm.created_at DESC
       `
-      
+
       const result = await this.db.query(query, [telegramBotId])
       return result.rows
     } catch (error) {
@@ -104,7 +104,7 @@ class PlatformMappingRepository extends BaseRepository {
    * @param {number} platformId - Platform bot/account ID
    * @returns {Promise<Array>} - Array of mappings
    */
-  async findByPlatformId(platformType, platformId) {
+  async findByPlatformId (platformType, platformId) {
     try {
       const query = `
         SELECT pm.*, 
@@ -118,7 +118,7 @@ class PlatformMappingRepository extends BaseRepository {
         WHERE pm.platform_type = $1 AND pm.platform_id = $2 AND pm.is_active = true
         ORDER BY pm.created_at DESC
       `
-      
+
       const result = await this.db.query(query, [platformType, platformId])
       return result.rows
     } catch (error) {
@@ -136,7 +136,7 @@ class PlatformMappingRepository extends BaseRepository {
    * @param {number} chatwootAccountId - Chatwoot account ID
    * @returns {Promise<Array>} - Array of mappings
    */
-  async findByChatwootAccountId(chatwootAccountId) {
+  async findByChatwootAccountId (chatwootAccountId) {
     try {
       const query = `
         SELECT pm.*, 
@@ -150,7 +150,7 @@ class PlatformMappingRepository extends BaseRepository {
         WHERE pm.chatwoot_account_id = $1 AND pm.is_active = true
         ORDER BY pm.created_at DESC
       `
-      
+
       const result = await this.db.query(query, [chatwootAccountId])
       return result.rows
     } catch (error) {
@@ -167,7 +167,7 @@ class PlatformMappingRepository extends BaseRepository {
    * @param {number} difyAppId - Dify app ID
    * @returns {Promise<Array>} - Array of mappings
    */
-  async findByDifyAppId(difyAppId) {
+  async findByDifyAppId (difyAppId) {
     try {
       const query = `
         SELECT pm.*, 
@@ -181,7 +181,7 @@ class PlatformMappingRepository extends BaseRepository {
         WHERE pm.dify_app_id = $1 AND pm.is_active = true
         ORDER BY pm.created_at DESC
       `
-      
+
       const result = await this.db.query(query, [difyAppId])
       return result.rows
     } catch (error) {
@@ -200,7 +200,7 @@ class PlatformMappingRepository extends BaseRepository {
    * @param {number} difyAppId - Dify app ID
    * @returns {Promise<Object|null>} - Mapping object or null
    */
-  async findActiveMapping(telegramBotId, chatwootAccountId, difyAppId) {
+  async findActiveMapping (telegramBotId, chatwootAccountId, difyAppId) {
     try {
       const query = `
         SELECT pm.*, 
@@ -217,7 +217,7 @@ class PlatformMappingRepository extends BaseRepository {
           AND pm.is_active = true
         LIMIT 1
       `
-      
+
       const result = await this.db.query(query, [telegramBotId, chatwootAccountId, difyAppId])
       return result.rows[0] || null
     } catch (error) {
@@ -236,7 +236,7 @@ class PlatformMappingRepository extends BaseRepository {
    * @param {Object} filters - Filter options
    * @returns {Promise<Array>} - Array of mappings with details
    */
-  async getAllWithDetails(filters = {}) {
+  async getAllWithDetails (filters = {}) {
     try {
       let query = `
         SELECT pm.*, 
@@ -252,7 +252,7 @@ class PlatformMappingRepository extends BaseRepository {
         LEFT JOIN dify_apps da ON pm.dify_app_id = da.id
         WHERE 1=1
       `
-      
+
       const params = []
       let paramCount = 0
 
@@ -280,7 +280,7 @@ class PlatformMappingRepository extends BaseRepository {
         params.push(filters.difyAppId)
       }
 
-      query += ` ORDER BY pm.created_at DESC`
+      query += ' ORDER BY pm.created_at DESC'
 
       if (filters.limit) {
         paramCount++
@@ -312,7 +312,7 @@ class PlatformMappingRepository extends BaseRepository {
    * @param {Object} user - User object (optional)
    * @returns {Promise<Object>} - Updated mapping
    */
-  async updateConfiguration(id, updateData, user = null) {
+  async updateConfiguration (id, updateData, user = null) {
     const {
       enableTelegramToChatwoot,
       enableTelegramToDify,
@@ -381,7 +381,7 @@ class PlatformMappingRepository extends BaseRepository {
     }
 
     paramCount++
-    updateFields.push(`updated_at = CURRENT_TIMESTAMP`)
+    updateFields.push('updated_at = CURRENT_TIMESTAMP')
     params.push(id)
 
     const query = `
@@ -413,7 +413,7 @@ class PlatformMappingRepository extends BaseRepository {
    * @param {Object} user - User object (optional)
    * @returns {Promise<boolean>} - Success status
    */
-  async delete(id, user = null) {
+  async delete (id, user = null) {
     try {
       const query = `
         UPDATE platform_mappings 
@@ -421,7 +421,7 @@ class PlatformMappingRepository extends BaseRepository {
         WHERE id = $1
         RETURNING id
       `
-      
+
       const result = await this.db.query(query, [id])
       return result.rows.length > 0
     } catch (error) {

@@ -5,12 +5,12 @@ const BaseRepository = require('./BaseRepository')
  * Handles chatwoot account data operations
  */
 class ChatwootAccountRepository extends BaseRepository {
-  constructor({ db, logger }) {
+  constructor ({ db, logger }) {
     super({ db, logger, tableName: 'chatwoot_accounts' })
-    
+
     // Define searchable fields
     this.searchFields = ['name', 'base_url', 'account_id']
-    
+
     // Define sortable fields
     this.sortableFields = ['name', 'created_at', 'updated_at', 'is_active']
   }
@@ -21,9 +21,9 @@ class ChatwootAccountRepository extends BaseRepository {
    * @param {Object} user - User object (optional)
    * @returns {Promise<Object>} - Created account
    */
-  async create(accountData, user = null) {
+  async create (accountData, user = null) {
     const { name, baseUrl, accessToken, accountId, inboxId, isActive } = accountData
-    
+
     const data = {
       name,
       base_url: baseUrl,
@@ -32,7 +32,7 @@ class ChatwootAccountRepository extends BaseRepository {
       inbox_id: inboxId || 1,
       is_active: isActive !== undefined ? isActive : true
     }
-    
+
     return super.create(data, user)
   }
 
@@ -41,7 +41,7 @@ class ChatwootAccountRepository extends BaseRepository {
    * @param {number} id - Account ID
    * @returns {Promise<Object|null>} - Account object or null
    */
-  async findById(id) {
+  async findById (id) {
     return super.findById(id)
   }
 
@@ -50,13 +50,12 @@ class ChatwootAccountRepository extends BaseRepository {
    * @param {string} accountId - Chatwoot account ID
    * @returns {Promise<Object|null>} - Account object or null
    */
-  async findByAccountId(accountId) {
+  async findByAccountId (accountId) {
     try {
       const query = 'SELECT * FROM chatwoot_accounts WHERE account_id = $1'
       const result = await this.db.query(query, [accountId])
-      
+
       return result.rows[0] || null
-      
     } catch (error) {
       this.logger.error('Failed to find chatwoot account by account ID', { accountId, error: error.message })
       throw error
@@ -68,16 +67,16 @@ class ChatwootAccountRepository extends BaseRepository {
    * @param {Object} options - Query options
    * @returns {Promise<Object>} - Accounts and pagination info
    */
-  async findAll(options = {}) {
+  async findAll (options = {}) {
     const { isActive = null } = options
-    
+
     // Add custom filtering for isActive
     if (isActive !== null) {
       const result = await super.findAll(options)
-      
+
       // Filter by isActive
       const filteredRecords = result.records.filter(record => record.is_active === isActive)
-      
+
       return {
         accounts: filteredRecords,
         pagination: {
@@ -86,7 +85,7 @@ class ChatwootAccountRepository extends BaseRepository {
         }
       }
     }
-    
+
     const result = await super.findAll(options)
     return {
       accounts: result.records,
@@ -101,9 +100,9 @@ class ChatwootAccountRepository extends BaseRepository {
    * @param {Object} user - User object (optional)
    * @returns {Promise<Object>} - Updated account
    */
-  async update(id, updateData, user = null) {
+  async update (id, updateData, user = null) {
     const { name, baseUrl, accessToken, accountId, inboxId, isActive } = updateData
-    
+
     const data = {
       name,
       base_url: baseUrl,
@@ -112,7 +111,7 @@ class ChatwootAccountRepository extends BaseRepository {
       inbox_id: inboxId || 1,
       is_active: isActive !== undefined ? isActive : true
     }
-    
+
     return super.update(id, data, user)
   }
 
@@ -121,7 +120,7 @@ class ChatwootAccountRepository extends BaseRepository {
    * @param {number} id - Account ID
    * @returns {Promise<boolean>} - Success status
    */
-  async delete(id) {
+  async delete (id) {
     return super.delete(id)
   }
 
@@ -129,13 +128,12 @@ class ChatwootAccountRepository extends BaseRepository {
    * Get active accounts
    * @returns {Promise<Array>} - Active accounts
    */
-  async findActive() {
+  async findActive () {
     try {
       const query = 'SELECT * FROM chatwoot_accounts WHERE is_active = true ORDER BY name'
       const result = await this.db.query(query)
-      
+
       return result.rows
-      
     } catch (error) {
       this.logger.error('Failed to find active chatwoot accounts', { error: error.message })
       throw error
@@ -147,7 +145,7 @@ class ChatwootAccountRepository extends BaseRepository {
    * @param {number} accountId - Account ID
    * @returns {Promise<Array>} - Account mappings
    */
-  async getBotMappings(accountId) {
+  async getBotMappings (accountId) {
     try {
       const query = `
         SELECT 
@@ -161,10 +159,9 @@ class ChatwootAccountRepository extends BaseRepository {
         WHERE bcm.chatwoot_account_id = $1
         ORDER BY tb.name
       `
-      
+
       const result = await this.db.query(query, [accountId])
       return result.rows
-      
     } catch (error) {
       this.logger.error('Failed to get account bot mappings', { accountId, error: error.message })
       throw error
@@ -176,7 +173,7 @@ class ChatwootAccountRepository extends BaseRepository {
    * @param {number} accountId - Account ID
    * @returns {Promise<Array>} - Account mappings
    */
-  async getDifyMappings(accountId) {
+  async getDifyMappings (accountId) {
     try {
       const query = `
         SELECT 
@@ -191,10 +188,9 @@ class ChatwootAccountRepository extends BaseRepository {
         WHERE dcm.chatwoot_account_id = $1
         ORDER BY da.name
       `
-      
+
       const result = await this.db.query(query, [accountId])
       return result.rows
-      
     } catch (error) {
       this.logger.error('Failed to get account dify mappings', { accountId, error: error.message })
       throw error

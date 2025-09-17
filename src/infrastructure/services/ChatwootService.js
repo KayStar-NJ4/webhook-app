@@ -5,7 +5,7 @@ const axios = require('axios')
  * Handles communication with Chatwoot API
  */
 class ChatwootService {
-  constructor({ config, configurationService, logger }) {
+  constructor ({ config, configurationService, logger }) {
     this.config = config
     this.configurationService = configurationService
     this.logger = logger
@@ -15,18 +15,18 @@ class ChatwootService {
     this.inboxId = null // Auto-detected
   }
 
-  async initialize() {
+  async initialize () {
     this.logger.info('Chatwoot service initialized (per-request configuration)')
   }
 
-  async initializeWithAccountId(accountId) {
+  async initializeWithAccountId (accountId) {
     try {
       this.logger.info('Starting ChatwootService initialization', {
         accountId,
         currentBaseUrl: this.baseUrl,
         currentAccountId: this.accountId
       })
-      
+
       const { Pool } = require('pg')
       const pool = new Pool({
         host: process.env.DB_HOST,
@@ -63,8 +63,8 @@ class ChatwootService {
         inboxId: this.inboxId
       })
     } catch (error) {
-      this.logger.error('Failed to initialize Chatwoot service with account', { 
-        accountId, 
+      this.logger.error('Failed to initialize Chatwoot service with account', {
+        accountId,
         error: error.message,
         stack: error.stack,
         response: error.response?.data,
@@ -83,7 +83,7 @@ class ChatwootService {
     }
   }
 
-  validateConfiguration() {
+  validateConfiguration () {
     const missing = []
     if (!this.baseUrl) missing.push('chatwoot.baseUrl')
     if (!this.accessToken) missing.push('chatwoot.accessToken')
@@ -100,7 +100,7 @@ class ChatwootService {
     })
   }
 
-  setAccessToken(accessToken) {
+  setAccessToken (accessToken) {
     this.accessToken = accessToken
     this.logger.info('Chatwoot access token set', {
       hasToken: !!accessToken,
@@ -108,11 +108,11 @@ class ChatwootService {
     })
   }
 
-  getHeaders() {
+  getHeaders () {
     return { Authorization: `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' }
   }
 
-  async getOrCreateApiInbox() {
+  async getOrCreateApiInbox () {
     try {
       this.logger.info('Looking for existing API inbox...')
       const response = await axios.get(`${this.baseUrl}/api/v1/accounts/${this.accountId}/inboxes`, {
@@ -143,7 +143,7 @@ class ChatwootService {
     }
   }
 
-  async createOrUpdateConversation(conversation, message, chatwootAccountId = null) {
+  async createOrUpdateConversation (conversation, message, chatwootAccountId = null) {
     try {
       this.logger.info('Starting createOrUpdateConversation', {
         conversationId: conversation.id,
@@ -151,7 +151,7 @@ class ChatwootService {
         chatwootAccountId,
         conversation_id: conversation.id
       })
-      
+
       if (chatwootAccountId) {
         await this.initializeWithAccountId(chatwootAccountId)
       } else if (!this.baseUrl || !this.accessToken || !this.accountId) {
@@ -179,10 +179,8 @@ class ChatwootService {
         }
       } else {
         let existingConversation = await this.findConversationBySourceId(conversation.id, inboxId)
-        if (!existingConversation && conversation.senderId)
-          existingConversation = await this.findConversationBySourceId(conversation.senderId, inboxId)
-        if (!existingConversation && conversation.chatId)
-          existingConversation = await this.findConversationBySourceId(conversation.chatId, inboxId)
+        if (!existingConversation && conversation.senderId) { existingConversation = await this.findConversationBySourceId(conversation.senderId, inboxId) }
+        if (!existingConversation && conversation.chatId) { existingConversation = await this.findConversationBySourceId(conversation.chatId, inboxId) }
 
         const uniqueSourceId = `telegram_${conversation.chatId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         try {
@@ -202,7 +200,7 @@ class ChatwootService {
 
       return chatwootConversation
     } catch (error) {
-      this.logger.error('Failed to create/update Chatwoot conversation', { 
+      this.logger.error('Failed to create/update Chatwoot conversation', {
         error: error.message,
         stack: error.stack,
         response: error.response?.data,
@@ -224,7 +222,7 @@ class ChatwootService {
     }
   }
 
-  async findConversationBySourceId(sourceId, inboxId) {
+  async findConversationBySourceId (sourceId, inboxId) {
     try {
       const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations`
       const response = await axios.get(url, { headers: this.getHeaders(), params: { inbox_id: inboxId, source_id: sourceId } })
@@ -235,7 +233,7 @@ class ChatwootService {
     }
   }
 
-  async createConversation(conversation, message, inboxId, customSourceId = null) {
+  async createConversation (conversation, message, inboxId, customSourceId = null) {
     const contactName = conversation.getChatDisplayName() || message.senderName || 'Unknown'
     const senderId = conversation.senderId || message.senderId || message.metadata?.userId
     const chatId = conversation.chatId || message.metadata?.chatId
@@ -258,7 +256,7 @@ class ChatwootService {
     return response.data.payload || response.data.data || response.data
   }
 
-  async createConversationWithoutInbox(conversation, message) {
+  async createConversationWithoutInbox (conversation, message) {
     const contactName = conversation.getChatDisplayName()
     const contactIdentifier = conversation.id
     let contactId
@@ -280,7 +278,7 @@ class ChatwootService {
     return response.data.payload || response.data.data || response.data
   }
 
-  async getConversation(conversationId) {
+  async getConversation (conversationId) {
     const response = await axios.get(
       `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations/${conversationId}`,
       { headers: this.getHeaders() }
@@ -288,7 +286,7 @@ class ChatwootService {
     return response.data.payload
   }
 
-  async sendMessage(conversationId, content, options = {}) {
+  async sendMessage (conversationId, content, options = {}) {
     try {
       this.logger.info('Sending message to Chatwoot', {
         conversationId,
@@ -296,7 +294,7 @@ class ChatwootService {
         messageType: options.message_type || 'outgoing',
         conversation_id: conversationId
       })
-      
+
       const payload = {
         content,
         message_type: options.message_type || 'outgoing',
@@ -305,21 +303,21 @@ class ChatwootService {
         ...options
       }
       const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations/${conversationId}/messages`
-      
+
       this.logger.info('Chatwoot send message request', {
         url,
         payload,
         conversation_id: conversationId
       })
-      
+
       const response = await axios.post(url, payload, { headers: this.getHeaders() })
-      
+
       this.logger.info('Message sent to Chatwoot successfully', {
         conversationId,
         responseId: response.data?.id,
         conversation_id: conversationId
       })
-      
+
       return response.data
     } catch (error) {
       this.logger.error('Failed to send message to Chatwoot', {
@@ -343,7 +341,7 @@ class ChatwootService {
     }
   }
 
-  async getConversations(options = {}) {
+  async getConversations (options = {}) {
     const inboxId = await this.getOrCreateApiInbox()
     const response = await axios.get(
       `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations?inbox_id=${inboxId}`,
@@ -352,7 +350,7 @@ class ChatwootService {
     return response.data
   }
 
-  async testConnection() {
+  async testConnection () {
     try {
       await axios.get(`${this.baseUrl}/api/v1/accounts/${this.accountId}`, { headers: this.getHeaders() })
       const inboxId = await this.getOrCreateApiInbox()
@@ -365,7 +363,7 @@ class ChatwootService {
     }
   }
 
-  validateWebhookData(data) {
+  validateWebhookData (data) {
     return data && data.message && data.conversation
   }
 }

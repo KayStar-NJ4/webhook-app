@@ -3,11 +3,11 @@
  * Handles Dify app management endpoints
  */
 class DifyController {
-  constructor({ 
+  constructor ({
     difyAppRepository,
     difyService,
     userRepository,
-    logger 
+    logger
   }) {
     this.difyAppRepository = difyAppRepository
     this.difyService = difyService
@@ -20,10 +20,10 @@ class DifyController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getDifyApps(req, res) {
+  async getDifyApps (req, res) {
     try {
       const { page = 1, limit = 10, search = '', isActive } = req.query
-      
+
       const options = {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -38,7 +38,6 @@ class DifyController {
         data: result.apps,
         pagination: result.pagination
       })
-
     } catch (error) {
       this.logger.error('Get Dify apps failed', { error: error.message })
       res.status(500).json({
@@ -53,7 +52,7 @@ class DifyController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getDifyAppById(req, res) {
+  async getDifyAppById (req, res) {
     try {
       const { id } = req.params
       const app = await this.difyAppRepository.findById(id)
@@ -75,7 +74,6 @@ class DifyController {
           mappings
         }
       })
-
     } catch (error) {
       this.logger.error('Get Dify app by ID failed', { error: error.message })
       res.status(500).json({
@@ -90,7 +88,7 @@ class DifyController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async createDifyApp(req, res) {
+  async createDifyApp (req, res) {
     try {
       const userId = req.user.userId
       const { name, apiUrl, apiKey, appId, timeout = 30000, isActive = true } = req.body
@@ -124,10 +122,10 @@ class DifyController {
 
       const app = await this.difyAppRepository.create(appData)
 
-      this.logger.info('Dify app created', { 
-        appId: app.id, 
+      this.logger.info('Dify app created', {
+        appId: app.id,
         name: app.name,
-        createdBy: userId 
+        createdBy: userId
       })
 
       res.status(201).json({
@@ -135,7 +133,6 @@ class DifyController {
         message: 'Dify app created successfully',
         data: app
       })
-
     } catch (error) {
       this.logger.error('Create Dify app failed', { error: error.message })
       res.status(500).json({
@@ -150,7 +147,7 @@ class DifyController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async updateDifyApp(req, res) {
+  async updateDifyApp (req, res) {
     try {
       const { id } = req.params
       const { name, apiUrl, apiKey, appId, timeout, isActive } = req.body
@@ -185,9 +182,9 @@ class DifyController {
 
       const app = await this.difyAppRepository.update(id, updateData)
 
-      this.logger.info('Dify app updated', { 
+      this.logger.info('Dify app updated', {
         appId: id,
-        updatedBy: req.user.userId 
+        updatedBy: req.user.userId
       })
 
       res.json({
@@ -195,7 +192,6 @@ class DifyController {
         message: 'Dify app updated successfully',
         data: app
       })
-
     } catch (error) {
       this.logger.error('Update Dify app failed', { error: error.message })
       res.status(500).json({
@@ -210,7 +206,7 @@ class DifyController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async deleteDifyApp(req, res) {
+  async deleteDifyApp (req, res) {
     try {
       const { id } = req.params
 
@@ -232,16 +228,15 @@ class DifyController {
         })
       }
 
-      this.logger.info('Dify app deleted', { 
+      this.logger.info('Dify app deleted', {
         appId: id,
-        deletedBy: req.user.userId 
+        deletedBy: req.user.userId
       })
 
       res.json({
         success: true,
         message: 'Dify app deleted successfully'
       })
-
     } catch (error) {
       this.logger.error('Delete Dify app failed', { error: error.message })
       res.status(500).json({
@@ -256,7 +251,7 @@ class DifyController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getActiveDifyApps(req, res) {
+  async getActiveDifyApps (req, res) {
     try {
       const apps = await this.difyAppRepository.findActive()
 
@@ -264,7 +259,6 @@ class DifyController {
         success: true,
         data: apps
       })
-
     } catch (error) {
       this.logger.error('Get active Dify apps failed', { error: error.message })
       res.status(500).json({
@@ -279,7 +273,7 @@ class DifyController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async testDifyAppConnection(req, res) {
+  async testDifyAppConnection (req, res) {
     try {
       const { id } = req.params
 
@@ -304,7 +298,7 @@ class DifyController {
 
       try {
         const isConnected = await this.difyService.testConnection()
-        
+
         res.json({
           success: true,
           data: {
@@ -318,7 +312,6 @@ class DifyController {
         this.difyService.apiKey = originalConfig.apiKey
         this.difyService.appId = originalConfig.appId
       }
-
     } catch (error) {
       this.logger.error('Test Dify app connection failed', { error: error.message })
       res.status(500).json({
@@ -333,7 +326,7 @@ class DifyController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async createMapping(req, res) {
+  async createMapping (req, res) {
     try {
       const userId = req.user.userId
       const { difyAppId, chatwootAccountId, isActive = true } = req.body
@@ -380,7 +373,6 @@ class DifyController {
         message: 'Mapping created successfully',
         data: mapping
       })
-
     } catch (error) {
       this.logger.error('Create Dify mapping failed', { error: error.message })
       res.status(500).json({
@@ -395,7 +387,7 @@ class DifyController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async deleteMapping(req, res) {
+  async deleteMapping (req, res) {
     try {
       const { mappingId } = req.params
 
@@ -412,7 +404,6 @@ class DifyController {
         success: true,
         message: 'Mapping deleted successfully'
       })
-
     } catch (error) {
       this.logger.error('Delete Dify mapping failed', { error: error.message })
       res.status(500).json({

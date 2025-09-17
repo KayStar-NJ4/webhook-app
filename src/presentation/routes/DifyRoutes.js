@@ -6,12 +6,12 @@ const express = require('express')
 const router = express.Router()
 
 class DifyRoutes {
-  constructor({ 
+  constructor ({
     difyController,
     authMiddleware,
     permissionMiddleware,
     validationMiddleware,
-    logger 
+    logger
   }) {
     this.difyController = difyController
     this.authMiddleware = authMiddleware
@@ -23,12 +23,12 @@ class DifyRoutes {
   /**
    * Initialize routes
    */
-  initialize() {
+  initialize () {
     // Apply authentication middleware to all routes
     router.use(this.authMiddleware.authenticate)
 
     // Dify Apps CRUD routes
-    router.get('/', 
+    router.get('/',
       this.permissionMiddleware.checkPermission('dify', 'read'),
       this.difyController.getDifyApps.bind(this.difyController)
     )

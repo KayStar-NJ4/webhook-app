@@ -3,7 +3,7 @@
  * Handles HTTP requests for webhooks
  */
 class WebhookController {
-  constructor({ messageBrokerService, logger }) {
+  constructor ({ messageBrokerService, logger }) {
     this.messageBrokerService = messageBrokerService
     this.logger = logger
   }
@@ -13,14 +13,14 @@ class WebhookController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async handleTelegramWebhook(req, res) {
+  async handleTelegramWebhook (req, res) {
     try {
       const botIdFromPath = req.params?.botId
       const secretToken = req.headers['x-telegram-bot-api-secret-token']
-      
-      this.logger.info('Received Telegram webhook', { 
-        body: req.body, 
-        botIdFromPath, 
+
+      this.logger.info('Received Telegram webhook', {
+        body: req.body,
+        botIdFromPath,
         hasSecretToken: !!secretToken,
         hasMessage: !!req.body.message,
         messageId: req.body.message?.message_id,
@@ -48,7 +48,6 @@ class WebhookController {
         success: true,
         data: result
       })
-
     } catch (error) {
       this.logger.error('Telegram webhook error', {
         error: error.message,
@@ -68,11 +67,11 @@ class WebhookController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async handleChatwootVerification(req, res) {
+  async handleChatwootVerification (req, res) {
     try {
-      this.logger.info('Received Chatwoot webhook verification', { 
+      this.logger.info('Received Chatwoot webhook verification', {
         query: req.query,
-        headers: req.headers 
+        headers: req.headers
       })
 
       // Chatwoot sends GET request for webhook verification
@@ -82,7 +81,6 @@ class WebhookController {
         message: 'Chatwoot webhook verified successfully',
         timestamp: new Date().toISOString()
       })
-
     } catch (error) {
       this.logger.error('Chatwoot webhook verification error', {
         error: error.message,
@@ -101,9 +99,9 @@ class WebhookController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async handleChatwootWebhook(req, res) {
+  async handleChatwootWebhook (req, res) {
     try {
-      this.logger.info('Received Chatwoot webhook', { 
+      this.logger.info('Received Chatwoot webhook', {
         event: req.body.event,
         body: req.body,
         headers: req.headers,
@@ -133,7 +131,6 @@ class WebhookController {
         success: true,
         data: result
       })
-
     } catch (error) {
       this.logger.error('Chatwoot webhook error', {
         error: error.message,
@@ -166,7 +163,7 @@ class WebhookController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async healthCheck(req, res) {
+  async healthCheck (req, res) {
     try {
       const health = {
         status: 'healthy',
@@ -177,7 +174,6 @@ class WebhookController {
       }
 
       res.status(200).json(health)
-
     } catch (error) {
       this.logger.error('Health check error', { error: error.message })
 

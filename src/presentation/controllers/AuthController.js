@@ -6,7 +6,7 @@ const bcrypt = require('bcrypt')
  * Handles authentication and authorization
  */
 class AuthController {
-  constructor({ userRepository, logger, configurationService }) {
+  constructor ({ userRepository, logger, configurationService }) {
     this.userRepository = userRepository
     this.logger = logger
     this.configurationService = configurationService
@@ -14,7 +14,7 @@ class AuthController {
     this.jwtExpiry = process.env.JWT_EXPIRY || '24h'
   }
 
-  async initialize() {
+  async initialize () {
     // JWT secret priority: ENV > Database > Default
     if (process.env.JWT_SECRET) {
       this.jwtSecret = process.env.JWT_SECRET
@@ -57,19 +57,19 @@ class AuthController {
    * @param {Array} permissions - Array of permission objects
    * @returns {Object} - Transformed permissions grouped by resource
    */
-  transformPermissions(permissions) {
+  transformPermissions (permissions) {
     const transformed = {}
-    
+
     permissions.forEach(permission => {
       const { resource, action } = permission
-      
+
       if (!transformed[resource]) {
         transformed[resource] = []
       }
-      
+
       transformed[resource].push({ action })
     })
-    
+
     return transformed
   }
 
@@ -78,7 +78,7 @@ class AuthController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async login(req, res) {
+  async login (req, res) {
     try {
       const { username, password } = req.body
 
@@ -149,7 +149,6 @@ class AuthController {
           }
         }
       })
-
     } catch (error) {
       this.logger.error('Login failed', { error: error.message })
       res.status(500).json({
@@ -164,7 +163,7 @@ class AuthController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getCurrentUser(req, res) {
+  async getCurrentUser (req, res) {
     try {
       const userId = req.user.userId
       const user = await this.userRepository.findWithRolesAndPermissions(userId)
@@ -190,7 +189,6 @@ class AuthController {
           permissions: transformedPermissions
         }
       })
-
     } catch (error) {
       this.logger.error('Get current user failed', { error: error.message })
       res.status(500).json({
@@ -205,15 +203,14 @@ class AuthController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async logout(req, res) {
+  async logout (req, res) {
     try {
       this.logger.info('User logged out', { userId: req.user.userId })
-      
+
       res.json({
         success: true,
         message: 'Logout successful'
       })
-
     } catch (error) {
       this.logger.error('Logout failed', { error: error.message })
       res.status(500).json({
@@ -228,7 +225,7 @@ class AuthController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async changePassword(req, res) {
+  async changePassword (req, res) {
     try {
       const { currentPassword, newPassword } = req.body
       const userId = req.user.userId
@@ -267,7 +264,6 @@ class AuthController {
         success: true,
         message: 'Password changed successfully'
       })
-
     } catch (error) {
       this.logger.error('Change password failed', { error: error.message })
       res.status(500).json({
@@ -279,4 +275,3 @@ class AuthController {
 }
 
 module.exports = AuthController
-

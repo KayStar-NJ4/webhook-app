@@ -3,7 +3,7 @@
  * Manages dependencies and their lifecycle
  */
 class Container {
-  constructor() {
+  constructor () {
     this.services = new Map()
     this.singletons = new Map()
   }
@@ -14,7 +14,7 @@ class Container {
    * @param {Function} factory - Service factory function
    * @param {boolean} singleton - Whether to create as singleton
    */
-  register(name, factory, singleton = true) {
+  register (name, factory, singleton = true) {
     this.services.set(name, { factory, singleton })
   }
 
@@ -23,7 +23,7 @@ class Container {
    * @param {string} name - Service name
    * @returns {any} - Service instance
    */
-  get(name) {
+  get (name) {
     const service = this.services.get(name)
     if (!service) {
       throw new Error(`Service '${name}' not found`)
@@ -45,14 +45,14 @@ class Container {
    * @param {string} name - Service name
    * @returns {boolean}
    */
-  has(name) {
+  has (name) {
     return this.services.has(name)
   }
 
   /**
    * Clear all services
    */
-  clear() {
+  clear () {
     this.services.clear()
     this.singletons.clear()
   }

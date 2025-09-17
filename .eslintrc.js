@@ -7,7 +7,7 @@ module.exports = {
     jest: true
   },
   extends: [
-    'standard'
+    'eslint:recommended'
   ],
   parserOptions: {
     ecmaVersion: 'latest'

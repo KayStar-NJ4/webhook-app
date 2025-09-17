@@ -6,7 +6,7 @@ const Message = require('../../domain/entities/Message')
  * For development and testing purposes
  */
 class InMemoryMessageRepository extends MessageRepository {
-  constructor() {
+  constructor () {
     super()
     this.messages = new Map()
   }
@@ -16,7 +16,7 @@ class InMemoryMessageRepository extends MessageRepository {
    * @param {string} id - Message ID
    * @returns {Promise<Message|null>}
    */
-  async findById(id) {
+  async findById (id) {
     const message = this.messages.get(id)
     return message ? new Message(message) : null
   }
@@ -26,12 +26,12 @@ class InMemoryMessageRepository extends MessageRepository {
    * @param {Message} message - Message entity
    * @returns {Promise<Message>}
    */
-  async save(message) {
+  async save (message) {
     message.validate()
-    
+
     const messageData = message.toJSON()
     this.messages.set(message.id, messageData)
-    
+
     return new Message(messageData)
   }
 
@@ -41,15 +41,15 @@ class InMemoryMessageRepository extends MessageRepository {
    * @param {Object} options - Query options
    * @returns {Promise<Message[]>}
    */
-  async findByConversationId(conversationId, options = {}) {
+  async findByConversationId (conversationId, options = {}) {
     const { limit = 50, offset = 0, sortBy = 'timestamp', sortOrder = 'desc' } = options
-    
+
     const messages = Array.from(this.messages.values())
       .filter(data => data.conversationId === conversationId)
       .sort((a, b) => {
         const aValue = a[sortBy]
         const bValue = b[sortBy]
-        
+
         if (sortOrder === 'asc') {
           return aValue > bValue ? 1 : -1
         } else {
@@ -58,7 +58,7 @@ class InMemoryMessageRepository extends MessageRepository {
       })
       .slice(offset, offset + limit)
       .map(data => new Message(data))
-    
+
     return messages
   }
 
@@ -67,7 +67,7 @@ class InMemoryMessageRepository extends MessageRepository {
    * @param {string} id - Message ID
    * @returns {Promise<boolean>}
    */
-  async exists(id) {
+  async exists (id) {
     return this.messages.has(id)
   }
 
@@ -76,7 +76,7 @@ class InMemoryMessageRepository extends MessageRepository {
    * @param {string} conversationId - Conversation ID
    * @returns {Promise<number>}
    */
-  async countByConversationId(conversationId) {
+  async countByConversationId (conversationId) {
     return Array.from(this.messages.values())
       .filter(data => data.conversationId === conversationId)
       .length
@@ -86,7 +86,7 @@ class InMemoryMessageRepository extends MessageRepository {
    * Clear all messages (for testing)
    * @returns {Promise<void>}
    */
-  async clear() {
+  async clear () {
     this.messages.clear()
   }
 
@@ -94,7 +94,7 @@ class InMemoryMessageRepository extends MessageRepository {
    * Get total message count
    * @returns {Promise<number>}
    */
-  async count() {
+  async count () {
     return this.messages.size
   }
 }

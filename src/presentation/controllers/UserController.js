@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt')
  * Handles user management operations
  */
 class UserController {
-  constructor({ userRepository, logger }) {
+  constructor ({ userRepository, logger }) {
     this.userRepository = userRepository
     this.logger = logger
   }
@@ -15,12 +15,12 @@ class UserController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getUsers(req, res) {
+  async getUsers (req, res) {
     try {
-      const { 
-        page = 1, 
-        limit = 10, 
-        search = '', 
+      const {
+        page = 1,
+        limit = 10,
+        search = '',
         sort_by = 'created_at.desc',
         is_active,
         role_id
@@ -34,9 +34,9 @@ class UserController {
         filters.role_id = parseInt(role_id)
       }
 
-      const result = await this.userRepository.findAll({ 
-        page: parseInt(page), 
-        limit: parseInt(limit), 
+      const result = await this.userRepository.findAll({
+        page: parseInt(page),
+        limit: parseInt(limit),
         search,
         sort_by,
         ...filters
@@ -52,7 +52,6 @@ class UserController {
           per_page: parseInt(limit)
         }
       })
-
     } catch (error) {
       this.logger.error('Get users failed', { error: error.message })
       res.status(500).json({
@@ -67,7 +66,7 @@ class UserController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getUserById(req, res) {
+  async getUserById (req, res) {
     try {
       const { id } = req.params
       const user = await this.userRepository.findById(parseInt(id))
@@ -83,7 +82,6 @@ class UserController {
         success: true,
         data: user
       })
-
     } catch (error) {
       this.logger.error('Get user by ID failed', { error: error.message })
       res.status(500).json({
@@ -98,12 +96,12 @@ class UserController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async createUser(req, res) {
+  async createUser (req, res) {
     try {
-      const { 
-        username, 
-        email, 
-        password, 
+      const {
+        username,
+        email,
+        password,
         full_name,
         phone_number,
         avatar,
@@ -161,7 +159,6 @@ class UserController {
         message: 'User created successfully',
         data: user
       })
-
     } catch (error) {
       this.logger.error('Create user failed', { error: error.message })
       res.status(500).json({
@@ -176,12 +173,12 @@ class UserController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async updateUser(req, res) {
+  async updateUser (req, res) {
     try {
       const { id } = req.params
-      const { 
-        username, 
-        email, 
+      const {
+        username,
+        email,
         full_name,
         phone_number,
         avatar,
@@ -250,7 +247,6 @@ class UserController {
         message: 'User updated successfully',
         data: user
       })
-
     } catch (error) {
       this.logger.error('Update user failed', { error: error.message })
       res.status(500).json({
@@ -265,7 +261,7 @@ class UserController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async deleteUser(req, res) {
+  async deleteUser (req, res) {
     try {
       const { id } = req.params
 
@@ -294,7 +290,6 @@ class UserController {
         success: true,
         message: 'User deleted successfully'
       })
-
     } catch (error) {
       this.logger.error('Delete user failed', { error: error.message })
       res.status(500).json({
@@ -309,7 +304,7 @@ class UserController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async changePassword(req, res) {
+  async changePassword (req, res) {
     try {
       const { id } = req.params
       const { password } = req.body
@@ -345,7 +340,6 @@ class UserController {
         success: true,
         message: 'Password changed successfully'
       })
-
     } catch (error) {
       this.logger.error('Change password failed', { error: error.message })
       res.status(500).json({
@@ -360,7 +354,7 @@ class UserController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async updateUserStatus(req, res) {
+  async updateUserStatus (req, res) {
     try {
       const { id } = req.params
       const { is_active } = req.body
@@ -398,7 +392,6 @@ class UserController {
         message: 'User status updated successfully',
         data: user
       })
-
     } catch (error) {
       this.logger.error('Update user status failed', { error: error.message })
       res.status(500).json({
@@ -413,7 +406,7 @@ class UserController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getUserRoles(req, res) {
+  async getUserRoles (req, res) {
     try {
       const { id } = req.params
       const user = await this.userRepository.findWithRolesAndPermissions(parseInt(id))
@@ -429,7 +422,6 @@ class UserController {
         success: true,
         data: user.roles || []
       })
-
     } catch (error) {
       this.logger.error('Get user roles failed', { error: error.message })
       res.status(500).json({
@@ -444,7 +436,7 @@ class UserController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async getUserPermissions(req, res) {
+  async getUserPermissions (req, res) {
     try {
       const { id } = req.params
       const user = await this.userRepository.findWithRolesAndPermissions(parseInt(id))
@@ -460,7 +452,6 @@ class UserController {
         success: true,
         data: user.permissions || []
       })
-
     } catch (error) {
       this.logger.error('Get user permissions failed', { error: error.message })
       res.status(500).json({
@@ -475,7 +466,7 @@ class UserController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async updateUserPermissions(req, res) {
+  async updateUserPermissions (req, res) {
     try {
       const { id } = req.params
       const { permissions = [] } = req.body
@@ -492,17 +483,16 @@ class UserController {
       // Update user permissions
       await this.userRepository.updatePermissions(parseInt(id), permissions)
 
-      this.logger.info('User permissions updated', { 
-        userId: id, 
-        permissions, 
-        updatedBy: req.user?.userId 
+      this.logger.info('User permissions updated', {
+        userId: id,
+        permissions,
+        updatedBy: req.user?.userId
       })
 
       res.json({
         success: true,
         message: 'User permissions updated successfully'
       })
-
     } catch (error) {
       this.logger.error('Update user permissions failed', { error: error.message })
       res.status(500).json({
@@ -517,7 +507,7 @@ class UserController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async addUserRole(req, res) {
+  async addUserRole (req, res) {
     try {
       const { id } = req.params
       const { role_id } = req.body
@@ -541,17 +531,16 @@ class UserController {
       // Add role to user
       await this.userRepository.addUserRole(parseInt(id), parseInt(role_id))
 
-      this.logger.info('User role added', { 
-        userId: id, 
-        roleId: role_id, 
-        addedBy: req.user?.userId 
+      this.logger.info('User role added', {
+        userId: id,
+        roleId: role_id,
+        addedBy: req.user?.userId
       })
 
       res.json({
         success: true,
         message: 'Role added successfully'
       })
-
     } catch (error) {
       this.logger.error('Add user role failed', { error: error.message })
       res.status(500).json({
@@ -566,7 +555,7 @@ class UserController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async removeUserRole(req, res) {
+  async removeUserRole (req, res) {
     try {
       const { id, roleId } = req.params
 
@@ -582,17 +571,16 @@ class UserController {
       // Remove role from user
       await this.userRepository.removeUserRole(parseInt(id), parseInt(roleId))
 
-      this.logger.info('User role removed', { 
-        userId: id, 
-        roleId: roleId, 
-        removedBy: req.user?.userId 
+      this.logger.info('User role removed', {
+        userId: id,
+        roleId,
+        removedBy: req.user?.userId
       })
 
       res.json({
         success: true,
         message: 'Role removed successfully'
       })
-
     } catch (error) {
       this.logger.error('Remove user role failed', { error: error.message })
       res.status(500).json({
@@ -607,7 +595,7 @@ class UserController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
-  async updateUserRoles(req, res) {
+  async updateUserRoles (req, res) {
     try {
       const { id } = req.params
       const { role_ids = [] } = req.body
@@ -624,17 +612,16 @@ class UserController {
       // Update user roles (replace all existing roles)
       await this.userRepository.updateUserRoles(parseInt(id), role_ids)
 
-      this.logger.info('User roles updated', { 
-        userId: id, 
-        roleIds: role_ids, 
-        updatedBy: req.user?.userId 
+      this.logger.info('User roles updated', {
+        userId: id,
+        roleIds: role_ids,
+        updatedBy: req.user?.userId
       })
 
       res.json({
         success: true,
         message: 'User roles updated successfully'
       })
-
     } catch (error) {
       this.logger.error('Update user roles failed', { error: error.message })
       res.status(500).json({

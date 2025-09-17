@@ -3,7 +3,7 @@
  * Coordinates message processing across different platforms
  */
 class MessageBrokerService {
-  constructor({
+  constructor ({
     processMessageUseCase,
     logger
   }) {
@@ -17,10 +17,10 @@ class MessageBrokerService {
    * @param {Object} messageData - Message data
    * @returns {Promise<Object>} - Processing result
    */
-  async handleMessage(platform, messageData) {
+  async handleMessage (platform, messageData) {
     try {
-      this.logger.info('Handling message from platform', { 
-        platform, 
+      this.logger.info('Handling message from platform', {
+        platform,
         messageData,
         conversation_id: messageData.conversationId
       })
@@ -41,7 +41,6 @@ class MessageBrokerService {
       })
 
       return result
-
     } catch (error) {
       this.logger.error('Failed to handle message', {
         error: error.message,
@@ -70,7 +69,7 @@ class MessageBrokerService {
    * @param {Object} telegramData - Telegram webhook data
    * @returns {Promise<Object>} - Processing result
    */
-  async handleTelegramWebhook(telegramData) {
+  async handleTelegramWebhook (telegramData) {
     try {
       // Get bot info from database if available
       let botInfo = null
@@ -106,10 +105,10 @@ class MessageBrokerService {
         textPreview: telegramData.message?.text?.substring(0, 50),
         botInfo
       })
-      
+
       // Add bot info to telegramData for parsing
       telegramData.bot = botInfo
-      
+
       const messageData = this.parseTelegramMessage(telegramData)
       return await this.handleMessage('telegram', messageData)
     } catch (error) {
@@ -126,7 +125,7 @@ class MessageBrokerService {
    * @param {Object} chatwootData - Chatwoot webhook data
    * @returns {Promise<Object>} - Processing result
    */
-  async handleChatwootWebhook(chatwootData) {
+  async handleChatwootWebhook (chatwootData) {
     try {
       this.logger.info('Processing Chatwoot webhook', {
         event: chatwootData.event,
@@ -134,9 +133,9 @@ class MessageBrokerService {
         conversationId: chatwootData.conversation?.id,
         timestamp: new Date().toISOString()
       })
-      
+
       const messageData = this.parseChatwootMessage(chatwootData)
-      
+
       // If parsing returns null (unhandled event or no message), just log and return success
       if (!messageData) {
         this.logger.info('Chatwoot webhook processed but no message to handle', {
@@ -145,14 +144,14 @@ class MessageBrokerService {
         })
         return { success: true, message: 'Webhook processed but no message to handle' }
       }
-      
+
       this.logger.info('Chatwoot message parsed successfully', {
         messageId: messageData.id,
         conversationId: messageData.conversationId,
         content: messageData.content?.substring(0, 50),
         platform: 'chatwoot'
       })
-      
+
       return await this.handleMessage('chatwoot', messageData)
     } catch (error) {
       this.logger.error('Failed to handle Chatwoot webhook', {
@@ -168,7 +167,7 @@ class MessageBrokerService {
    * @param {Object} telegramData - Raw Telegram data
    * @returns {Object} - Parsed message data
    */
-  parseTelegramMessage(telegramData) {
+  parseTelegramMessage (telegramData) {
     // Validate webhook data structure
     if (!telegramData || !telegramData.message) {
       this.logger.warn('Invalid Telegram webhook data - no message found', { telegramData })
@@ -187,7 +186,7 @@ class MessageBrokerService {
 
     // Skip messages from this bot to prevent loops (but allow other bots in group)
     if (from.is_bot && from.id === telegramData.bot?.id) {
-      this.logger.info('Skipping message from this bot to prevent loops', { 
+      this.logger.info('Skipping message from this bot to prevent loops', {
         messageId: message.message_id,
         botId: from.id,
         isThisBot: true
@@ -197,7 +196,7 @@ class MessageBrokerService {
 
     // Skip messages without text content
     if (!message.text || !message.text.trim()) {
-      this.logger.info('Skipping non-text message', { 
+      this.logger.info('Skipping non-text message', {
         messageId: message.message_id,
         hasText: !!message.text,
         messageType: message.content_type || 'unknown'
@@ -207,15 +206,15 @@ class MessageBrokerService {
 
     const isGroupChat = chat.type === 'group' || chat.type === 'supergroup'
     const conversationId = isGroupChat ? chat.id.toString() : from.id.toString()
-    
+
     // For group chats, only respond when bot is mentioned
     const isBotMentioned = isGroupChat && message.text && (
       message.text.includes(`@${telegramData.bot?.username}`) ||
       message.text.includes(`@${telegramData.bot?.first_name}`) ||
-      message.entities?.some(entity => entity.type === 'mention' && 
+      message.entities?.some(entity => entity.type === 'mention' &&
         message.text.substring(entity.offset, entity.offset + entity.length).includes(telegramData.bot?.username))
     )
-    
+
     // Respond to all messages (private and group)
     const shouldRespond = true
 
@@ -235,7 +234,7 @@ class MessageBrokerService {
       botUsername: telegramData.bot?.username,
       shouldRespond
     })
-    
+
     // Skip if we shouldn't respond
     if (!shouldRespond) {
       this.logger.info('Skipping message - not mentioned in group or not private chat', {
@@ -290,9 +289,9 @@ class MessageBrokerService {
    * @param {Object} chatwootData - Raw Chatwoot data
    * @returns {Object} - Parsed message data
    */
-  parseChatwootMessage(chatwootData) {
+  parseChatwootMessage (chatwootData) {
     const event = chatwootData.event
-    
+
     // Handle different webhook event types
     switch (event) {
       case 'message_created':
@@ -312,7 +311,7 @@ class MessageBrokerService {
    * @param {Object} chatwootData - Raw Chatwoot data
    * @returns {Object} - Parsed message data
    */
-  parseMessageCreatedEvent(chatwootData) {
+  parseMessageCreatedEvent (chatwootData) {
     const message = chatwootData
     const conversation = message.conversation
     const sender = message.sender
@@ -365,7 +364,7 @@ class MessageBrokerService {
    * @param {Object} chatwootData - Raw Chatwoot data
    * @returns {Object} - Parsed message data
    */
-  parseConversationUpdatedEvent(chatwootData) {
+  parseConversationUpdatedEvent (chatwootData) {
     // For conversation_updated, we need to get the latest message
     const messages = chatwootData.messages
     if (!messages || messages.length === 0) {
@@ -413,7 +412,7 @@ class MessageBrokerService {
    * @param {Object} chatwootData - Raw Chatwoot data
    * @returns {Object|null} - Parsed message data or null if should not be processed
    */
-  parseContactUpdatedEvent(chatwootData) {
+  parseContactUpdatedEvent (chatwootData) {
     // Contact_updated events don't have message context, so we don't process them as messages
     // They are just informational updates about contact changes
     this.logger.info('Contact updated event received, skipping message processing', {
@@ -421,7 +420,7 @@ class MessageBrokerService {
       contactName: chatwootData.name,
       event: 'contact_updated'
     })
-    
+
     return null // Don't process contact updates as messages
   }
 }

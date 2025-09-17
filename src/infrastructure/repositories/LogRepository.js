@@ -6,7 +6,7 @@ const Logger = require('../logging/Logger')
  * Manages application logs in database
  */
 class LogRepository {
-  constructor() {
+  constructor () {
     this.pool = new Pool({
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || 5432,
@@ -15,14 +15,14 @@ class LogRepository {
       password: process.env.DB_PASSWORD || 'password',
       ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
     })
-    
+
     this.logger = new Logger('LogRepository')
   }
 
   /**
    * Initialize the repository
    */
-  async initialize() {
+  async initialize () {
     try {
       await this.pool.query('SELECT 1')
       // Log repository connected successfully
@@ -35,14 +35,14 @@ class LogRepository {
   /**
    * Log a message to the logs table
    */
-  async log(level, message, metadata = {}) {
+  async log (level, message, metadata = {}) {
     try {
       const query = `
         INSERT INTO logs (level, message, component, metadata, timestamp)
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id
       `
-      
+
       const values = [
         level,
         message,
@@ -63,14 +63,14 @@ class LogRepository {
   /**
    * Log an error to the error_logs table
    */
-  async logError(error, metadata = {}) {
+  async logError (error, metadata = {}) {
     try {
       const query = `
         INSERT INTO error_logs (level, message, stack, component, url, method, status_code, metadata, timestamp)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id
       `
-      
+
       const values = [
         'error',
         error.message || 'Unknown error',
@@ -95,16 +95,16 @@ class LogRepository {
   /**
    * Get recent logs
    */
-  async getLogs(limit = 100, level = null) {
+  async getLogs (limit = 100, level = null) {
     try {
       let query = 'SELECT * FROM logs'
       const values = []
-      
+
       if (level) {
         query += ' WHERE level = $1'
         values.push(level)
       }
-      
+
       query += ' ORDER BY timestamp DESC LIMIT $' + (values.length + 1)
       values.push(limit)
 
@@ -119,14 +119,14 @@ class LogRepository {
   /**
    * Get recent error logs
    */
-  async getErrorLogs(limit = 100) {
+  async getErrorLogs (limit = 100) {
     try {
       const query = `
         SELECT * FROM error_logs 
         ORDER BY timestamp DESC 
         LIMIT $1
       `
-      
+
       const result = await this.pool.query(query, [limit])
       return result.rows
     } catch (error) {
@@ -138,13 +138,13 @@ class LogRepository {
   /**
    * Clean old logs (older than specified days)
    */
-  async cleanOldLogs(days = 30) {
+  async cleanOldLogs (days = 30) {
     try {
       const query = `
         DELETE FROM logs 
         WHERE timestamp < NOW() - INTERVAL '${days} days'
       `
-      
+
       const result = await this.pool.query(query)
       this.logger.info(`Cleaned ${result.rowCount} old log entries`)
       return result.rowCount
@@ -157,13 +157,13 @@ class LogRepository {
   /**
    * Clean old error logs (older than specified days)
    */
-  async cleanOldErrorLogs(days = 30) {
+  async cleanOldErrorLogs (days = 30) {
     try {
       const query = `
         DELETE FROM error_logs 
         WHERE timestamp < NOW() - INTERVAL '${days} days'
       `
-      
+
       const result = await this.pool.query(query)
       this.logger.info(`Cleaned ${result.rowCount} old error log entries`)
       return result.rowCount
@@ -176,7 +176,7 @@ class LogRepository {
   /**
    * Close the database connection
    */
-  async close() {
+  async close () {
     try {
       await this.pool.end()
       this.logger.info('Log repository connection closed')
