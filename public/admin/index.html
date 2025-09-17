@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Turbo Chatwoot Webhook - Admin Panel</title>
+    
+    <!-- Google Font: Source Sans Pro -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+    <!-- AdminLTE -->
+    <link rel="stylesheet" href="/node_modules/admin-lte/dist/css/adminlte.min.css">
+    
+    <!-- Global Theme CSS -->
+    <link rel="stylesheet" href="/admin/src/assets/css/main.css">
+    
+    <!-- Custom CSS -->
+    <style>
+        .wrapper {
+            height: 100vh !important;
+        }
+        .main-sidebar {
+            height: 100vh !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+        }
+        .content-wrapper {
+            margin-left: 250px !important;
+            min-height: 100vh !important;
+            padding-left: 0 !important;
+        }
+        .main-header {
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            left: 250px !important;
+            z-index: 1030 !important;
+            margin-left: 0 !important;
+            padding-left: 0 !important;
+        }
+        .content {
+            margin-top: 70px !important;
+            padding-left: 0 !important;
+            margin-left: 0 !important;
+            padding-bottom: 60px !important; /* Space for fixed footer */
+        }
+        
+        /* Fixed footer at bottom of viewport */
+        .main-footer {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 250px !important;
+            right: 0 !important;
+            z-index: 1000 !important;
+            width: calc(100% - 250px) !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            text-align: center !important;
+        }
+        
+        /* Custom styles for 2-level menu */
+        .nav-treeview {
+            padding-left: 1rem;
+        }
+        .nav-treeview .nav-link {
+            padding-left: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .nav-treeview .nav-link i {
+            font-size: 0.8rem;
+        }
+        .nav-item.has-treeview > .nav-link .right {
+            transition: transform 0.3s ease;
+        }
+        .nav-item.has-treeview.menu-open > .nav-link .right {
+            transform: rotate(-90deg);
+        }
+        .nav-item.has-treeview > .nav-link:hover .right {
+            transform: rotate(-45deg);
+        }
+        .nav-item.has-treeview.menu-open > .nav-link:hover .right {
+            transform: rotate(-90deg);
+        }
+
+        /* Menu cha active - màu trắng */
+        .nav-item.has-treeview > .nav-link.active {
+            background-color: #fff !important;
+            color: #007bff !important;
+        }
+
+        /* Menu con active - màu xanh */
+        .nav-treeview .nav-link.active {
+            background-color: #007bff !important;
+            color: #fff !important;
+        }
+
+        /* Hover effects */
+        .nav-item.has-treeview > .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-treeview .nav-link:hover {
+            background-color: rgba(0, 123, 255, 0.1);
+        }
+        
+        @media (max-width: 767.98px) {
+            .content-wrapper {
+                margin-left: 0 !important;
+            }
+            .main-header {
+                left: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body class="hold-transition sidebar-mini layout-fixed">
+    <div id="app"></div>
+
+    <!-- jQuery -->
+    <script src="/node_modules/jquery/dist/jquery.min.js"></script>
+    <!-- Axios - Load first -->
+    <script src="/node_modules/axios/dist/axios.min.js"></script>
+    <!-- Bootstrap 4 -->
+    <script src="/node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- AdminLTE App -->
+    <script src="/node_modules/admin-lte/dist/js/adminlte.min.js"></script>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Vue Router 4 -->
+    <script src="https://unpkg.com/vue-router@4/dist/vue-router.global.js"></script>
+    
+    <!-- Vuelidate -->
+    <script src="https://unpkg.com/@vuelidate/core@2.0.0-alpha.33/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@vuelidate/validators@2.0.0-alpha.22/dist/index.umd.js"></script>
+    
+    <!-- Lodash -->
+    <script src="/node_modules/lodash/lodash.min.js"></script>
+    
+    
+    <!-- Services -->
+    <script src="/admin/src/services/BaseService.js"></script>
+    <script src="/admin/src/services/AuthService.js"></script>
+    <script src="/admin/src/services/AdminService.js"></script>
+    <script src="/admin/src/services/TelegramService.js"></script>
+    <script src="/admin/src/services/ChatwootService.js"></script>
+    <script src="/admin/src/services/DifyService.js"></script>
+    <script src="/admin/src/services/UserService.js"></script>
+    <script src="/admin/src/services/RoleService.js"></script>
+    <script src="/admin/src/services/PermissionService.js"></script>
+    <script src="/admin/src/services/ConfigurationService.js"></script>
+    <script src="/admin/src/services/LogsService.js"></script>
+    <script src="/admin/src/services/index.js"></script>
+    
+    <!-- Utils -->
+    <script src="/admin/src/utils/auth.js"></script>
+    
+    <!-- Theme Manager -->
+    <script src="/admin/src/assets/js/theme-manager.js"></script>
+    
+    <!-- Components -->
+    <script src="/admin/src/pages/LoginPage.js"></script>
+    
+        <!-- Module Components will be loaded dynamically -->
+
+    <!-- Vue Components will be loaded dynamically -->
+
+    <script>
+        const { createApp } = Vue;
+        const { createRouter, createWebHistory } = VueRouter;
+
+        // Enhanced Vue SFC loader for Vue 3.5.21
+        async function loadVueComponent(path) {
+            try {
+                const response = await fetch(path);
+                const text = await response.text();
+                
+                // Parse template, script, and style sections
+                const templateMatch = text.match(/<template[^>]*>([\s\S]*?)<\/template>/);
+                const scriptMatch = text.match(/<script[^>]*>([\s\S]*?)<\/script>/);
+                const styleMatch = text.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+                
+                const template = templateMatch ? templateMatch[1].trim() : '';
+                const scriptContent = scriptMatch ? scriptMatch[1].trim() : '';
+                
+                // Create component object
+                const component = {
+                    template: template
+                };
+                
+                // Parse script content with better error handling
+                if (scriptContent) {
+                    try {
+                        // Remove export default and clean up
+                        let cleanScript = scriptContent.replace(/export\s+default\s*/, '').trim();
+                        
+                        // Remove trailing semicolon if present
+                        if (cleanScript.endsWith(';')) {
+                            cleanScript = cleanScript.slice(0, -1);
+                        }
+                        
+                        // Handle object literal syntax
+                        if (cleanScript.startsWith('{') && cleanScript.endsWith('}')) {
+                            // Direct object literal
+                            const scriptObj = new Function('return ' + cleanScript)();
+                            Object.assign(component, scriptObj);
+                        } else {
+                            // Try to extract object from more complex syntax
+                            const objMatch = cleanScript.match(/\{[\s\S]*\}/);
+                            if (objMatch) {
+                                const scriptObj = new Function('return ' + objMatch[0])();
+                                Object.assign(component, scriptObj);
+                            } else {
+                                console.warn('Could not parse script content for', path);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing script for', path, e);
+                        console.error('Script content:', scriptContent.substring(0, 200) + '...');
+                        
+                        // Try fallback parsing
+                        try {
+                            // Look for the main object definition
+                            const objMatch = scriptContent.match(/\{[\s\S]*\}/);
+                            if (objMatch) {
+                                const scriptObj = new Function('return ' + objMatch[0])();
+                                Object.assign(component, scriptObj);
+                            }
+                        } catch (fallbackError) {
+                            console.error('Fallback parsing also failed for', path, fallbackError);
+                        }
+                    }
+                }
+                
+                return component;
+            } catch (error) {
+                console.error('Failed to load Vue component:', path, error);
+                return null;
+            }
+        }
+        
+        // Load Vue components
+        let SidebarComponent, HeaderComponent, AdminLayoutComponent, ListComponent, PageComponent;
+        let DashboardPageComponent, UsersPageComponent, UserListComponent, UserFormComponent, UserPasswordFormComponent, UserPermissionsComponent, UserRolesComponent, SystemConfigurationComponent, LogsPageComponent;
+        let RolePageComponent, RoleListComponent, RoleFormComponent, RolePermissionsComponent;
+        let ChatwootAccountListComponent, ChatwootAccountFormComponent, ChatwootAccountsPageComponent, DifyAppsListComponent, DifyAppFormComponent, DifyAppsPageComponent, TelegramBotsListComponent;
+        let PlatformMappingListComponent, PlatformMappingFormComponent, PlatformMappingsPageComponent;
+        let FormListingSortComponent, FormTableFiltersComponent, FormCheckBoxComponent, PaginateComponent, ActionButtonsComponent;
+        let FormInputTextComponent, FormImageComponent, FormSelectComponent, FormInputDateComponent, FormInputTextAreaComponent;
+        
+        async function loadComponents() {
+            
+            // Load main components first
+            SidebarComponent = await loadVueComponent('/admin/src/components/SidebarComponent.vue');
+            window.SidebarComponent = SidebarComponent;
+            
+            HeaderComponent = await loadVueComponent('/admin/src/components/HeaderComponent.vue');
+            window.HeaderComponent = HeaderComponent;
+            
+            AdminLayoutComponent = await loadVueComponent('/admin/src/components/AdminLayoutComponent.vue');
+            window.AdminLayoutComponent = AdminLayoutComponent;
+            
+            ListComponent = await loadVueComponent('/admin/src/components/ListComponent.vue');
+            window.ListComponent = ListComponent;
+            
+            PageComponent = await loadVueComponent('/admin/src/components/PageComponent.vue');
+            window.PageComponent = PageComponent;
+            
+            
+            // Load user sub-components FIRST (before UsersPageComponent)
+            UserListComponent = await loadVueComponent('/admin/src/modules/users/UserListComponent.vue');
+            window.UserListComponent = UserListComponent;
+            
+            UserFormComponent = await loadVueComponent('/admin/src/modules/users/UserFormComponent.vue');
+            window.UserFormComponent = UserFormComponent;
+            
+            // Load UserPasswordFormComponent
+            UserPasswordFormComponent = await loadVueComponent('/admin/src/modules/users/UserPasswordFormComponent.vue');
+            window.UserPasswordFormComponent = UserPasswordFormComponent;
+            
+            // Load UserPermissionsComponent
+            UserPermissionsComponent = await loadVueComponent('/admin/src/modules/users/UserPermissionsComponent.vue');
+            window.UserPermissionsComponent = UserPermissionsComponent;
+            
+            // Load UserRolesComponent
+            UserRolesComponent = await loadVueComponent('/admin/src/modules/users/UserRolesComponent.vue');
+            window.UserRolesComponent = UserRolesComponent;
+            
+            // Load role sub-components FIRST (before RolePageComponent)
+            RoleListComponent = await loadVueComponent('/admin/src/modules/roles/RoleListComponent.vue');
+            window.RoleListComponent = RoleListComponent;
+            
+            RoleFormComponent = await loadVueComponent('/admin/src/modules/roles/RoleFormComponent.vue');
+            window.RoleFormComponent = RoleFormComponent;
+            
+            RolePermissionsComponent = await loadVueComponent('/admin/src/modules/roles/RolePermissionsComponent.vue');
+            window.RolePermissionsComponent = RolePermissionsComponent;
+            
+            // Load module components (after sub-components are loaded)
+            DashboardPageComponent = await loadVueComponent('/admin/src/modules/dashboard/DashboardPageComponent.vue');
+            window.DashboardPageComponent = DashboardPageComponent;
+            
+            UsersPageComponent = await loadVueComponent('/admin/src/modules/users/UsersPageComponent.vue');
+            window.UsersPageComponent = UsersPageComponent;
+            
+            RolePageComponent = await loadVueComponent('/admin/src/modules/roles/RolePageComponent.vue');
+            window.RolePageComponent = RolePageComponent;
+            
+            SystemConfigurationComponent = await loadVueComponent('/admin/src/modules/configurations/SystemConfigurationComponent.vue');
+            window.SystemConfigurationComponent = SystemConfigurationComponent;
+            
+            LogsPageComponent = await loadVueComponent('/admin/src/modules/logs/LogsPageComponent.vue');
+            window.LogsPageComponent = LogsPageComponent;
+            
+            // Load Chatwoot components
+            ChatwootAccountListComponent = await loadVueComponent('/admin/src/modules/chatwoot/ChatwootAccountListComponent.vue');
+            window.ChatwootAccountListComponent = ChatwootAccountListComponent;
+            
+            ChatwootAccountFormComponent = await loadVueComponent('/admin/src/modules/chatwoot/ChatwootAccountFormComponent.vue');
+            window.ChatwootAccountFormComponent = ChatwootAccountFormComponent;
+            
+            ChatwootAccountsPageComponent = await loadVueComponent('/admin/src/modules/chatwoot/ChatwootAccountsPageComponent.vue');
+            window.ChatwootAccountsPageComponent = ChatwootAccountsPageComponent;
+            
+            DifyAppsListComponent = await loadVueComponent('/admin/src/modules/dify/DifyAppsListComponent.vue');
+            window.DifyAppsListComponent = DifyAppsListComponent;
+            
+            DifyAppFormComponent = await loadVueComponent('/admin/src/modules/dify/DifyAppFormComponent.vue');
+            window.DifyAppFormComponent = DifyAppFormComponent;
+            
+            DifyAppsPageComponent = await loadVueComponent('/admin/src/modules/dify/DifyAppsPageComponent.vue');
+            window.DifyAppsPageComponent = DifyAppsPageComponent;
+            
+            // Load Telegram components
+            TelegramBotsListComponent = await loadVueComponent('/admin/src/modules/telegram/TelegramBotsListComponent.vue');
+            window.TelegramBotsListComponent = TelegramBotsListComponent;
+            
+            TelegramBotFormComponent = await loadVueComponent('/admin/src/modules/telegram/TelegramBotFormComponent.vue');
+            window.TelegramBotFormComponent = TelegramBotFormComponent;
+            
+            TelegramBotsPageComponent = await loadVueComponent('/admin/src/modules/telegram/TelegramBotsPageComponent.vue');
+            window.TelegramBotsPageComponent = TelegramBotsPageComponent;
+            
+            // Load Platform Mapping components
+            PlatformMappingListComponent = await loadVueComponent('/admin/src/modules/platform-mappings/PlatformMappingListComponent.vue');
+            window.PlatformMappingListComponent = PlatformMappingListComponent;
+            
+            PlatformMappingFormComponent = await loadVueComponent('/admin/src/modules/platform-mappings/PlatformMappingFormComponent.vue');
+            window.PlatformMappingFormComponent = PlatformMappingFormComponent;
+            
+            PlatformMappingsPageComponent = await loadVueComponent('/admin/src/modules/platform-mappings/PlatformMappingsPageComponent.vue');
+            window.PlatformMappingsPageComponent = PlatformMappingsPageComponent;
+            
+            // Load shared components
+            FormListingSortComponent = await loadVueComponent('/admin/src/components/shared/FormListingSortComponent.vue');
+            window.FormListingSortComponent = FormListingSortComponent;
+            
+            FormTableFiltersComponent = await loadVueComponent('/admin/src/components/shared/FormTableFiltersComponent.vue');
+            window.FormTableFiltersComponent = FormTableFiltersComponent;
+            
+            FormCheckBoxComponent = await loadVueComponent('/admin/src/components/shared/FormCheckBoxComponent.vue');
+            window.FormCheckBoxComponent = FormCheckBoxComponent;
+            
+            PaginateComponent = await loadVueComponent('/admin/src/components/shared/PaginateComponent.vue');
+            window.PaginateComponent = PaginateComponent;
+            
+            ActionButtonsComponent = await loadVueComponent('/admin/src/components/shared/ActionButtonsComponent.vue');
+            window.ActionButtonsComponent = ActionButtonsComponent;
+            
+            // Load shared form components
+            FormInputTextComponent = await loadVueComponent('/admin/src/components/shared/FormInputTextComponent.vue');
+            window.FormInputTextComponent = FormInputTextComponent;
+            
+            FormImageComponent = await loadVueComponent('/admin/src/components/shared/FormImageComponent.vue');
+            window.FormImageComponent = FormImageComponent;
+            
+            FormSelectComponent = await loadVueComponent('/admin/src/components/shared/FormSelectComponent.vue');
+            window.FormSelectComponent = FormSelectComponent;
+            
+            FormInputDateComponent = await loadVueComponent('/admin/src/components/shared/FormInputDateComponent.vue');
+            window.FormInputDateComponent = FormInputDateComponent;
+            
+            FormInputTextAreaComponent = await loadVueComponent('/admin/src/components/shared/FormInputTextAreaComponent.vue');
+            window.FormInputTextAreaComponent = FormInputTextAreaComponent;
+            
+        }
+
+
+        // Initialize app
+        async function initializeApp() {
+            try {
+                // Load Vue components first
+                await loadComponents();
+                
+                // Create router with loaded components
+                const router = createRouter({
+                    history: createWebHistory(),
+                    routes: [
+            { path: '/admin/login', component: window.LoginPage },
+            {
+                path: '/admin',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', redirect: '/admin/dashboard' }
+                ]
+            },
+            {
+                path: '/admin/dashboard',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.DashboardPageComponent }
+                ]
+            },
+            {
+                path: '/admin/users',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.UsersPageComponent }
+                ]
+            },
+            {
+                path: '/admin/roles',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.RolePageComponent }
+                ]
+            },
+            {
+                path: '/admin/telegram-bots',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.TelegramBotsPageComponent }
+                ]
+            },
+            {
+                path: '/admin/chatwoot-accounts',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.ChatwootAccountsPageComponent }
+                ]
+            },
+            {
+                path: '/admin/dify-apps',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.DifyAppsPageComponent }
+                ]
+            },
+            {
+                path: '/admin/platform-mappings',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.PlatformMappingsPageComponent }
+                ]
+            },
+            {
+                path: '/admin/configurations',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.SystemConfigurationComponent }
+                ]
+            },
+            {
+                path: '/admin/logs',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.LogsPageComponent }
+                ]
+            },
+            { path: '/', redirect: '/admin/login' },
+            { path: '/admin/:pathMatch(.*)*', redirect: '/admin/login' }
+                    ]
+        });
+
+        // Set up router guard
+        router.beforeEach((to, from, next) => {
+            const token = localStorage.getItem('token');
+            const isLoginPage = to.path === '/admin/login';
+            const isAdminRoot = to.path === '/admin' || to.path === '/admin/';
+            const isAdminRoute = to.path.startsWith('/admin');
+            
+            if (!token) {
+                if (isLoginPage) {
+                    next();
+                } else if (isAdminRoute) {
+                    next('/admin/login');
+                } else {
+                    next('/admin/login');
+                }
+            } else {
+                if (isLoginPage) {
+                    next('/admin/dashboard');
+                } else if (isAdminRoot) {
+                    next('/admin/dashboard');
+                } else {
+                    next();
+                }
+            }
+        });
+
+        // Main App
+        const app = createApp({
+            template: '<router-view></router-view>',
+            data() {
+                return {
+                    isLoading: false
+                }
+            },
+            mounted() {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                }
+            }
+        });
+
+        // Setup vue3-toastify
+        if (window.Vue3Toastify) {
+            app.use(window.Vue3Toastify, {
+                position: 'top-right',
+                autoClose: 5000,
+                closeOnClick: true,
+                pauseOnFocusLoss: true,
+                pauseOnHover: true,
+                draggable: true,
+                draggablePercent: 0.6,
+                showCloseButtonOnHover: false,
+                hideProgressBar: false,
+                closeButton: 'button',
+                icon: true,
+                rtl: false
+            });
+            
+            // Make toast available globally
+            window.toast = window.Vue3Toastify.toast;
+            
+            // Create ToastService wrapper for backward compatibility
+            window.ToastService = {
+                success: (msg) => window.toast.success(msg),
+                error: (msg) => window.toast.error(msg),
+                warning: (msg) => window.toast.warning(msg),
+                info: (msg) => window.toast.info(msg),
+                handleError: (error, defaultMsg) => {
+                    const message = (error.response && error.response.data && error.response.data.message) || error.message || defaultMsg;
+                    window.toast.error(message);
+                },
+                confirmAsync: async (message, title = 'Confirm') => {
+                    return new Promise((resolve) => {
+                        const result = confirm(`${title}\n\n${message}`);
+                        resolve(result);
+                    });
+                }
+            };
+        } else {
+            // Enhanced fallback with better UI
+            // Create a simple toast container
+            const toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                max-width: 400px;
+            `;
+            document.body.appendChild(toastContainer);
+            
+            // Enhanced toast function
+            window.toast = {
+                success: (msg) => showToast(msg, 'success'),
+                error: (msg) => showToast(msg, 'error'),
+                warning: (msg) => showToast(msg, 'warning'),
+                info: (msg) => showToast(msg, 'info')
+            };
+            
+            // Create ToastService wrapper for backward compatibility
+            window.ToastService = {
+                success: (msg) => window.toast.success(msg),
+                error: (msg) => window.toast.error(msg),
+                warning: (msg) => window.toast.warning(msg),
+                info: (msg) => window.toast.info(msg),
+                handleError: (error, defaultMsg) => {
+                    const message = (error.response && error.response.data && error.response.data.message) || error.message || defaultMsg;
+                    window.toast.error(message);
+                },
+                confirmAsync: async (message, title = 'Confirm') => {
+                    return new Promise((resolve) => {
+                        const result = confirm(`${title}\n\n${message}`);
+                        resolve(result);
+                    });
+                }
+            };
+            
+            function showToast(message, type) {
+                const toast = document.createElement('div');
+                const icons = {
+                    success: '✅',
+                    error: '❌',
+                    warning: '⚠️',
+                    info: 'ℹ️'
+                };
+                const colors = {
+                    success: '#28a745',
+                    error: '#dc3545',
+                    warning: '#ffc107',
+                    info: '#17a2b8'
+                };
+                
+                toast.style.cssText = `
+                    background: ${colors[type]};
+                    color: white;
+                    padding: 12px 16px;
+                    margin-bottom: 10px;
+                    border-radius: 4px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                    display: flex;
+                    align-items: center;
+                    animation: slideIn 0.3s ease-out;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    font-size: 14px;
+                    max-width: 100%;
+                    word-wrap: break-word;
+                `;
+                
+                toast.innerHTML = `
+                    <span style="margin-right: 8px; font-size: 16px;">${icons[type]}</span>
+                    <span style="flex: 1;">${message}</span>
+                    <button onclick="this.parentElement.remove()" style="
+                        background: none;
+                        border: none;
+                        color: white;
+                        font-size: 18px;
+                        cursor: pointer;
+                        margin-left: 8px;
+                        padding: 0;
+                        line-height: 1;
+                    ">&times;</button>
+                `;
+                
+                // Add CSS animation
+                if (!document.getElementById('toast-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'toast-styles';
+                    style.textContent = `
+                        @keyframes slideIn {
+                            from { transform: translateX(100%); opacity: 0; }
+                            to { transform: translateX(0); opacity: 1; }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                
+                toastContainer.appendChild(toast);
+                
+                // Auto remove after 5 seconds
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.style.animation = 'slideIn 0.3s ease-out reverse';
+                        setTimeout(() => toast.remove(), 300);
+                    }
+                }, 5000);
+            }
+        }
+
+        // Register dependencies globally
+        function registerDependencies() {
+            // Register Vuelidate
+            if (window.Vuelidate) {
+                window.useVuelidate = window.Vuelidate.useVuelidate;
+            }
+            if (window.VuelidateValidators) {
+                window.required = window.VuelidateValidators.required;
+                window.email = window.VuelidateValidators.email;
+                window.minLength = window.VuelidateValidators.minLength;
+            }
+            
+            // Register Lodash
+            if (window._) {
+                window.lodash = window._;
+            }
+            
+        }
+
+        // Register all components globally
+        function registerGlobalComponents() {
+            if (window.SidebarComponent) app.component('SidebarComponent', window.SidebarComponent);
+            if (window.HeaderComponent) app.component('HeaderComponent', window.HeaderComponent);
+            if (window.AdminLayoutComponent) app.component('AdminLayoutComponent', window.AdminLayoutComponent);
+            if (window.ListComponent) app.component('ListComponent', window.ListComponent);
+            if (window.PageComponent) app.component('PageComponent', window.PageComponent);
+            if (window.DashboardPageComponent) app.component('DashboardPageComponent', window.DashboardPageComponent);
+            if (window.UsersPageComponent) app.component('UsersPageComponent', window.UsersPageComponent);
+            if (window.UserListComponent) app.component('UserListComponent', window.UserListComponent);
+            if (window.UserFormComponent) app.component('UserFormComponent', window.UserFormComponent);
+            if (window.UserPasswordFormComponent) app.component('UserPasswordFormComponent', window.UserPasswordFormComponent);
+            if (window.UserRolesComponent) {
+                app.component('UserRolesComponent', window.UserRolesComponent);
+                app.component('user-roles-component', window.UserRolesComponent);
+            }
+            if (window.UserPermissionsComponent) {
+                app.component('UserPermissionsComponent', window.UserPermissionsComponent);
+                app.component('user-permissions-component', window.UserPermissionsComponent);
+            }
+            if (window.RolePageComponent) app.component('RolePageComponent', window.RolePageComponent);
+            if (window.RoleListComponent) app.component('RoleListComponent', window.RoleListComponent);
+            if (window.RoleFormComponent) app.component('RoleFormComponent', window.RoleFormComponent);
+            if (window.RolePermissionsComponent) app.component('RolePermissionsComponent', window.RolePermissionsComponent);
+            if (window.SystemConfigurationComponent) app.component('SystemConfigurationComponent', window.SystemConfigurationComponent);
+            if (window.LogsPageComponent) app.component('LogsPageComponent', window.LogsPageComponent);
+            if (window.ChatwootAccountListComponent) app.component('ChatwootAccountListComponent', window.ChatwootAccountListComponent);
+            if (window.ChatwootAccountFormComponent) app.component('ChatwootAccountFormComponent', window.ChatwootAccountFormComponent);
+            if (window.ChatwootAccountsPageComponent) app.component('ChatwootAccountsPageComponent', window.ChatwootAccountsPageComponent);
+            if (window.DifyAppsListComponent) app.component('DifyAppsListComponent', window.DifyAppsListComponent);
+            if (window.DifyAppFormComponent) app.component('DifyAppFormComponent', window.DifyAppFormComponent);
+            if (window.DifyAppsPageComponent) app.component('DifyAppsPageComponent', window.DifyAppsPageComponent);
+            
+            if (window.TelegramBotsListComponent) app.component('TelegramBotsListComponent', window.TelegramBotsListComponent);
+            if (window.TelegramBotFormComponent) app.component('TelegramBotFormComponent', window.TelegramBotFormComponent);
+            if (window.TelegramBotsPageComponent) app.component('TelegramBotsPageComponent', window.TelegramBotsPageComponent);
+            if (window.PlatformMappingListComponent) app.component('PlatformMappingListComponent', window.PlatformMappingListComponent);
+            if (window.PlatformMappingFormComponent) app.component('PlatformMappingFormComponent', window.PlatformMappingFormComponent);
+            if (window.PlatformMappingsPageComponent) app.component('PlatformMappingsPageComponent', window.PlatformMappingsPageComponent);
+            if (window.FormListingSortComponent) app.component('FormListingSortComponent', window.FormListingSortComponent);
+            if (window.FormTableFiltersComponent) app.component('FormTableFiltersComponent', window.FormTableFiltersComponent);
+            if (window.FormCheckBoxComponent) app.component('FormCheckBoxComponent', window.FormCheckBoxComponent);
+            if (window.PaginateComponent) app.component('PaginateComponent', window.PaginateComponent);
+            if (window.ActionButtonsComponent) app.component('ActionButtonsComponent', window.ActionButtonsComponent);
+            if (window.FormInputTextComponent) app.component('FormInputTextComponent', window.FormInputTextComponent);
+            if (window.FormImageComponent) app.component('FormImageComponent', window.FormImageComponent);
+            if (window.FormSelectComponent) app.component('FormSelectComponent', window.FormSelectComponent);
+            if (window.FormInputDateComponent) app.component('FormInputDateComponent', window.FormInputDateComponent);
+            if (window.FormInputTextAreaComponent) app.component('FormInputTextAreaComponent', window.FormInputTextAreaComponent);
+        }
+
+        app.use(router);
+        
+        // Register dependencies first
+        registerDependencies();
+        
+        // Register components globally
+        registerGlobalComponents();
+        
+        // Wait for all services to load, then mount
+                const allServicesLoaded = window.BaseService && window.AuthService && 
+                                        window.TelegramService && window.ChatwootService && 
+                                        window.DifyService && window.UserService && 
+                                        window.ConfigurationService && window.LogsService;
+                
+                if (!allServicesLoaded) {
+                    console.error('❌ Not all services loaded, cannot mount app');
+                    return;
+                }
+                
+                app.mount('#app');
+                
+                const currentPath = window.location.pathname;
+                router.replace(currentPath).then(() => {
+                }).catch(error => {
+                    console.error('❌ Router navigation failed:', error);
+                });
+                
+            } catch (error) {
+                console.error('❌ Failed to initialize app:', error);
+            }
+        }
+        
+        // Start the app
+        initializeApp();
+    </script>
+</body>
+</html>

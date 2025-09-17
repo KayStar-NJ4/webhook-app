@@ -63,18 +63,11 @@ class ChatwootHandler {
    */
   async handleMessageCreated(webhookData) {
     try {
-      // Debug: Log toàn bộ webhook data
-      try {
-        logger.info('Full webhook data:', JSON.stringify(webhookData, null, 2));
-      } catch (error) {
-        logger.info('Webhook data (string):', webhookData.toString());
-      }
       
       const { message, conversation, account } = webhookData;
       
       if (!message || !conversation) {
         logger.warn('Missing message or conversation data in webhook');
-        logger.info('Webhook data structure:', JSON.stringify(webhookData, null, 2));
         
         // Thử xử lý webhook thực tế từ Chatwoot
         if (webhookData.event === 'message_created' && webhookData.conversation) {
