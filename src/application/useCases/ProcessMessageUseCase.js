@@ -70,7 +70,22 @@ class ProcessMessageUseCase {
       this.logger.error('Failed to process message', {
         error: error.message,
         stack: error.stack,
-        messageData
+        messageData,
+        response: error.response?.data,
+        status: error.response?.status,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        hostname: error.hostname,
+        port: error.port,
+        path: error.path,
+        method: error.method,
+        headers: error.config?.headers,
+        url: error.config?.url,
+        conversation_id: messageData.conversationId,
+        platform: messageData.platform,
+        messageId: messageData.id,
+        senderId: messageData.senderId
       })
       throw error
     }
@@ -947,6 +962,15 @@ class ProcessMessageUseCase {
         this.chatwootService.setAccessToken(chatwootAccount.access_token)
       }
       
+      // Khởi tạo ChatwootService với account ID trước khi gửi tin nhắn
+      this.logger.info('Initializing ChatwootService before sending message', {
+        conversationId: conversation.chatwootId,
+        accountId: conversation.metadata?.accountId || 1,
+        conversation_id: conversation.id
+      })
+      
+      await this.chatwootService.initializeWithAccountId(conversation.metadata?.accountId || 1)
+      
       // Gửi chỉ 1 tin nhắn duy nhất
       await this.chatwootService.sendMessage(
         conversation.chatwootId,
@@ -983,6 +1007,15 @@ class ProcessMessageUseCase {
           if (chatwootAccount && chatwootAccount.access_token) {
             this.chatwootService.setAccessToken(chatwootAccount.access_token)
           }
+          
+          // Khởi tạo ChatwootService với account ID trước khi gửi fallback message
+          this.logger.info('Initializing ChatwootService for fallback message', {
+            conversationId: conversation.chatwootId,
+            accountId: conversation.metadata?.accountId || 1,
+            conversation_id: conversation.id
+          })
+          
+          await this.chatwootService.initializeWithAccountId(conversation.metadata?.accountId || 1)
           
           await this.chatwootService.sendMessage(
             conversation.chatwootId,

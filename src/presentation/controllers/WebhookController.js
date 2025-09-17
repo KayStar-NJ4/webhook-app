@@ -91,7 +91,25 @@ class WebhookController {
     try {
       this.logger.info('Received Chatwoot webhook', { 
         event: req.body.event,
-        body: req.body 
+        body: req.body,
+        headers: req.headers,
+        method: req.method,
+        url: req.url
+      })
+
+      // Log detailed webhook payload for debugging
+      this.logger.info('Webhook payload details', {
+        event: req.body.event,
+        hasMessage: !!req.body.id,
+        hasConversation: !!req.body.conversation,
+        hasSender: !!req.body.sender,
+        hasAccount: !!req.body.account,
+        messageId: req.body.id,
+        conversationId: req.body.conversation?.id,
+        senderId: req.body.sender?.id,
+        accountId: req.body.account?.id,
+        content: req.body.content?.substring(0, 100),
+        fullPayload: req.body
       })
 
       const result = await this.messageBrokerService.handleChatwootWebhook(req.body)
@@ -105,12 +123,25 @@ class WebhookController {
       this.logger.error('Chatwoot webhook error', {
         error: error.message,
         stack: error.stack,
-        body: req.body
+        body: req.body,
+        response: error.response?.data,
+        status: error.response?.status,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        hostname: error.hostname,
+        port: error.port,
+        path: error.path,
+        method: error.method,
+        headers: error.config?.headers,
+        url: error.config?.url,
+        conversation_id: req.body.conversation?.id
       })
 
       res.status(500).json({
         success: false,
-        error: error.message
+        error: error.message,
+        timestamp: new Date().toISOString()
       })
     }
   }

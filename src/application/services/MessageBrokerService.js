@@ -48,7 +48,18 @@ class MessageBrokerService {
         stack: error.stack,
         platform,
         messageData,
-        conversation_id: messageData.conversationId
+        conversation_id: messageData.conversationId,
+        response: error.response?.data,
+        status: error.response?.status,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        hostname: error.hostname,
+        port: error.port,
+        path: error.path,
+        method: error.method,
+        headers: error.config?.headers,
+        url: error.config?.url
       })
       throw error
     }

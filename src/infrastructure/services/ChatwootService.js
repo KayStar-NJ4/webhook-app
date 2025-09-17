@@ -21,6 +21,12 @@ class ChatwootService {
 
   async initializeWithAccountId(accountId) {
     try {
+      this.logger.info('Starting ChatwootService initialization', {
+        accountId,
+        currentBaseUrl: this.baseUrl,
+        currentAccountId: this.accountId
+      })
+      
       const { Pool } = require('pg')
       const pool = new Pool({
         host: process.env.DB_HOST,
@@ -41,15 +47,38 @@ class ChatwootService {
       this.accessToken = account.access_token
       this.accountId = account.account_id
 
+      this.logger.info('Chatwoot account data loaded', {
+        accountId: this.accountId,
+        baseUrl: this.baseUrl,
+        hasAccessToken: !!this.accessToken,
+        accessTokenPreview: this.accessToken ? this.accessToken.substring(0, 10) + '...' : 'null'
+      })
+
       this.inboxId = await this.getOrCreateApiInbox()
 
       this.logger.info('Chatwoot service initialized with account', {
         accountId: this.accountId,
         baseUrl: this.baseUrl,
-        accessToken: this.accessToken ? '***' : 'null'
+        accessToken: this.accessToken ? '***' : 'null',
+        inboxId: this.inboxId
       })
     } catch (error) {
-      this.logger.error('Failed to initialize Chatwoot service with account', { accountId, error: error.message })
+      this.logger.error('Failed to initialize Chatwoot service with account', { 
+        accountId, 
+        error: error.message,
+        stack: error.stack,
+        response: error.response?.data,
+        status: error.response?.status,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        hostname: error.hostname,
+        port: error.port,
+        path: error.path,
+        method: error.method,
+        headers: error.config?.headers,
+        url: error.config?.url
+      })
       throw error
     }
   }
@@ -116,6 +145,13 @@ class ChatwootService {
 
   async createOrUpdateConversation(conversation, message, chatwootAccountId = null) {
     try {
+      this.logger.info('Starting createOrUpdateConversation', {
+        conversationId: conversation.id,
+        messageId: message.id,
+        chatwootAccountId,
+        conversation_id: conversation.id
+      })
+      
       if (chatwootAccountId) {
         await this.initializeWithAccountId(chatwootAccountId)
       } else if (!this.baseUrl || !this.accessToken || !this.accountId) {
@@ -166,7 +202,24 @@ class ChatwootService {
 
       return chatwootConversation
     } catch (error) {
-      this.logger.error('Failed to create/update Chatwoot conversation', { error: error.message })
+      this.logger.error('Failed to create/update Chatwoot conversation', { 
+        error: error.message,
+        stack: error.stack,
+        response: error.response?.data,
+        status: error.response?.status,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        hostname: error.hostname,
+        port: error.port,
+        path: error.path,
+        method: error.method,
+        headers: error.config?.headers,
+        url: error.config?.url,
+        conversation_id: conversation.id,
+        messageId: message.id,
+        chatwootAccountId
+      })
       throw new Error(`Chatwoot API error: ${error.message}`)
     }
   }
@@ -236,16 +289,58 @@ class ChatwootService {
   }
 
   async sendMessage(conversationId, content, options = {}) {
-    const payload = {
-      content,
-      message_type: options.message_type || 'outgoing',
-      private: false,
-      content_type: 'text',
-      ...options
+    try {
+      this.logger.info('Sending message to Chatwoot', {
+        conversationId,
+        content: content.substring(0, 100),
+        messageType: options.message_type || 'outgoing',
+        conversation_id: conversationId
+      })
+      
+      const payload = {
+        content,
+        message_type: options.message_type || 'outgoing',
+        private: false,
+        content_type: 'text',
+        ...options
+      }
+      const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations/${conversationId}/messages`
+      
+      this.logger.info('Chatwoot send message request', {
+        url,
+        payload,
+        conversation_id: conversationId
+      })
+      
+      const response = await axios.post(url, payload, { headers: this.getHeaders() })
+      
+      this.logger.info('Message sent to Chatwoot successfully', {
+        conversationId,
+        responseId: response.data?.id,
+        conversation_id: conversationId
+      })
+      
+      return response.data
+    } catch (error) {
+      this.logger.error('Failed to send message to Chatwoot', {
+        error: error.message,
+        stack: error.stack,
+        response: error.response?.data,
+        status: error.response?.status,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        hostname: error.hostname,
+        port: error.port,
+        path: error.path,
+        method: error.method,
+        headers: error.config?.headers,
+        url: error.config?.url,
+        conversation_id: conversationId,
+        content: content.substring(0, 100)
+      })
+      throw error
     }
-    const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations/${conversationId}/messages`
-    const response = await axios.post(url, payload, { headers: this.getHeaders() })
-    return response.data
   }
 
   async getConversations(options = {}) {
