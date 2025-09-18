@@ -7,9 +7,14 @@ services:
     container_name: turbo-chatwoot-webhook-prod
     environment:
       - NODE_ENV=production
-      - REPOSITORY_TYPE=${REPOSITORY_TYPE:-redis}
+      - REPOSITORY_TYPE=${REPOSITORY_TYPE:-postgresql}
       - PORT=3000
       - HOSTNAME=0.0.0.0
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=chatwoot_webhook
+      - DB_USER=postgres
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
     env_file:
       - .env
     volumes:
