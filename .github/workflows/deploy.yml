@@ -91,77 +91,7 @@ jobs:
             # Pull latest code from repository
             git pull origin develop
             
-            # Create .env file (only essential variables)
-            cat > .env << 'EOF'
-            NODE_ENV=production
-            PORT=3000
-            HOSTNAME=0.0.0.0
-            LOG_LEVEL=info
-            JWT_SECRET=TurboChatwootWebhook2025SecretKeyForJWTTokenGeneration
-            DB_HOST=postgres
-            DB_PORT=5434
-            DB_NAME=chatwoot_webhook
-            DB_USER=postgres
-            DB_PASSWORD=Turbo@2025
-            DB_SSL=false
-            EOF
-            
-            # Create nginx config for subpath deployment
-            cat > nginx/nginx.conf << 'EOF'
-            events {
-                worker_connections 1024;
-            }
-            
-            http {
-                include       /etc/nginx/mime.types;
-                default_type  application/octet-stream;
-                
-                upstream webhook_app {
-                    server webhook-app:3000;
-                }
-                
-                server {
-                    listen 80;
-                    server_name _;
-                    
-                    # Health check endpoint
-                    location /webhook/health {
-                        return 200 "healthy\n";
-                        add_header Content-Type text/plain;
-                    }
-                    
-                    # Proxy all /webhook requests to the app
-                    location /webhook/ {
-                        proxy_pass http://webhook_app/;
-                        proxy_set_header Host $host;
-                        proxy_set_header X-Real-IP $remote_addr;
-                        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                        proxy_set_header X-Forwarded-Proto $scheme;
-                        proxy_set_header X-Forwarded-Prefix /webhook;
-                    }
-                    
-                    # Admin panel at /webhook/admin
-                    location /webhook/admin/ {
-                        proxy_pass http://webhook_app/admin/;
-                        proxy_set_header Host $host;
-                        proxy_set_header X-Real-IP $remote_addr;
-                        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                        proxy_set_header X-Forwarded-Proto $scheme;
-                        proxy_set_header X-Forwarded-Prefix /webhook;
-                    }
-                    
-                    # API endpoints at /webhook/api
-                    location /webhook/api/ {
-                        proxy_pass http://webhook_app/api/;
-                        proxy_set_header Host $host;
-                        proxy_set_header X-Real-IP $remote_addr;
-                        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                        proxy_set_header X-Forwarded-Proto $scheme;
-                        proxy_set_header X-Forwarded-Prefix /webhook;
-                    }
-                }
-            }
-            EOF
+            # Files are now pulled from repository
             
             # Login to GitHub Container Registry
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.DOCKER_REGISTRY }} -u ${{ github.actor }} --password-stdin
