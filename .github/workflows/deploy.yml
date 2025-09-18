@@ -107,9 +107,9 @@ jobs:
                   - ./backup:/app/backup:rw
                   - /etc/localtime:/etc/localtime:ro
                 restart: unless-stopped
-                 depends_on:
-                   - redis
-                   - postgres
+                depends_on:
+                  - redis
+                  - postgres
                 networks:
                   - webhook-network
                 healthcheck:
