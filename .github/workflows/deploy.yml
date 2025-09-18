@@ -1,4 +1,4 @@
-name: Deploy to Production
+name: Build and Push Docker Image
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
       - name: Build frontend
         run: yarn build:frontend
 
-  build-and-deploy:
+  build-and-push:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
@@ -75,233 +75,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to production server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: ${{ secrets.PROD_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          port: ${{ secrets.PROD_PORT || 22 }}
-          script: |
-            cd ~/workplace/vision_lab/webhook/staging
-            
-            # Create necessary directories
-            mkdir -p nginx/html nginx/ssl backup logs
-            
-            # Create docker-compose.prod.yml
-            cat > docker-compose.prod.yml << 'EOF'
-            
-            services:
-              webhook-app:
-                image: ghcr.io/kaystar-nj4/turbo-chatwoot-webhook:latest
-                container_name: turbo-chatwoot-webhook-prod
-                environment:
-                  - NODE_ENV=production
-                  - REPOSITORY_TYPE=redis
-                  - PORT=3000
-                  - HOSTNAME=0.0.0.0
-                env_file:
-                  - .env
-                volumes:
-                  - ./logs:/app/logs:rw
-                  - ./backup:/app/backup:rw
-                  - /etc/localtime:/etc/localtime:ro
-                restart: unless-stopped
-                depends_on:
-                  - redis
-                  - postgres
-                networks:
-                  - webhook-network
-                healthcheck:
-                  test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/webhook/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
-                  interval: 30s
-                  timeout: 10s
-                  retries: 3
-                  start_period: 40s
-            
-               # Nginx will be configured manually
-            
-              redis:
-                image: redis:7-alpine
-                container_name: webhook-redis-prod
-                ports:
-                  - "127.0.0.1:6381:6379"
-                volumes:
-                  - redis_data:/data
-                  - /etc/localtime:/etc/localtime:ro
-                restart: unless-stopped
-                command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-                networks:
-                  - webhook-network
-                healthcheck:
-                  test: ["CMD", "redis-cli", "ping"]
-                  interval: 10s
-                  timeout: 5s
-                  retries: 3
-            
-              postgres:
-                image: postgres:16-alpine
-                container_name: webhook-postgres-prod
-                ports:
-                  - "127.0.0.1:5432:5432"
-                environment:
-                  - POSTGRES_DB=chatwoot_webhook
-                  - POSTGRES_USER=postgres
-                  - POSTGRES_PASSWORD=Turbo@2025
-                volumes:
-                  - postgres_data:/var/lib/postgresql/data
-                  - /etc/localtime:/etc/localtime:ro
-                restart: unless-stopped
-                networks:
-                  - webhook-network
-                healthcheck:
-                  test: ["CMD-SHELL", "pg_isready -U postgres -d chatwoot_webhook"]
-                  interval: 10s
-                  timeout: 5s
-                  retries: 3
-            
-            volumes:
-              redis_data:
-                driver: local
-              postgres_data:
-                driver: local
-            
-            networks:
-              webhook-network:
-                driver: bridge
-            EOF
-            
-            # Create .env file (only essential variables)
-            cat > .env << 'EOF'
-            NODE_ENV=production
-            PORT=3000
-            HOSTNAME=0.0.0.0
-            LOG_LEVEL=info
-            JWT_SECRET=TurboChatwootWebhook2025SecretKeyForJWTTokenGeneration
-            DB_HOST=postgres
-            DB_PORT=5432
-            DB_NAME=chatwoot_webhook
-            DB_USER=postgres
-            DB_PASSWORD=Turbo@2025
-            DB_SSL=false
-            EOF
-            
-             # Nginx config will be set up manually
-            
-            # Login to GitHub Container Registry
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.DOCKER_REGISTRY }} -u ${{ github.actor }} --password-stdin
-            
-            # Pull latest Docker image (chứa source code)
-            docker pull ${{ env.DOCKER_REGISTRY }}/$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]'):latest
-            
-            # Stop existing containers
-            docker compose -f docker-compose.prod.yml down
-            
-            # Clean PostgreSQL data to resolve version conflict
-            echo "Cleaning PostgreSQL data directory..."
-            sudo rm -rf postgres_data
-            mkdir -p postgres_data
-            
-            # Clean Docker volumes
-            echo "Cleaning Docker volumes..."
-            docker volume rm webhook_postgres_data 2>/dev/null || true
-            docker volume rm webhook_redis_data 2>/dev/null || true
-            
-             # Start PostgreSQL first
-             echo "Starting PostgreSQL..."
-             docker compose -f docker-compose.prod.yml up -d postgres
-             
-             # Wait for PostgreSQL to be ready
-             echo "Waiting for PostgreSQL to be ready..."
-             sleep 30
-             
-             # Create database
-             echo "Creating database..."
-             docker exec webhook-postgres-prod psql -U postgres -c "CREATE DATABASE chatwoot_webhook;" 2>/dev/null || echo "Database might already exist"
-             
-             # Start all containers
-             echo "Starting all containers..."
-             docker compose -f docker-compose.prod.yml up -d
-            
-            # Wait a bit for containers to start
-            sleep 10
-            
-            # Check if containers started
-            echo "=== Checking if containers started ==="
-            docker compose -f docker-compose.prod.yml ps
-            
-            # Show logs if containers failed to start
-            echo "=== Container logs ==="
-            docker compose -f docker-compose.prod.yml logs --tail=20
-            
-            # Run database migrations
-            echo "Running database migrations..."
-            docker compose -f docker-compose.prod.yml exec -T webhook-app yarn migrate
-            
-            # Run database seeding if needed
-            echo "Running database seeding..."
-            docker compose -f docker-compose.prod.yml exec -T webhook-app yarn seed
-            
-            # Clean up old images
-            docker image prune -f
-            
-            # Show deployment status
-            docker compose -f docker-compose.prod.yml ps
-            
-            # Show logs for debugging
-            echo "=== Container Status ==="
-            docker ps -a
-            
-            echo "=== Docker Compose Logs ==="
-            docker compose -f docker-compose.prod.yml logs --tail=20
-
-      - name: Health check
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: ${{ secrets.PROD_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          port: ${{ secrets.PROD_PORT || 22 }}
-          script: |
-            cd ~/workplace/vision_lab/webhook/staging
-            
-            # Wait for services to be ready
-            echo "Waiting for services to start..."
-            sleep 60
-            
-            # Check container status
-            echo "=== Container Status ==="
-            docker ps -a
-            
-            # Check if nginx is running
-            echo "=== Checking Nginx ==="
-            docker compose -f docker-compose.prod.yml ps nginx
-            
-            # Check if webhook-app is running
-            echo "=== Checking Webhook App ==="
-            docker compose -f docker-compose.prod.yml ps webhook-app
-            
-            # Check health endpoint directly from container
-            echo "=== Health Check ==="
-            if docker exec turbo-chatwoot-webhook-prod curl -f http://localhost:3000/webhook/health; then
-              echo "✅ Deployment successful - Health check passed"
-            else
-              echo "❌ Deployment failed - Health check failed"
-              echo "=== Debug Info ==="
-              docker compose -f docker-compose.prod.yml logs --tail=50
-              exit 1
-            fi
-
   notify:
-    needs: [build-and-deploy]
+    needs: [build-and-push]
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Notify deployment status
+      - name: Notify build status
         if: always()
         run: |
-          if [ "${{ needs.build-and-deploy.result }}" == "success" ]; then
-            echo "🚀 Deployment to production completed successfully!"
+          if [ "${{ needs.build-and-push.result }}" == "success" ]; then
+            echo "🚀 Docker image built and pushed successfully!"
+            echo "📦 Image: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            echo "📋 Please follow the MANUAL_DEPLOYMENT_GUIDE.md for server setup"
           else
-            echo "❌ Deployment to production failed!"
+            echo "❌ Docker image build failed!"
           fi

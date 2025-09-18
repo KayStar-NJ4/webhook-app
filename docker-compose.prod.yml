@@ -1,20 +1,12 @@
-version: '3.8'
-
 services:
-  # Backend API
   webhook-app:
-    image: ghcr.io/${GITHUB_REPOSITORY:-thuanpt/turbo-chatwoot-webhook}:latest
+    image: ghcr.io/kaystar-nj4/turbo-chatwoot-webhook:latest
     container_name: turbo-chatwoot-webhook-prod
     environment:
       - NODE_ENV=production
-      - REPOSITORY_TYPE=${REPOSITORY_TYPE:-postgresql}
+      - REPOSITORY_TYPE=redis
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=chatwoot_webhook
-      - DB_USER=postgres
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
     env_file:
       - .env
     volumes:
@@ -23,10 +15,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
     depends_on:
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
+      - redis
+      - postgres
     networks:
       - webhook-network
     healthcheck:
@@ -35,160 +25,68 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '1.0'
-        reservations:
-          memory: 512M
-          cpus: '0.5'
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: webhook-nginx-prod
-    ports:
-      - "9090:80"
-      - "9091:443"
-    volumes:
-      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/html:/usr/share/nginx/html:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      - /etc/localtime:/etc/localtime:ro
-    depends_on:
-      webhook-app:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - webhook-network
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.5'
-        reservations:
-          memory: 128M
-          cpus: '0.25'
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: webhook-redis-prod
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:6381:6379"
     volumes:
       - redis_data:/data
       - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     networks:
       - webhook-network
     healthcheck:
-      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
-        reservations:
-          memory: 256M
-          cpus: '0.25'
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
-  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
     container_name: webhook-postgres-prod
     ports:
-      - "127.0.0.1:5434:5432"
+      - "127.0.0.1:5432:5432"
     environment:
-      - POSTGRES_DB=${DB_NAME:-chatwoot_webhook}
-      - POSTGRES_USER=${DB_USER:-postgres}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
-      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+      - POSTGRES_DB=chatwoot_webhook
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Turbo@2025
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
       - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
     networks:
       - webhook-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-chatwoot_webhook}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d chatwoot_webhook"]
       interval: 10s
       timeout: 5s
       retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '1.0'
-        reservations:
-          memory: 512M
-          cpus: '0.5'
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
-  # Monitoring with Prometheus (Optional)
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: webhook-prometheus
+  # Optional: Nginx reverse proxy
+  nginx:
+    image: nginx:stable-alpine
+    container_name: webhook-nginx-prod
     ports:
-      - "127.0.0.1:9090:9090"
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-      - /etc/localtime:/etc/localtime:ro
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
-    restart: unless-stopped
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - webhook-app
     networks:
       - webhook-network
-    profiles:
-      - monitoring
+    restart: unless-stopped
 
 volumes:
   redis_data:
     driver: local
   postgres_data:
     driver: local
-  prometheus_data:
-    driver: local
 
 networks:
   webhook-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16

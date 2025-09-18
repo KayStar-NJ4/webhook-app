@@ -12,6 +12,8 @@ Hệ thống quản lý webhook đa nền tảng với giao diện admin hiện 
 
 ## 🚀 Cài đặt nhanh
 
+### Development Setup
+
 ```bash
 # 1. Cài đặt dependencies
 yarn install
@@ -31,6 +33,21 @@ yarn dev
 
 # 6. Truy cập: http://localhost:3000/admin
 # Default: superadmin / password
+```
+
+### Production Deployment
+
+**Automated Build:** The GitHub Actions workflow automatically builds and pushes Docker images to GitHub Container Registry when you push to the `master` branch.
+
+**Manual Server Setup:** Follow the comprehensive guide in [MANUAL_DEPLOYMENT_GUIDE.md](./MANUAL_DEPLOYMENT_GUIDE.md) for server deployment.
+
+**Quick Setup Script:**
+```bash
+# Linux/macOS
+./scripts/setup-production.sh
+
+# Windows
+scripts\setup-production.bat
 ```
 
 ## 📁 Cấu trúc dự án
