@@ -53,7 +53,7 @@ ssh -i ~/.ssh/id_rsa root@103.142.137.118
 
 ### 2.2 Thêm các Secrets sau:
 
-#### **PROD_HOST** 
+#### **PROD_HOST**
 ```
 Name: PROD_HOST
 Value: 103.142.137.118
