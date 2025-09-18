@@ -157,7 +157,7 @@ jobs:
                   retries: 3
             
               postgres:
-                image: postgres:15-alpine
+                image: postgres:16-alpine
                 container_name: webhook-postgres-prod
                 ports:
                   - "127.0.0.1:5434:5432"
@@ -268,6 +268,16 @@ jobs:
             
             # Stop existing containers
             docker compose -f docker-compose.prod.yml down
+            
+            # Clean PostgreSQL data to resolve version conflict
+            echo "Cleaning PostgreSQL data directory..."
+            sudo rm -rf postgres_data
+            mkdir -p postgres_data
+            
+            # Clean Docker volumes
+            echo "Cleaning Docker volumes..."
+            docker volume rm webhook_postgres_data 2>/dev/null || true
+            docker volume rm webhook_redis_data 2>/dev/null || true
             
             # Start new containers
             echo "Starting containers..."
