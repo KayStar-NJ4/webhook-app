@@ -269,6 +269,7 @@ class ChatwootService {
       )
       contactId = contactResponse.data.payload?.contact?.id || contactResponse.data.payload?.id || contactResponse.data.id
     } catch (error) {
+      console.error('Error in Chatwoot service:', error)
       throw error
     }
 

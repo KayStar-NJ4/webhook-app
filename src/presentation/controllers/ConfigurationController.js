@@ -439,7 +439,7 @@ class ConfigurationController {
       let result = { success: false, message: 'Unknown configuration type' }
 
       switch (type) {
-        case 'chatwoot':
+        case 'chatwoot': {
           const chatwootAccount = await this.chatwootAccountRepository.findById(id)
           if (chatwootAccount) {
             // Test Chatwoot connection
@@ -448,8 +448,9 @@ class ConfigurationController {
             result = { success: false, message: 'Chatwoot account not found' }
           }
           break
+        }
 
-        case 'telegram':
+        case 'telegram': {
           const telegramBot = await this.telegramBotRepository.findById(id)
           if (telegramBot) {
             // Test Telegram connection
@@ -458,8 +459,9 @@ class ConfigurationController {
             result = { success: false, message: 'Telegram bot not found' }
           }
           break
+        }
 
-        case 'dify':
+        case 'dify': {
           const difyApp = await this.difyAppRepository.findById(id)
           if (difyApp) {
             // Test Dify connection
@@ -468,6 +470,7 @@ class ConfigurationController {
             result = { success: false, message: 'Dify app not found' }
           }
           break
+        }
 
         default:
           result = { success: false, message: 'Invalid configuration type' }
