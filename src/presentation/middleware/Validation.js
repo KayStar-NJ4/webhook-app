@@ -212,41 +212,6 @@ class Validation {
       isActive: Joi.boolean().optional()
     }),
 
-    // Webhook validation schemas
-    telegramWebhook: Joi.object({
-      update_id: Joi.number().required(),
-      message: Joi.object({
-        message_id: Joi.number().required(),
-        from: Joi.object({
-          id: Joi.number().required(),
-          is_bot: Joi.boolean().default(false),
-          first_name: Joi.string().optional(),
-          last_name: Joi.string().optional(),
-          username: Joi.string().optional(),
-          language_code: Joi.string().optional()
-        }).required(),
-        chat: Joi.object({
-          id: Joi.number().required(),
-          type: Joi.string().valid('private', 'group', 'supergroup', 'channel').required(),
-          title: Joi.string().optional(),
-          username: Joi.string().optional(),
-          description: Joi.string().optional()
-        }).required(),
-        date: Joi.number().required(),
-        text: Joi.string().optional()
-      }).optional(),
-      callback_query: Joi.object().optional()
-    }).unknown(true), // Allow additional fields
-
-    chatwootWebhook: Joi.object({
-      event: Joi.string().required(),
-      id: Joi.number().optional(),
-      conversation: Joi.object().optional(),
-      message: Joi.object().optional(),
-      sender: Joi.object().optional(),
-      account: Joi.object().optional(),
-      account_id: Joi.number().optional()
-    }).unknown(true) // Allow additional fields
   }
 
   /**
