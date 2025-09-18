@@ -80,10 +80,13 @@ jobs:
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
+          password: ${{ secrets.PROD_PASSWORD }}
           port: ${{ secrets.PROD_PORT || 22 }}
           script: |
             cd ~/workplace/vision_lab/webhook/staging
+            
+            # Login to GitHub Container Registry
+            echo "${{ secrets.PROD_TOKEN }}" | docker login ${{ env.DOCKER_REGISTRY }} -u ${{ github.actor }} --password-stdin
             
             # Pull latest Docker image (chứa source code)
             docker pull ${{ env.DOCKER_REGISTRY }}/$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]'):latest
@@ -108,7 +111,7 @@ jobs:
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
+          password: ${{ secrets.PROD_PASSWORD }}
           port: ${{ secrets.PROD_PORT || 22 }}
           script: |
             cd ~/workplace/vision_lab/webhook/staging
