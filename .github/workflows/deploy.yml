@@ -119,21 +119,7 @@ jobs:
                   retries: 3
                   start_period: 40s
             
-              nginx:
-                image: nginx:alpine
-                container_name: webhook-nginx-prod
-                ports:
-                  - "9090:80"
-                  - "9443:443"
-                volumes:
-                  - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-                  - ./nginx/html:/usr/share/nginx/html:ro
-                  - /etc/localtime:/etc/localtime:ro
-                 depends_on:
-                   - webhook-app
-                restart: unless-stopped
-                networks:
-                  - webhook-network
+               # Nginx will be configured manually
             
               redis:
                 image: redis:7-alpine
@@ -200,122 +186,7 @@ jobs:
             DB_SSL=false
             EOF
             
-             # Create nginx config for subpath deployment
-             cat > nginx/nginx.conf << 'EOF'
-             events {
-                 worker_connections 1024;
-             }
-             
-             http {
-                 include       /etc/nginx/mime.types;
-                 default_type  application/octet-stream;
-                 
-                 upstream webhook_app {
-                     server webhook-app:3000;
-                 }
-                 
-                 upstream chatwoot {
-                     server staging-rails-1:3000;
-                 }
-                 
-                 server {
-                     listen 80;
-                     server_name chatwoot.turbo.vn;
-                     
-                     # Health check endpoint
-                     location /health {
-                         proxy_pass http://webhook_app/webhook/health;
-                         proxy_set_header Host $host;
-                         proxy_set_header X-Real-IP $remote_addr;
-                         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                         proxy_set_header X-Forwarded-Proto $scheme;
-                     }
-                     
-                     # Webhook endpoints - main path
-                     location /webhook/ {
-                         proxy_pass http://webhook_app;
-                         proxy_set_header Host $host;
-                         proxy_set_header X-Real-IP $remote_addr;
-                         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                         proxy_set_header X-Forwarded-Proto $scheme;
-                         proxy_set_header Connection "";
-                         proxy_http_version 1.1;
-                     }
-                     
-                     # API endpoints - proxy to webhook backend
-                     location /api/ {
-                         proxy_pass http://webhook_app;
-                         proxy_set_header Host $host;
-                         proxy_set_header X-Real-IP $remote_addr;
-                         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                         proxy_set_header X-Forwarded-Proto $scheme;
-                         proxy_set_header Connection "";
-                         proxy_http_version 1.1;
-                     }
-                     
-                     # Admin panel static files
-                     location /admin/ {
-                         proxy_pass http://webhook_app;
-                         proxy_set_header Host $host;
-                         proxy_set_header X-Real-IP $remote_addr;
-                         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                         proxy_set_header X-Forwarded-Proto $scheme;
-                         proxy_set_header Connection "";
-                         proxy_http_version 1.1;
-                     }
-                     
-                     # Root location - proxy to Chatwoot
-                     location / {
-                         proxy_pass http://staging-rails-1:3000;  # Chatwoot container
-                         proxy_set_header Host $host;
-                         proxy_set_header X-Real-IP $remote_addr;
-                         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                         proxy_set_header X-Forwarded-Proto $scheme;
-                         proxy_http_version 1.1;
-                         proxy_set_header Upgrade $http_upgrade;
-                         proxy_set_header Connection "upgrade";
-                         proxy_redirect off;
-                         client_max_body_size 0;
-                         proxy_buffering off;
-                     }
-                 }
-                 
-                 # -------------------------
-                 # HTTP -> HTTPS Redirect cho Chatwoot
-                 # -------------------------
-                 server {
-                     listen 80;
-                     listen 443 ssl;
-                     
-                     server_name chatwoot.turbo.vn;
-                     
-                     # --- SSL certificate ---
-                     ssl_certificate     /etc/nginx/conf.d/ssl/fullchain.pem;
-                     ssl_certificate_key /etc/nginx/conf.d/ssl/privkey.pem;
-                     ssl_protocols TLSv1.2 TLSv1.3;
-                     ssl_ciphers HIGH:!aNULL:!MD5;
-                     
-                     # --- Chatwoot at root / ---
-                     location / {
-                         proxy_pass http://staging-rails-1:3000;  # Chatwoot container
-                         proxy_set_header Host $host;
-                         proxy_set_header X-Real-IP $remote_addr;
-                         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                         proxy_set_header X-Forwarded-Proto $scheme;
-                         proxy_http_version 1.1;
-                         proxy_set_header Upgrade $http_upgrade;
-                         proxy_set_header Connection "upgrade";
-                         proxy_redirect off;
-                         client_max_body_size 0;
-                         proxy_buffering off;
-                     }
-                     
-                     # --- Optional logging ---
-                     access_log /var/log/nginx/dify-access.log;
-                     error_log  /var/log/nginx/dify-error.log;
-                 }
-             }
-             EOF
+             # Nginx config will be set up manually
             
             # Login to GitHub Container Registry
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.DOCKER_REGISTRY }} -u ${{ github.actor }} --password-stdin
@@ -406,9 +277,9 @@ jobs:
             echo "=== Checking Webhook App ==="
             docker compose -f docker-compose.prod.yml ps webhook-app
             
-            # Check health endpoint
+            # Check health endpoint directly from container
             echo "=== Health Check ==="
-            if curl -f http://localhost:9090/webhook/health; then
+            if docker exec turbo-chatwoot-webhook-prod curl -f http://localhost:3000/webhook/health; then
               echo "✅ Deployment successful - Health check passed"
             else
               echo "❌ Deployment failed - Health check failed"
