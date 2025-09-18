@@ -215,10 +215,9 @@ jobs:
              echo "Waiting for PostgreSQL to be ready..."
              sleep 30
              
-             # Create database and run initialization
-             echo "Creating database and running initialization..."
+             # Create database
+             echo "Creating database..."
              docker exec webhook-postgres-prod psql -U postgres -c "CREATE DATABASE chatwoot_webhook;" 2>/dev/null || echo "Database might already exist"
-             docker exec -i webhook-postgres-prod psql -U postgres -d chatwoot_webhook < scripts/init-db.sql
              
              # Start all containers
              echo "Starting all containers..."
@@ -236,7 +235,12 @@ jobs:
             docker compose -f docker-compose.prod.yml logs --tail=20
             
             # Run database migrations
+            echo "Running database migrations..."
             docker compose -f docker-compose.prod.yml exec -T webhook-app yarn migrate
+            
+            # Run database seeding if needed
+            echo "Running database seeding..."
+            docker compose -f docker-compose.prod.yml exec -T webhook-app yarn seed
             
             # Clean up old images
             docker image prune -f
