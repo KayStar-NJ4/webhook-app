@@ -35,7 +35,7 @@ cd /tmp/webhook
 chmod +x scripts/setup-server.sh
 ./scripts/setup-server.sh
 ```
- 
+
 ### 2. Setup Project Directory
 
 ```bash
