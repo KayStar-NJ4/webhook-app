@@ -107,11 +107,9 @@ jobs:
                   - ./backup:/app/backup:rw
                   - /etc/localtime:/etc/localtime:ro
                 restart: unless-stopped
-                depends_on:
-                  redis:
-                    condition: service_healthy
-                  postgres:
-                    condition: service_healthy
+                 depends_on:
+                   - redis
+                   - postgres
                 networks:
                   - webhook-network
                 healthcheck:
@@ -131,9 +129,8 @@ jobs:
                   - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
                   - ./nginx/html:/usr/share/nginx/html:ro
                   - /etc/localtime:/etc/localtime:ro
-                depends_on:
-                  webhook-app:
-                    condition: service_healthy
+                 depends_on:
+                   - webhook-app
                 restart: unless-stopped
                 networks:
                   - webhook-network
@@ -339,9 +336,22 @@ jobs:
             docker volume rm webhook_postgres_data 2>/dev/null || true
             docker volume rm webhook_redis_data 2>/dev/null || true
             
-            # Start new containers
-            echo "Starting containers..."
-            docker compose -f docker-compose.prod.yml up -d
+             # Start PostgreSQL first
+             echo "Starting PostgreSQL..."
+             docker compose -f docker-compose.prod.yml up -d postgres
+             
+             # Wait for PostgreSQL to be ready
+             echo "Waiting for PostgreSQL to be ready..."
+             sleep 30
+             
+             # Create database and run initialization
+             echo "Creating database and running initialization..."
+             docker exec webhook-postgres-prod psql -U postgres -c "CREATE DATABASE chatwoot_webhook;" 2>/dev/null || echo "Database might already exist"
+             docker exec -i webhook-postgres-prod psql -U postgres -d chatwoot_webhook < scripts/init-db.sql
+             
+             # Start all containers
+             echo "Starting all containers..."
+             docker compose -f docker-compose.prod.yml up -d
             
             # Wait a bit for containers to start
             sleep 10
