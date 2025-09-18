@@ -86,22 +86,22 @@ jobs:
             cd ~/workplace/vision_lab/webhook/staging
             
             # Pull latest Docker image (chứa source code)
-            docker pull ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            docker pull ${{ env.DOCKER_REGISTRY }}/$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]'):latest
             
             # Stop existing containers
-            docker-compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml down
             
             # Start new containers
-            docker-compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml up -d
             
             # Run database migrations
-            docker-compose -f docker-compose.prod.yml exec -T webhook-app yarn migrate
+            docker compose -f docker-compose.prod.yml exec -T webhook-app yarn migrate
             
             # Clean up old images
             docker image prune -f
             
             # Show deployment status
-            docker-compose -f docker-compose.prod.yml ps
+            docker compose -f docker-compose.prod.yml ps
 
       - name: Health check
         uses: appleboy/ssh-action@v1.0.3
@@ -126,7 +126,7 @@ jobs:
             
             # Show logs for debugging if needed
             echo "=== Recent logs ==="
-            docker-compose -f docker-compose.prod.yml logs --tail=50
+            docker compose -f docker-compose.prod.yml logs --tail=50
 
   notify:
     needs: [build-and-deploy]
