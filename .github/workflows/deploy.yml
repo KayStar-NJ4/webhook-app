@@ -195,7 +195,7 @@ jobs:
             PORT=3000
             HOSTNAME=0.0.0.0
             LOG_LEVEL=info
-            JWT_SECRET=your_jwt_secret_here_minimum_32_characters
+            JWT_SECRET=TurboChatwootWebhook2025SecretKeyForJWTTokenGeneration
             DB_HOST=postgres
             DB_PORT=5432
             DB_NAME=chatwoot_webhook
@@ -258,6 +258,13 @@ jobs:
             
             # Show deployment status
             docker compose -f docker-compose.prod.yml ps
+            
+            # Show logs for debugging
+            echo "=== Container Status ==="
+            docker ps -a
+            
+            echo "=== Docker Compose Logs ==="
+            docker compose -f docker-compose.prod.yml logs --tail=20
 
       - name: Health check
         uses: appleboy/ssh-action@v1.0.3
@@ -270,19 +277,31 @@ jobs:
             cd ~/workplace/vision_lab/webhook/staging
             
             # Wait for services to be ready
-            sleep 30
+            echo "Waiting for services to start..."
+            sleep 60
+            
+            # Check container status
+            echo "=== Container Status ==="
+            docker ps -a
+            
+            # Check if nginx is running
+            echo "=== Checking Nginx ==="
+            docker compose -f docker-compose.prod.yml ps nginx
+            
+            # Check if webhook-app is running
+            echo "=== Checking Webhook App ==="
+            docker compose -f docker-compose.prod.yml ps webhook-app
             
             # Check health endpoint
+            echo "=== Health Check ==="
             if curl -f http://localhost:7070/health; then
               echo "✅ Deployment successful - Health check passed"
             else
               echo "❌ Deployment failed - Health check failed"
+              echo "=== Debug Info ==="
+              docker compose -f docker-compose.prod.yml logs --tail=50
               exit 1
             fi
-            
-            # Show logs for debugging if needed
-            echo "=== Recent logs ==="
-            docker compose -f docker-compose.prod.yml logs --tail=50
 
   notify:
     needs: [build-and-deploy]
