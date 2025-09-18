@@ -80,7 +80,7 @@ jobs:
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
-          password: ${{ secrets.PROD_PASSWORD }}
+          key: ${{ secrets.PROD_SSH_KEY }}
           port: ${{ secrets.PROD_PORT || 22 }}
           script: |
             cd ~/workplace/vision_lab/webhook/staging
@@ -111,7 +111,7 @@ jobs:
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
-          password: ${{ secrets.PROD_PASSWORD }}
+          key: ${{ secrets.PROD_SSH_KEY }}
           port: ${{ secrets.PROD_PORT || 22 }}
           script: |
             cd ~/workplace/vision_lab/webhook/staging
