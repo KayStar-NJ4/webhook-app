@@ -228,10 +228,32 @@ class ProcessMessageUseCase {
       chatId: message.metadata?.chatId
     })
 
-    let conversation = await this.conversationRepository.findByPlatformChatId(
-      message.platform,
-      message.conversationId
-    )
+    let conversation = null
+
+    // For Chatwoot messages, first try to find by chatwootId
+    if (message.platform === 'chatwoot' && message.metadata?.conversationId) {
+      this.logger.info('Looking up conversation by Chatwoot ID', {
+        chatwootId: message.metadata.conversationId
+      })
+      conversation = await this.conversationRepository.findByChatwootId(message.metadata.conversationId)
+      
+      if (conversation) {
+        this.logger.info('Found conversation by Chatwoot ID', {
+          conversationId: conversation.id,
+          chatwootId: conversation.chatwootId,
+          platform: conversation.platform,
+          chatId: conversation.chatId
+        })
+      }
+    }
+
+    // If not found by chatwootId, try the standard platform lookup
+    if (!conversation) {
+      conversation = await this.conversationRepository.findByPlatformChatId(
+        message.platform,
+        message.conversationId
+      )
+    }
 
     if (!conversation) {
       this.logger.info('No existing conversation found, creating new one', {
