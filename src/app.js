@@ -171,7 +171,9 @@ class Application {
         errorHandler,
         metrics,
         securityMiddleware,
-        metricsMiddleware
+        metricsMiddleware,
+        webhookController,
+        validation
       })
 
       // Application initialized successfully

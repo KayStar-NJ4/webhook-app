@@ -62,8 +62,10 @@ class ProcessMessageUseCase {
       return true
     }
 
-    // 5. CHATWOOT: Check sender ID = 1 (bot user ID in Chatwoot)
-    if (messageData.metadata?.senderId === 1 || messageData.metadata?.senderId === '1') {
+    // 5. CHATWOOT: Only check sender ID = 1 if it's an outgoing message
+    // For incoming messages, sender ID = 1 could be a real user
+    if ((messageData.metadata?.senderId === 1 || messageData.metadata?.senderId === '1') &&
+        (messageData.metadata?.isOutgoing === true || messageData.metadata?.messageType === 'outgoing')) {
       return true
     }
 

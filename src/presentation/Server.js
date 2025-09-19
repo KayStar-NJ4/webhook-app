@@ -4,6 +4,7 @@ const helmet = require('helmet')
 const morgan = require('morgan')
 const SecurityMiddleware = require('./middleware/SecurityMiddleware')
 const MetricsMiddleware = require('./middleware/MetricsMiddleware')
+const Validation = require('./middleware/Validation')
 
 /**
  * Server - Presentation layer
@@ -21,7 +22,9 @@ class Server {
     errorHandler,
     metrics,
     securityMiddleware,
-    metricsMiddleware
+    metricsMiddleware,
+    webhookController,
+    validation
   }) {
     this.config = config
     this.logger = logger
@@ -34,6 +37,8 @@ class Server {
     this.metrics = metrics
     this.securityMiddleware = securityMiddleware
     this.metricsMiddleware = metricsMiddleware
+    this.webhookController = webhookController
+    this.validation = validation
     this.app = express()
     this.port = config.get('server.port')
     this.host = config.get('server.host')
@@ -153,6 +158,15 @@ class Server {
         }
       })
     })
+
+    // Root POST endpoint for Chatwoot webhooks (backward compatibility)
+    this.app.post('/',
+      this.securityMiddleware.getWebhookRateLimiter(),
+      this.validation.validate(Validation.schemas.chatwootWebhook, 'body'),
+      this.errorHandler.asyncHandler(
+        (req, res) => this.webhookController.handleChatwootWebhook(req, res)
+      )
+    )
   }
 
   /**

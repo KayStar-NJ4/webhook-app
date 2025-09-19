@@ -97,7 +97,7 @@ class Validation {
     chatwootWebhook: Joi.object({
       // Chatwoot webhook có nhiều loại event khác nhau
       event: Joi.string().optional(),
-      id: Joi.number().optional(),
+      id: Joi.alternatives().try(Joi.number(), Joi.string()).optional(),
 
       // Message object (có thể có hoặc không tùy event)
       message: Joi.object({
@@ -119,11 +119,30 @@ class Validation {
         inbox_id: Joi.number().required()
       }).optional(),
 
+      // Contact object (for contact_updated events)
+      name: Joi.string().optional(),
+      email: Joi.string().email().allow(null).optional(),
+      avatar: Joi.string().uri().optional(),
+      blocked: Joi.boolean().optional(),
+      thumbnail: Joi.string().uri().optional(),
+      identifier: Joi.string().allow(null).optional(),
+      phone_number: Joi.string().allow(null).optional(),
+      custom_attributes: Joi.object().optional(),
+      changed_attributes: Joi.array().optional(),
+      additional_attributes: Joi.object().optional(),
+
       // Các field khác có thể có
       user: Joi.object().optional(),
       account: Joi.object().optional(),
       inbox: Joi.object().optional(),
-      sender: Joi.object().optional()
+      sender: Joi.object().optional(),
+      content: Joi.string().optional(),
+      private: Joi.boolean().optional(),
+      source_id: Joi.string().optional(),
+      created_at: Joi.string().optional(),
+      content_type: Joi.string().optional(),
+      message_type: Joi.string().optional(),
+      content_attributes: Joi.object().optional()
     }).unknown(true), // Cho phép các field khác
 
     webhookSetup: Joi.object({

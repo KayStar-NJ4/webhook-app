@@ -353,7 +353,7 @@ class MessageBrokerService {
           name: sender.name,
           username: sender.additional_attributes?.username,
           language_code: sender.additional_attributes?.language_code,
-          is_bot: message.message_type === 'outgoing' // Bot messages are outgoing
+          is_bot: message.message_type === 'outgoing' || sender.type === 'agent_bot' // Bot messages are outgoing or from agent_bot
         }
       }
     }
