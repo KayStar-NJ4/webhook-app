@@ -3,7 +3,7 @@ services:
     image: ghcr.io/kaystar-nj4/turbo-chatwoot-webhook:latest
     container_name: turbo-chatwoot-webhook
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - NODE_ENV=production
       - DB_HOST=webhook-postgres
@@ -19,12 +19,10 @@ services:
       - ./logs:/app/logs
     restart: unless-stopped
     depends_on:
-      webhook-postgres:
-        condition: service_healthy
-      webhook-redis:
-        condition: service_healthy
+      - webhook-postgres
+      - webhook-redis
     networks:
-      - webhook-network
+      - docker_default
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/webhook/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
       interval: 30s
@@ -33,10 +31,8 @@ services:
       start_period: 40s
 
   webhook-postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: webhook-postgres
-    ports:
-      - "5432:5432"
     environment:
       - POSTGRES_DB=${DB_NAME:-chatwoot_webhook}
       - POSTGRES_USER=${DB_USER:-postgres}
@@ -47,18 +43,10 @@ services:
     restart: unless-stopped
     networks:
       - docker_default
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-chatwoot_webhook}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
 
   webhook-redis:
     image: redis:7-alpine
     container_name: webhook-redis
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped
