@@ -1,19 +1,4 @@
-FROM node:20-alpine AS base
-
-# Install dependencies and build
-RUN apk add --no-cache libc6-compat dumb-init
-WORKDIR /app
-
-# Copy package files and install dependencies
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile --silent
-
-# Copy source and build frontend
-COPY . .
-RUN yarn build:frontend
-
-# Production stage
-FROM node:20-alpine AS production
+FROM node:20-alpine
 
 # Install runtime dependencies
 RUN apk add --no-cache libc6-compat dumb-init
@@ -29,10 +14,9 @@ COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile --production --silent && \
     yarn cache clean
 
-# Copy built application
-COPY --from=base --chown=nodejs:nodejs /app/src ./src
-COPY --from=base --chown=nodejs:nodejs /app/scripts ./scripts
-COPY --from=base --chown=nodejs:nodejs /app/nginx/html ./nginx/html
+# Copy application source
+COPY --chown=nodejs:nodejs src ./src
+COPY --chown=nodejs:nodejs scripts ./scripts
 
 # Create logs directory
 RUN mkdir -p logs && chown -R nodejs:nodejs logs

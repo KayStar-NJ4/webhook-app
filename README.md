@@ -11,35 +11,84 @@ Hệ thống webhook đa nền tảng kết nối Chatwoot với Telegram và Di
 
 ## 🚀 Cài đặt nhanh
 
-```bash
-# 1. Cài đặt dependencies
-yarn install
-
-# 2. Cấu hình database
-cp .env.example .env
-# Chỉnh sửa .env với thông tin database
-
-# 3. Setup database
-yarn setup
-
-# 4. Khởi động
-yarn dev
-
-# 5. Truy cập: http://localhost:3000/admin
-# Default: superadmin / password
-```
-
-## 🐳 Docker
+### 1. Cài đặt Docker
 
 ```bash
-# Build và chạy
-yarn docker:prod
+# Ubuntu/Debian
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo apt install docker-compose-plugin
 
-# Hoặc build image
-yarn docker:build
+# CentOS/RHEL
+sudo yum install -y yum-utils
+sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+sudo yum install -y docker-ce docker-ce-cli containerd.io
+sudo systemctl start docker
+sudo systemctl enable docker
 ```
 
-## 🔧 Cấu hình
+### 2. Download files
+
+```bash
+# Tạo thư mục
+mkdir turbo-chatwoot-webhook
+cd turbo-chatwoot-webhook
+
+# Download .env template
+wget -O .env https://raw.githubusercontent.com/[username]/turbo-chatwoot-webhook/master/.env.example
+
+# Download docker-compose
+wget -O docker-compose.yaml https://raw.githubusercontent.com/[username]/turbo-chatwoot-webhook/master/docker-compose.yml
+```
+
+### 3. Cấu hình
+
+```bash
+# Chỉnh sửa .env
+nano .env
+```
+
+**Cấu hình cần thiết:**
+```env
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=chatwoot_webhook
+DB_USER=postgres
+DB_PASSWORD=your_password
+
+# JWT
+JWT_SECRET=your_jwt_secret
+
+# Redis
+REDIS_PASSWORD=your_redis_password
+
+# Server
+NODE_ENV=production
+PORT=3000
+```
+
+### 4. Deploy
+
+```bash
+# Pull image
+docker pull ghcr.io/[username]/turbo-chatwoot-webhook:latest
+
+# Start services
+docker-compose up -d
+
+# Setup database
+docker-compose exec webhook-app yarn migrate
+docker-compose exec webhook-app yarn seed
+```
+
+### 5. Truy cập
+
+- **Main app**: http://localhost:3000
+- **Admin panel**: http://localhost:3000/admin
+- **Default login**: superadmin / password
+
+## 🔧 Cấu hình hệ thống
 
 1. **Chatwoot Account** - URL, token, account ID
 2. **Telegram Bots** - Token từ @BotFather  
@@ -60,14 +109,19 @@ yarn docker:build
 - **Registry**: GitHub Container Registry (ghcr.io)
 - **Manual Deploy**: Pull image và deploy thủ công
 
-## 📝 Scripts
+## 🔄 Upgrade
 
-- `yarn start` - Production server
-- `yarn dev` - Development với nodemon
-- `yarn lint` - ESLint
-- `yarn docker:build` - Build Docker image
-- `yarn docker:prod` - Chạy production với Docker
-- `yarn setup` - Setup database
+```bash
+# Pull latest image
+docker pull ghcr.io/[username]/turbo-chatwoot-webhook:latest
+
+# Restart services
+docker-compose down
+docker-compose up -d
+
+# Update database (if needed)
+docker-compose exec webhook-app yarn migrate
+```
 
 ## 🔒 Bảo mật
 
@@ -75,6 +129,23 @@ yarn docker:build
 - Role-based permissions
 - Input validation
 - SQL injection prevention
+
+## 📝 Development
+
+```bash
+# Clone repository
+git clone https://github.com/[username]/turbo-chatwoot-webhook.git
+cd turbo-chatwoot-webhook
+
+# Install dependencies
+yarn install
+
+# Setup database
+yarn setup
+
+# Start development
+yarn dev
+```
 
 ---
 

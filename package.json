@@ -8,10 +8,6 @@
     "dev": "nodemon src/app.js",
     "lint": "eslint src/ scripts/ --ext .js",
     "lint:fix": "eslint src/ scripts/ --ext .js --fix",
-    "build:frontend": "node scripts/build-frontend.js",
-    "docker:build": "docker build -t turbo-chatwoot-webhook:latest .",
-    "docker:dev": "docker-compose up --build",
-    "docker:prod": "yarn build:frontend && docker-compose up --build -d",
     "migrate": "node scripts/migrate.js",
     "seed": "node scripts/seed.js",
     "setup": "yarn migrate && yarn seed"
