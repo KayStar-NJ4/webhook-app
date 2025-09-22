@@ -35,10 +35,10 @@ mkdir turbo-chatwoot-webhook
 cd turbo-chatwoot-webhook
 
 # Download .env template
-wget -O .env https://raw.githubusercontent.com/[username]/turbo-chatwoot-webhook/master/.env.example
+wget -O .env https://raw.githubusercontent.com/KayStar-NJ4/turbo-chatwoot-webhook/master/.env.example
 
 # Download docker-compose
-wget -O docker-compose.yaml https://raw.githubusercontent.com/[username]/turbo-chatwoot-webhook/master/docker-compose.yml
+wget -O docker-compose.yaml https://raw.githubusercontent.com/KayStar-NJ4/turbo-chatwoot-webhook/master/docker-compose.yml
 ```
 
 ### 3. Cấu hình
@@ -72,7 +72,7 @@ PORT=3000
 
 ```bash
 # Pull image
-docker pull ghcr.io/[username]/turbo-chatwoot-webhook:latest
+docker pull ghcr.io/KayStar-NJ4/turbo-chatwoot-webhook:latest
 
 # Start services
 docker-compose up -d
@@ -113,7 +113,7 @@ docker-compose exec webhook-app yarn seed
 
 ```bash
 # Pull latest image
-docker pull ghcr.io/[username]/turbo-chatwoot-webhook:latest
+docker pull ghcr.io/KayStar-NJ4/turbo-chatwoot-webhook:latest
 
 # Restart services
 docker-compose down
@@ -134,7 +134,7 @@ docker-compose exec webhook-app yarn migrate
 
 ```bash
 # Clone repository
-git clone https://github.com/[username]/turbo-chatwoot-webhook.git
+git clone https://github.com/KayStar-NJ4/turbo-chatwoot-webhook.git
 cd turbo-chatwoot-webhook
 
 # Install dependencies
