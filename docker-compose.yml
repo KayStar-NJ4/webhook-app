@@ -6,6 +6,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: production
     container_name: turbo-chatwoot-webhook
     environment:
       - NODE_ENV=production
