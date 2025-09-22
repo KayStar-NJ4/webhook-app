@@ -1,172 +1,154 @@
-# 🚀 Turbo Chatwoot Webhook - Admin Panel
+# 🚀 Turbo Chatwoot Webhook
 
-Hệ thống quản lý webhook đa nền tảng với giao diện admin hiện đại, hỗ trợ đa ngôn ngữ và phân quyền chi tiết.
+Webhook trung gian kết nối các platform với Chatwoot và Dify AI.
 
-## ✨ Tính năng chính
+## ✨ Tính năng
 
-- **1 Chatwoot Account** kết nối với **nhiều Telegram Bots** và **Dify Apps**
-- **Hệ thống phân quyền** 4 cấp độ (Super Admin, Admin, Operator, Viewer)
-- **Đa ngôn ngữ** (Tiếng Việt, English)
-- **Component system** chuẩn với List/Form pattern
-- **Responsive design** và UI/UX hiện đại
+- **Multi-platform**: Telegram, Chatwoot, Dify AI
+- **Admin Panel**: Giao diện quản lý hiện đại
+- **Real-time**: Xử lý webhook real-time
+- **Scalable**: Kiến trúc microservice
 
-## 🚀 Cài đặt nhanh
+## 🚀 Cài đặt
 
-### Development Setup
+### Development
 
 ```bash
-# 1. Cài đặt dependencies
+# 1. Clone repository
+git clone https://github.com/KayStar-NJ4/turbo-chatwoot-webhook.git
+cd turbo-chatwoot-webhook
+
+# 2. Cài đặt dependencies
 yarn install
 
-# 2. Cấu hình database
+# 3. Cấu hình environment
 cp .env.example .env
 # Chỉnh sửa .env với thông tin database
 
-# 3. Chạy migration (tạo bảng)
-yarn migrate
+# 4. Setup database
+yarn setup
 
-# 4. Chạy seed (tạo dữ liệu mặc định)
-yarn seed
-
-# 5. Khởi động
+# 5. Chạy development
 yarn dev
 
 # 6. Truy cập: http://localhost:3000/admin
-# Default: superadmin / password
 ```
 
-### Production Deployment
-
-**Automated Build:** The GitHub Actions workflow automatically builds and pushes Docker images to GitHub Container Registry when you push to the `master` branch.
-
-**Manual Server Setup:** Follow the comprehensive guide in [MANUAL_DEPLOYMENT_GUIDE.md](./MANUAL_DEPLOYMENT_GUIDE.md) for server deployment.
-
-**Quick Setup Script:**
-```bash
-# Linux/macOS
-./scripts/setup-production.sh
-
-# Windows
-scripts\setup-production.bat
-```
-
-## 📁 Cấu trúc dự án
-
-```
-public/admin/src/
-├── components/shared/     # Component dùng chung
-├── layouts/              # AdminLayout, AuthLayout
-├── modules/              # Modules nghiệp vụ (List/Form)
-│   ├── users/
-│   ├── chatwoot/
-│   ├── telegram/
-│   └── dify/
-├── pages/                # Trang chính
-└── i18n/locales/         # Đa ngôn ngữ
-```
-
-## 🔧 Cấu hình hệ thống
-
-1. **Tạo Chatwoot Account** - Nhập URL, token, account ID
-2. **Tạo Telegram Bots** - Nhập token từ @BotFather
-3. **Tạo Dify Apps** - Nhập API key và app ID
-4. **Cấu hình Mapping** - Kết nối các services với nhau
-
-## 🎨 Component System
-
-```vue
-<!-- Sử dụng component -->
-<FormInputTextComponent
-  v-model="value"
-  label="Tên"
-  :required="true"
-  :error="errors.name"
-/>
-
-<FormButtonComponent
-  @click="handleClick"
-  variant="primary"
-  icon="fas fa-save"
-  text="Lưu"
-  :loading="isLoading"
-/>
-```
-
-## 🌐 Đa ngôn ngữ
-
-```vue
-<template>
-  <h1>{{ $t('dashboard.title') }}</h1>
-  <p>{{ $t('common.loading') }}</p>
-</template>
-```
-
-## 🔒 Bảo mật
-
-- JWT authentication
-- Role-based permissions
-- Input validation
-- SQL injection prevention
-- XSS protection
-
-## 📊 API Endpoints
-
-- **Auth**: `/api/admin/auth/*`
-- **Users**: `/api/admin/users`
-- **Chatwoot**: `/api/admin/chatwoot-accounts`
-- **Telegram**: `/api/admin/telegram-bots`
-- **Dify**: `/api/admin/dify-apps`
-- **Config**: `/api/admin/configurations/*`
-
-## 🚀 Deployment
+### Production
 
 ```bash
-# Docker
-docker build -t turbo-chatwoot-webhook .
-docker run -p 3000:3000 turbo-chatwoot-webhook
+# 1. Download environment file
+wget -O .env https://raw.githubusercontent.com/KayStar-NJ4/turbo-chatwoot-webhook/master/.env.example
 
-# Environment
+# 2. Download docker-compose
+wget -O docker-compose.yml https://raw.githubusercontent.com/KayStar-NJ4/turbo-chatwoot-webhook/master/docker-compose.yml
+
+# 3. Chỉnh sửa .env với thông tin production
+
+# 4. Pull latest Docker image
+docker pull ghcr.io/kaystar-nj4/turbo-chatwoot-webhook:latest
+
+# 5. Chạy với Docker
+docker-compose up -d
+
+# 6. Truy cập: http://your-domain.com/admin
+```
+
+## 🔄 CI/CD
+
+**Automated Build:** GitHub Actions tự động build và push Docker images khi push vào `master` branch.
+
+**Manual Deployment:** Bạn tự deploy bằng cách pull image và chạy docker-compose.
+
+```bash
+# Pull latest image
+docker pull ghcr.io/kaystar-nj4/turbo-chatwoot-webhook:latest
+
+# Deploy
+docker-compose up -d
+```
+
+## 📋 Scripts
+
+```bash
+yarn start          # Production start
+yarn dev            # Development với nodemon
+yarn lint           # Lint code
+yarn lint:fix       # Fix lint errors
+yarn migrate        # Chạy database migrations
+yarn seed           # Seed dữ liệu mặc định
+yarn setup          # Setup database (migrate + seed)
+yarn docker:build   # Build và chạy Docker
+yarn docker:down    # Stop Docker containers
+yarn docker:logs    # Xem Docker logs
+```
+
+## 🏗️ Kiến trúc
+
+```
+src/
+├── app.js                 # Entry point
+├── domain/               # Domain entities
+├── application/          # Use cases
+├── infrastructure/       # External services
+└── presentation/         # Controllers, routes, middleware
+
+public/
+└── admin/               # Frontend admin panel
+    ├── index.html
+    ├── src/
+    └── js/
+```
+
+## 🔧 Environment Variables
+
+```bash
+# Database
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=chatwoot_webhook
 DB_USER=postgres
 DB_PASSWORD=password
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# JWT
 JWT_SECRET=your-secret-key
+
+# Services
+CHATWOOT_ACCESS_TOKEN=your-token
+TELEGRAM_BOT_TOKEN=your-bot-token
+DIFY_API_KEY=your-api-key
 ```
 
-## 🎯 Development
+## 📡 API Endpoints
 
-### Thêm module mới:
-1. Tạo `modules/[module]/[Module]ListComponent.vue`
-2. Tạo `modules/[module]/[Module]FormComponent.vue`
-3. Tạo `pages/[Module]Page.vue`
-4. Thêm route và translations
+- `GET /` - API information
+- `GET /webhook/health` - Health check
+- `POST /webhook/telegram` - Telegram webhook
+- `POST /webhook/chatwoot` - Chatwoot webhook
+- `GET /api/status` - Server status
+- `GET /admin` - Admin panel
 
-### Thêm component mới:
-1. Tạo trong `components/shared/`
-2. Export trong `components/index.js`
-3. Sử dụng trong modules
+## 🐳 Docker
 
-## 📝 Changelog
+```bash
+# Build image
+docker build -t turbo-chatwoot-webhook .
 
-### v1.0.0 - 2024-01-11
-- ✅ Gộp migration thành file init duy nhất
-- ✅ Tạo component system chuẩn
-- ✅ Refactor modules với List/Form pattern
-- ✅ Thêm hệ thống đa ngôn ngữ
-- ✅ Tạo layouts AdminLayout và AuthLayout
-- ✅ Hoàn thiện phân quyền và bảo mật
+# Run container
+docker run -p 3000:3000 --env-file .env turbo-chatwoot-webhook
 
----
+# Docker Compose
+docker-compose up -d
+```
 
-**Made with ❤️ by Turbo Team**
+## 📝 License
 
-Development (Local)
-Bước 1: Cài đặt ngrok để expose local server
+MIT License - see [LICENSE](LICENSE) file for details.
 
-# Cài đặt ngrok
-yarn global add ngrok
-# hoặc download từ https://ngrok.com/
+## 👨‍💻 Author
 
-# Chạy ngrok (trong terminal khác)
-ngrok http 3000
+**ThuanPT** - [GitHub](https://github.com/KayStar-NJ4)

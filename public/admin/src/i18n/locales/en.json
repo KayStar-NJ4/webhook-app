@@ -10,8 +10,7 @@
     "telegramBots": "Telegram Bots",
     "difyApps": "Dify Apps",
     "platformMappings": "Platform Mappings",
-    "configurations": "Configurations",
-    "logs": "Logs"
+    "configurations": "Configurations"
   },
   "auth": {
     "login": "Login",
@@ -281,18 +280,5 @@
     "deleteConfirm": "Are you sure you want to delete this platform mapping?"
   },
   "pages": {
-    "logs": {
-      "title": "System Logs",
-      "description": "View and manage system logs",
-      "level": "Level",
-      "component": "Component",
-      "componentPlaceholder": "Enter component name...",
-      "message": "Message",
-      "timestamp": "Timestamp",
-      "details": "Details",
-      "stack": "Stack trace",
-      "metadata": "Metadata",
-      "loadError": "Error loading logs"
-    }
   }
 }

@@ -10,7 +10,6 @@ window.Services = {
   UserService: window.UserService,
   RoleService: window.RoleService,
   ConfigurationService: window.ConfigurationService,
-  LogsService: window.LogsService,
   BaseService: window.BaseService,
   ServiceFactory: window.ServiceFactory
 };

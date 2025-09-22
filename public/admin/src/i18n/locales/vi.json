@@ -10,8 +10,7 @@
     "telegramBots": "Bot Telegram",
     "difyApps": "Ứng dụng Dify",
     "platformMappings": "Liên kết Platform",
-    "configurations": "Cấu hình",
-    "logs": "Nhật ký"
+    "configurations": "Cấu hình"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -283,18 +282,5 @@
     "deleteConfirm": "Bạn có chắc chắn muốn xóa liên kết platform này?"
   },
   "pages": {
-    "logs": {
-      "title": "Nhật ký hệ thống",
-      "description": "Xem và quản lý nhật ký hệ thống",
-      "level": "Mức độ",
-      "component": "Thành phần",
-      "componentPlaceholder": "Nhập tên thành phần...",
-      "message": "Thông báo",
-      "timestamp": "Thời gian",
-      "details": "Chi tiết",
-      "stack": "Stack trace",
-      "metadata": "Metadata",
-      "loadError": "Lỗi khi tải nhật ký"
-    }
   }
 }

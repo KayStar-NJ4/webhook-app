@@ -19,7 +19,6 @@ class ServiceFactory {
       chatwoot: window.ChatwootService,
       dify: window.DifyService,
       configuration: window.ConfigurationService,
-      logs: window.LogsService
     }
   }
 
@@ -64,9 +63,6 @@ class ServiceFactory {
     return this.get('configuration')
   }
 
-  get logs() {
-    return this.get('logs')
-  }
 }
 
 // Export to global window object

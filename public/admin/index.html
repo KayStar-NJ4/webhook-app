@@ -150,7 +150,6 @@
     <script src="/admin/src/services/RoleService.js"></script>
     <script src="/admin/src/services/PermissionService.js"></script>
     <script src="/admin/src/services/ConfigurationService.js"></script>
-    <script src="/admin/src/services/LogsService.js"></script>
     <script src="/admin/src/services/index.js"></script>
     
     <!-- Utils -->
@@ -242,7 +241,7 @@
         
         // Load Vue components
         let SidebarComponent, HeaderComponent, AdminLayoutComponent, ListComponent, PageComponent;
-        let DashboardPageComponent, UsersPageComponent, UserListComponent, UserFormComponent, UserPasswordFormComponent, UserPermissionsComponent, UserRolesComponent, SystemConfigurationComponent, LogsPageComponent;
+        let DashboardPageComponent, UsersPageComponent, UserListComponent, UserFormComponent, UserPasswordFormComponent, UserPermissionsComponent, UserRolesComponent, SystemConfigurationComponent;
         let RolePageComponent, RoleListComponent, RoleFormComponent, RolePermissionsComponent;
         let ChatwootAccountListComponent, ChatwootAccountFormComponent, ChatwootAccountsPageComponent, DifyAppsListComponent, DifyAppFormComponent, DifyAppsPageComponent, TelegramBotsListComponent;
         let PlatformMappingListComponent, PlatformMappingFormComponent, PlatformMappingsPageComponent;
@@ -310,8 +309,6 @@
             SystemConfigurationComponent = await loadVueComponent('/admin/src/modules/configurations/SystemConfigurationComponent.vue');
             window.SystemConfigurationComponent = SystemConfigurationComponent;
             
-            LogsPageComponent = await loadVueComponent('/admin/src/modules/logs/LogsPageComponent.vue');
-            window.LogsPageComponent = LogsPageComponent;
             
             // Load Chatwoot components
             ChatwootAccountListComponent = await loadVueComponent('/admin/src/modules/chatwoot/ChatwootAccountListComponent.vue');
@@ -459,13 +456,6 @@
                 component: window.AdminLayoutComponent,
                 children: [
                     { path: '', component: window.SystemConfigurationComponent }
-                ]
-            },
-            {
-                path: '/admin/logs',
-                component: window.AdminLayoutComponent,
-                children: [
-                    { path: '', component: window.LogsPageComponent }
                 ]
             },
             { path: '/', redirect: '/admin/login' },
@@ -707,7 +697,6 @@
             if (window.RoleFormComponent) app.component('RoleFormComponent', window.RoleFormComponent);
             if (window.RolePermissionsComponent) app.component('RolePermissionsComponent', window.RolePermissionsComponent);
             if (window.SystemConfigurationComponent) app.component('SystemConfigurationComponent', window.SystemConfigurationComponent);
-            if (window.LogsPageComponent) app.component('LogsPageComponent', window.LogsPageComponent);
             if (window.ChatwootAccountListComponent) app.component('ChatwootAccountListComponent', window.ChatwootAccountListComponent);
             if (window.ChatwootAccountFormComponent) app.component('ChatwootAccountFormComponent', window.ChatwootAccountFormComponent);
             if (window.ChatwootAccountsPageComponent) app.component('ChatwootAccountsPageComponent', window.ChatwootAccountsPageComponent);
@@ -745,7 +734,7 @@
                 const allServicesLoaded = window.BaseService && window.AuthService && 
                                         window.TelegramService && window.ChatwootService && 
                                         window.DifyService && window.UserService && 
-                                        window.ConfigurationService && window.LogsService;
+                                        window.ConfigurationService;
                 
                 if (!allServicesLoaded) {
                     console.error('❌ Not all services loaded, cannot mount app');

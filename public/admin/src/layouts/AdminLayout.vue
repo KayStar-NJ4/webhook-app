@@ -63,12 +63,6 @@
             </router-link>
           </li>
           
-          <li v-if="hasPermission('system', 'logs')" class="nav-item">
-            <router-link to="/admin/logs" class="nav-link">
-              <i class="fas fa-file-alt"></i>
-              <span v-if="!sidebarCollapsed">{{ $t('nav.logs') }}</span>
-            </router-link>
-          </li>
         </ul>
       </nav>
     </aside>

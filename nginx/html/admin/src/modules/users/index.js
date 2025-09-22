@@ -1,5 +1,0 @@
-export { default as UserListComponent } from './UserListComponent.vue'
-export { default as UserFormComponent } from './UserFormComponent.vue'
-export { default as UserPasswordFormComponent } from './UserPasswordFormComponent.vue'
-export { default as UserPermissionsComponent } from './UserPermissionsComponent.vue'
-export { default as UserRolesComponent } from './UserRolesComponent.vue'

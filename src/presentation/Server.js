@@ -117,8 +117,20 @@ class Server {
       this.app.use(this.adminRoutes.getRouter())
     }
 
-    // Serve static files
-    this.app.use(express.static('public'))
+    // Serve static files with correct MIME types
+    this.app.use(express.static('public', {
+      setHeaders: (res, path) => {
+        if (path.endsWith('.js')) {
+          res.setHeader('Content-Type', 'text/javascript; charset=utf-8')
+        } else if (path.endsWith('.vue')) {
+          res.setHeader('Content-Type', 'text/html; charset=utf-8')
+        } else if (path.endsWith('.css')) {
+          res.setHeader('Content-Type', 'text/css; charset=utf-8')
+        } else if (path.endsWith('.json')) {
+          res.setHeader('Content-Type', 'application/json; charset=utf-8')
+        }
+      }
+    }))
 
     // Serve node_modules for admin panel
     this.app.use('/node_modules', express.static('node_modules'))

@@ -128,15 +128,6 @@
                   <p>Cấu hình</p>
                 </a>
               </li>
-              <li class="nav-item" v-if="hasPermission('system', 'logs')">
-                <a href="#" 
-                   class="nav-link" 
-                   :class="{ active: activeRoute === '/admin/logs' }"
-                   @click="navigate('/admin/logs')">
-                  <i class="nav-icon fas fa-file-alt"></i>
-                  <p>Logs hệ thống</p>
-                </a>
-              </li>
             </ul>
           </li>
         </ul>
@@ -190,7 +181,7 @@ export default {
       } else if (menuKey === 'social-network') {
         return this.activeRoute.includes('/admin/telegram-bots');
       } else if (menuKey === 'system-settings') {
-        return this.activeRoute.includes('/admin/users') || this.activeRoute.includes('/admin/roles') || this.activeRoute.includes('/admin/configurations') || this.activeRoute.includes('/admin/logs');
+        return this.activeRoute.includes('/admin/users') || this.activeRoute.includes('/admin/roles') || this.activeRoute.includes('/admin/configurations');
       }
       return false;
     },
@@ -208,8 +199,7 @@ export default {
     hasAnySystemSettingsPermission() {
       return this.hasPermission('users', 'read') || 
              this.hasPermission('roles', 'read') || 
-             this.hasPermission('configurations', 'read') || 
-             this.hasPermission('system', 'logs')
+             this.hasPermission('configurations', 'read')
     }
   },
   mounted() {
@@ -219,7 +209,7 @@ export default {
       this.openMenus.add('data-source');
     } else if (currentRoute.includes('/admin/telegram-bots')) {
       this.openMenus.add('social-network');
-    } else if (currentRoute.includes('/admin/users') || currentRoute.includes('/admin/roles') || currentRoute.includes('/admin/configurations') || currentRoute.includes('/admin/logs')) {
+    } else if (currentRoute.includes('/admin/users') || currentRoute.includes('/admin/roles') || currentRoute.includes('/admin/configurations')) {
       this.openMenus.add('system-settings');
     }
   }
