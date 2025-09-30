@@ -1,3 +1,6 @@
-export { default as ChatwootAccountListComponent } from './ChatwootAccountListComponent.vue'
-export { default as ChatwootAccountFormComponent } from './ChatwootAccountFormComponent.vue'
-export { default as ChatwootAccountsPageComponent } from './ChatwootAccountsPageComponent.vue'
+// CommonJS export for compatibility
+module.exports = {
+  ChatwootAccountListComponent: require('./ChatwootAccountListComponent.vue').default,
+  ChatwootAccountFormComponent: require('./ChatwootAccountFormComponent.vue').default,
+  ChatwootAccountsPageComponent: require('./ChatwootAccountsPageComponent.vue').default
+}

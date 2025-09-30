@@ -67,10 +67,10 @@
                                         <input 
                                             type="checkbox" 
                                             class="form-check-input" 
-                                            id="isActive"
+                                            :id="activeId"
                                             v-model="form.isActive"
                                         >
-                                        <label class="form-check-label" for="isActive">
+                                        <label class="form-check-label" :for="activeId">
                                             Kích hoạt bot
                                         </label>
                                     </div>
@@ -118,6 +118,11 @@ export default {
             }
         }
     },
+  computed: {
+    activeId() {
+      return `telegramBotActive_${this.object_info?.id || 'new'}`
+    }
+  },
     mounted() {
         this.setupModalEvents();
         this.loadFormData();

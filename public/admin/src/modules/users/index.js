@@ -1,5 +1,9 @@
-export { default as UserListComponent } from './UserListComponent.vue'
-export { default as UserFormComponent } from './UserFormComponent.vue'
-export { default as UserPasswordFormComponent } from './UserPasswordFormComponent.vue'
-export { default as UserPermissionsComponent } from './UserPermissionsComponent.vue'
-export { default as UserRolesComponent } from './UserRolesComponent.vue'
+// CommonJS export for compatibility
+module.exports = {
+  UserListComponent: require('./UserListComponent.vue').default,
+  UserFormComponent: require('./UserFormComponent.vue').default,
+  UserPasswordFormComponent: require('./UserPasswordFormComponent.vue').default,
+  UserPermissionsComponent: require('./UserPermissionsComponent.vue').default,
+  UserRolesComponent: require('./UserRolesComponent.vue').default,
+  UsersPageComponent: require('./UsersPageComponent.vue').default
+}

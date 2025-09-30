@@ -73,10 +73,10 @@
                                         <input 
                                             type="checkbox" 
                                             class="form-check-input" 
-                                            id="isActive"
+                                            id="difyAppActive"
                                             v-model="form.isActive"
                                         >
-                                        <label class="form-check-label" for="isActive">
+                                        <label class="form-check-label" for="difyAppActive">
                                             Kích hoạt app
                                         </label>
                                     </div>

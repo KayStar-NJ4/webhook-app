@@ -7,6 +7,7 @@ window.Services = {
   TelegramService: window.TelegramService,
   ChatwootService: window.ChatwootService,
   DifyService: window.DifyService,
+  PlatformMappingService: window.PlatformMappingService,
   UserService: window.UserService,
   RoleService: window.RoleService,
   ConfigurationService: window.ConfigurationService,

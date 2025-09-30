@@ -7,19 +7,61 @@ require('dotenv').config()
 
 class SeedManager {
   constructor () {
-    this.pool = new Pool({
+    this.targetDbConfig = {
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || 5432,
       database: process.env.DB_NAME || 'turbo_chatwoot_webhook',
       user: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASSWORD || 'password'
-    })
+    }
+
+    this.controlDbConfig = {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
+      database: process.env.DB_SUPER_DB || 'postgres',
+      user: process.env.DB_SUPER_USER || process.env.DB_USER || 'postgres',
+      password: process.env.DB_SUPER_PASSWORD || process.env.DB_PASSWORD || 'password'
+    }
+
+    this.pool = new Pool(this.targetDbConfig)
 
     this.seedsDir = path.join(__dirname, 'seed')
   }
 
+  async ensureDatabaseExists () {
+    const dbName = this.targetDbConfig.database
+    const controlPool = new Pool(this.controlDbConfig)
+    let controlClient
+    try {
+      controlClient = await controlPool.connect()
+      const existsResult = await controlClient.query(
+        'SELECT 1 FROM pg_database WHERE datname = $1',
+        [dbName]
+      )
+      if (existsResult.rowCount === 0) {
+        console.log(`🛠️  Creating database: ${dbName}`)
+        await controlClient.query(`CREATE DATABASE "${dbName}" TEMPLATE template0`)
+        const targetUser = this.targetDbConfig.user
+        if (targetUser) {
+          try {
+            await controlClient.query(`GRANT ALL PRIVILEGES ON DATABASE "${dbName}" TO "${targetUser}"`)
+          } catch (err) {
+            if (process.env.DEBUG) console.warn(`GRANT on database "${dbName}" to "${targetUser}" failed: ${err.message}`)
+          }
+        }
+        console.log(`✅ Database created: ${dbName}`)
+      }
+    } catch (error) {
+      console.error('❌ Failed ensuring database exists:', error.message)
+    } finally {
+      if (controlClient) controlClient.release()
+      await controlPool.end()
+    }
+  }
+
   async connect () {
     try {
+      await this.ensureDatabaseExists()
       this.client = await this.pool.connect()
       console.log('✅ Connected to database')
     } catch (error) {

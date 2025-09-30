@@ -54,9 +54,7 @@ class LogRepository {
       const result = await this.pool.query(query, values)
       return result.rows[0].id
     } catch (error) {
-      console.error('Failed to log message:', error.message)
-      // Fallback to console if database logging fails
-      // Log entry created
+      // Suppress console output; optionally could buffer or ignore
     }
   }
 
@@ -86,9 +84,7 @@ class LogRepository {
       const result = await this.pool.query(query, values)
       return result.rows[0].id
     } catch (dbError) {
-      console.error('Failed to log error to database:', dbError.message)
-      // Fallback to console if database logging fails
-      console.error('Original error:', error.message, error.stack)
+      // Suppress console output
     }
   }
 

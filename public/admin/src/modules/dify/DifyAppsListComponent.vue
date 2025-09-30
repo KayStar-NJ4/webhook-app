@@ -53,7 +53,7 @@
                 <table class="table table-bordered table-hover">
                   <thead class="table-header">
                   <tr>
-                    <th style="width: 120px;"></th>
+                    <th style="width: 80px;"></th>
                     <th class="text-center text-nowrap">Tên App</th>
                     <th class="text-center text-nowrap">API URL</th>
                     <th class="text-center text-nowrap">App ID</th>

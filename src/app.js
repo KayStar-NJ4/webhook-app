@@ -178,7 +178,11 @@ class Application {
 
       // Application initialized successfully
     } catch (error) {
-      console.error('Failed to initialize application:', error)
+      // Silent failure path uses process exit without console noise
+      try {
+        const logger = this.serviceRegistry?.get?.('logger') || { error: () => {} }
+        logger.error('Failed to initialize application', { error: error.message, stack: error.stack })
+      } catch (_) { void 0 }
       process.exit(1)
     }
   }
@@ -192,7 +196,10 @@ class Application {
       await this.initialize()
       await this.server.start()
     } catch (error) {
-      console.error('Failed to start application:', error)
+      try {
+        const logger = this.serviceRegistry?.get?.('logger') || { error: () => {} }
+        logger.error('Failed to start application', { error: error.message, stack: error.stack })
+      } catch (_) { void 0 }
       process.exit(1)
     }
   }
@@ -207,7 +214,10 @@ class Application {
         await this.server.stop()
       }
     } catch (error) {
-      console.error('Failed to stop application:', error)
+      try {
+        const logger = this.serviceRegistry?.get?.('logger') || { error: () => {} }
+        logger.error('Failed to stop application', { error: error.message, stack: error.stack })
+      } catch (_) { void 0 }
     }
   }
 }

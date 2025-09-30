@@ -81,7 +81,7 @@ export default {
         }
       } catch (error) {
         if (this.$toast && this.$toast.error) {
-          this.$toast.error(this.$t('errors.networkError'))
+          this.$toast.error('Lỗi kết nối mạng')
         }
       } finally {
         this.isLoading = false
@@ -132,7 +132,7 @@ export default {
           this.loadUsers()
           if (this.$toast && this.$toast.success) {
             this.$toast.success(
-              this.isEdit ? this.$t('users.messages.updated') : this.$t('users.messages.created')
+              this.isEdit ? 'Cập nhật người dùng thành công' : 'Tạo người dùng thành công'
             )
           }
         } else {
@@ -143,7 +143,7 @@ export default {
           this.errors = error.response.data.errors
         } else {
           if (this.$toast && this.$toast.error) {
-            this.$toast.error(this.$t('errors.networkError'))
+            this.$toast.error('Lỗi kết nối mạng')
           }
         }
       } finally {

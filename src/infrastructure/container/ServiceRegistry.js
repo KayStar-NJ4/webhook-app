@@ -51,10 +51,11 @@ class ServiceRegistry {
     // Log repository
     this.container.register('logRepository', () => new LogRepository(), true)
 
-    // Logger with database logging
+    // Logger with database logging and config access (for debug_mode)
     this.container.register('logger', (container) => {
       const logRepository = container.get('logRepository')
-      return new Logger('Application', logRepository)
+      const config = container.get('config')
+      return new Logger('Application', logRepository, config)
     }, true)
 
     // Repositories - PostgreSQL only

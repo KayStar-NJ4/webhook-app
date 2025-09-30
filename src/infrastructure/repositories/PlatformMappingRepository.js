@@ -17,10 +17,8 @@ class PlatformMappingRepository extends BaseRepository {
    */
   getSelectableFields () {
     return [
-      'id', 'platform_type', 'platform_id', 'telegram_bot_id', 'chatwoot_account_id', 'dify_app_id',
-      'enable_telegram_to_chatwoot', 'enable_telegram_to_dify',
-      'enable_chatwoot_to_telegram', 'enable_dify_to_chatwoot', 'enable_dify_to_telegram',
-      'auto_connect_telegram_chatwoot', 'auto_connect_telegram_dify',
+      'id',
+      'source_platform', 'source_id', 'target_platform', 'target_id', 'enable_bidirectional',
       'is_active', 'created_by', 'created_at', 'updated_at'
     ]
   }
@@ -33,34 +31,20 @@ class PlatformMappingRepository extends BaseRepository {
    */
   async create (mappingData, user = null) {
     const {
-      platformType = 'telegram',
-      platformId,
-      telegramBotId,
-      chatwootAccountId,
-      difyAppId,
-      enableTelegramToChatwoot = true,
-      enableTelegramToDify = true,
-      enableChatwootToTelegram = true,
-      enableDifyToChatwoot = true,
-      enableDifyToTelegram = true,
-      autoConnectTelegramChatwoot = true,
-      autoConnectTelegramDify = true,
+      sourcePlatform,
+      sourceId,
+      targetPlatform,
+      targetId,
+      enableBidirectional = false,
       isActive = true
     } = mappingData
 
     const data = {
-      platform_type: platformType,
-      platform_id: platformId,
-      telegram_bot_id: platformType === 'telegram' ? telegramBotId : null,
-      chatwoot_account_id: chatwootAccountId,
-      dify_app_id: difyAppId,
-      enable_telegram_to_chatwoot: enableTelegramToChatwoot,
-      enable_telegram_to_dify: enableTelegramToDify,
-      enable_chatwoot_to_telegram: enableChatwootToTelegram,
-      enable_dify_to_chatwoot: enableDifyToChatwoot,
-      enable_dify_to_telegram: enableDifyToTelegram,
-      auto_connect_telegram_chatwoot: autoConnectTelegramChatwoot,
-      auto_connect_telegram_dify: autoConnectTelegramDify,
+      source_platform: sourcePlatform,
+      source_id: sourceId,
+      target_platform: targetPlatform,
+      target_id: targetId,
+      enable_bidirectional: enableBidirectional,
       is_active: isActive
     }
 
@@ -239,17 +223,18 @@ class PlatformMappingRepository extends BaseRepository {
   async getAllWithDetails (filters = {}) {
     try {
       let query = `
-        SELECT pm.*, 
-               tb.name as telegram_bot_name,
-               tb.bot_token as telegram_bot_token,
-               ca.name as chatwoot_account_name,
-               ca.base_url as chatwoot_base_url,
-               da.name as dify_app_name,
-               da.api_url as dify_api_url
+        SELECT pm.*,
+          CASE pm.source_platform
+            WHEN 'telegram' THEN (SELECT name FROM telegram_bots WHERE id = pm.source_id)
+            WHEN 'chatwoot' THEN (SELECT name FROM chatwoot_accounts WHERE id = pm.source_id)
+            WHEN 'dify' THEN (SELECT name FROM dify_apps WHERE id = pm.source_id)
+          END AS source_name,
+          CASE pm.target_platform
+            WHEN 'telegram' THEN (SELECT name FROM telegram_bots WHERE id = pm.target_id)
+            WHEN 'chatwoot' THEN (SELECT name FROM chatwoot_accounts WHERE id = pm.target_id)
+            WHEN 'dify' THEN (SELECT name FROM dify_apps WHERE id = pm.target_id)
+          END AS target_name
         FROM platform_mappings pm
-        LEFT JOIN telegram_bots tb ON pm.telegram_bot_id = tb.id
-        LEFT JOIN chatwoot_accounts ca ON pm.chatwoot_account_id = ca.id
-        LEFT JOIN dify_apps da ON pm.dify_app_id = da.id
         WHERE 1=1
       `
 
@@ -262,22 +247,26 @@ class PlatformMappingRepository extends BaseRepository {
         params.push(filters.isActive)
       }
 
-      if (filters.telegramBotId) {
+      // Optional generic filters (v2)
+      if (filters.sourcePlatform) {
         paramCount++
-        query += ` AND pm.telegram_bot_id = $${paramCount}`
-        params.push(filters.telegramBotId)
+        query += ` AND pm.source_platform = $${paramCount}`
+        params.push(filters.sourcePlatform)
       }
-
-      if (filters.chatwootAccountId) {
+      if (filters.sourceId) {
         paramCount++
-        query += ` AND pm.chatwoot_account_id = $${paramCount}`
-        params.push(filters.chatwootAccountId)
+        query += ` AND pm.source_id = $${paramCount}`
+        params.push(filters.sourceId)
       }
-
-      if (filters.difyAppId) {
+      if (filters.targetPlatform) {
         paramCount++
-        query += ` AND pm.dify_app_id = $${paramCount}`
-        params.push(filters.difyAppId)
+        query += ` AND pm.target_platform = $${paramCount}`
+        params.push(filters.targetPlatform)
+      }
+      if (filters.targetId) {
+        paramCount++
+        query += ` AND pm.target_id = $${paramCount}`
+        params.push(filters.targetId)
       }
 
       query += ' ORDER BY pm.created_at DESC'
@@ -301,6 +290,51 @@ class PlatformMappingRepository extends BaseRepository {
         error: error.message,
         filters
       })
+      throw error
+    }
+  }
+
+  /**
+   * Find routes for a platform and id using generic source/target columns
+   * Returns active mappings where (source=platform,id) OR (target=platform,id and bidirectional)
+   * @param {string} platform - telegram|chatwoot|dify
+   * @param {number} platformId - id
+   */
+  async findRoutesFor (platform, platformId) {
+    try {
+      const query = `
+        SELECT pm.*
+        FROM platform_mappings pm
+        WHERE pm.is_active = TRUE AND (
+          (pm.source_platform = $1 AND pm.source_id = $2)
+          OR
+          (pm.target_platform = $1 AND pm.target_id = $2 AND pm.enable_bidirectional = TRUE)
+        )
+        ORDER BY pm.created_at DESC
+      `
+      const result = await this.db.query(query, [platform, platformId])
+      return result.rows
+    } catch (error) {
+      this.logger.error('Failed to find routes for platform', { error: error.message, platform, platformId })
+      throw error
+    }
+  }
+
+  /**
+   * Check if mapping exists by exact source/target pair
+   */
+  async existsByPair (sourcePlatform, sourceId, targetPlatform, targetId) {
+    try {
+      const query = `
+        SELECT 1 FROM platform_mappings
+        WHERE source_platform = $1 AND source_id = $2
+          AND target_platform = $3 AND target_id = $4
+        LIMIT 1
+      `
+      const result = await this.db.query(query, [sourcePlatform, sourceId, targetPlatform, targetId])
+      return result.rows.length > 0
+    } catch (error) {
+      this.logger.error('Failed to check mapping existence by pair', { error: error.message, sourcePlatform, sourceId, targetPlatform, targetId })
       throw error
     }
   }

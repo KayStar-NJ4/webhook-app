@@ -21,11 +21,14 @@ class PlatformMappingController {
       const mappingData = req.body
       const user = req.user
 
-      // Validate required fields
-      if (!mappingData.telegramBotId || !mappingData.chatwootAccountId || !mappingData.difyAppId) {
+      // Support new generic model: source/target + optional bidirectional
+      const hasGeneric = mappingData.sourcePlatform && mappingData.sourceId && mappingData.targetPlatform && mappingData.targetId
+      const hasLegacy = mappingData.telegramBotId && mappingData.chatwootAccountId && mappingData.difyAppId
+
+      if (!hasGeneric && !hasLegacy) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: telegramBotId, chatwootAccountId, difyAppId'
+          error: 'Missing required fields: either (sourcePlatform, sourceId, targetPlatform, targetId) or (telegramBotId, chatwootAccountId, difyAppId)'
         })
       }
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-dialog modal-lg" role="document">
+  <div class="modal-dialog modal-xl">
     <div class="modal-content" :class="{'overlay-wrapper' : saving }">
       <div class="overlay" v-if="saving">
         <i class="fas fa-3x fa-spinner fa-spin"></i>
@@ -186,33 +186,39 @@ export default {
       this.saving = true;
       try {
         // Validate form
-        if (!this.form.name || !this.form.base_url || !this.form.account_id || !this.form.access_token) {
-          this.showError('Vui lòng điền đầy đủ thông tin bắt buộc');
+        if (!this.form.name?.trim() || !this.form.base_url?.trim() || !this.form.account_id?.trim() || !this.form.access_token?.trim()) {
+          this.showError('Vui lòng điền đầy đủ thông tin bắt buộc: Tên, Base URL, Account ID và Access Token');
+          this.saving = false;
           return;
         }
 
-        // Prepare data for API
+        // Prepare data for API - try both formats
         const data = {
-          name: this.form.name,
-          baseUrl: this.form.base_url,
-          accountId: this.form.account_id,
-          accessToken: this.form.access_token,
+          name: this.form.name.trim(),
+          baseUrl: this.form.base_url.trim(),
+          base_url: this.form.base_url.trim(),
+          accountId: this.form.account_id.trim(),
+          account_id: this.form.account_id.trim(),
+          accessToken: this.form.access_token.trim(),
+          access_token: this.form.access_token.trim(),
           inboxId: this.form.inbox_id || 1,
-          isActive: this.form.is_active
+          inbox_id: this.form.inbox_id || 1,
+          isActive: this.form.is_active,
+          is_active: this.form.is_active
         };
 
         if (this.isEdit) {
-          await window.ChatwootService.update(this.id, data);
+          const response = await window.ChatwootService.update(this.id, data);
           this.showSuccess('Cập nhật tài khoản Chatwoot thành công');
         } else {
-          await window.ChatwootService.create(data);
+          const response = await window.ChatwootService.create(data);
           this.showSuccess('Thêm tài khoản Chatwoot thành công');
         }
         
         this.$emit('success');
       } catch (error) {
-        console.error('Error saving chatwoot account:', error);
-        this.showError((error.response && error.response.data && error.response.data.message) || error.message || 'Có lỗi xảy ra khi lưu tài khoản Chatwoot');
+        const errorMessage = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi lưu tài khoản Chatwoot';
+        this.showError(errorMessage);
       } finally {
         this.saving = false;
       }
