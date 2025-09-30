@@ -149,21 +149,9 @@ class Server {
       })
     })
 
-    // Root endpoint
+    // Root endpoint -> redirect to admin panel
     this.app.get('/', (req, res) => {
-      res.json({
-        name: 'Turbo Chatwoot Webhook',
-        version: '3.0.0',
-        description: 'Webhook trung gian kết nối các platform với Chatwoot và Dify AI',
-        endpoints: {
-          health: '/webhook/health',
-          telegram: '/webhook/telegram',
-          chatwoot: '/webhook/chatwoot',
-          api: '/api',
-          logs: '/api/logs',
-          metrics: '/metrics'
-        }
-      })
+      res.redirect('/admin')
     })
 
     // Root POST endpoint for Chatwoot webhooks (backward compatibility)
