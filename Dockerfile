@@ -22,7 +22,7 @@ RUN yarn install --frozen-lockfile --production --silent && \
 COPY --chown=nodejs:nodejs src/ ./src/
 COPY --chown=nodejs:nodejs scripts/ ./scripts/
 COPY --chown=nodejs:nodejs public/ ./public/
-COPY --chown=nodejs:nodejs env.example ./.env.example
+COPY --chown=nodejs:nodejs .env.example ./.env.example
 
 # Create logs directory
 RUN mkdir -p logs && chown -R nodejs:nodejs logs
