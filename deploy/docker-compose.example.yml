@@ -1,17 +1,21 @@
 version: '3.8'
 services:
-  app:
+  turbo-webhook-app:
     image: ghcr.io/kaystar-nj4/turbo-chatwoot-webhook:latest
-    container_name: turbo-chatwoot-webhook
-    environment:
-      - NODE_ENV=production
+    container_name: turbo-webhook-app
+    ports:
+      - "3001:3000"
     env_file:
       - .env
     volumes:
       - ./logs:/app/logs
     restart: unless-stopped
     depends_on:
-      - redis
+      - turbo-webhook-postgres
+      - turbo-webhook-redis
+    networks:
+      - docker_default
+    command: sh -c "sleep 10 && yarn migrate && yarn start"
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/webhook/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
       interval: 30s
@@ -19,32 +23,39 @@ services:
       retries: 3
       start_period: 40s
 
-  nginx:
-    image: nginx:alpine
-    container_name: webhook-nginx
-    ports:
-      - "80:80"
+  turbo-webhook-postgres:
+    image: postgres:16-alpine
+    container_name: turbo-webhook-postgres
+    env_file:
+      - .env
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - app
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     restart: unless-stopped
+    networks:
+      - docker_default
 
-  redis:
+  turbo-webhook-redis:
     image: redis:7-alpine
-    container_name: webhook-redis
-    ports:
-      - "6379:6379"
+    container_name: turbo-webhook-redis
     volumes:
       - redis_data:/data
     restart: unless-stopped
     command: redis-server --appendonly yes
+    networks:
+      - docker_default
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
+  postgres_data:
   redis_data:
 
 networks:
-  default:
+  docker_default:
     external: true
-    name: docker_default
 
