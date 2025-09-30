@@ -68,11 +68,6 @@ class Server {
       credentials: true
     }))
 
-    // Request logging
-    if (this.config.isDevelopment()) {
-      this.app.use(morgan('combined'))
-    }
-
     // Request ID middleware
     this.app.use((req, res, next) => {
       req.requestId = req.get('X-Request-ID') || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -234,24 +229,11 @@ class Server {
    * Print startup information
    */
   printStartupInfo () {
-    console.log('\n🎉 Turbo Chatwoot Webhook Server v3.0.0 is running!')
-    console.log(`📍 Address: http://${this.host}:${this.port}`)
-    console.log(`🌍 Environment: ${this.config.get('server.nodeEnv')}`)
-    console.log('\n📋 Available endpoints:')
-    console.log('   GET  / - API information')
-    console.log('   GET  /webhook/health - Health check')
-    console.log('   POST /webhook/telegram - Telegram webhook')
-    console.log('   POST /webhook/chatwoot - Chatwoot webhook')
-    console.log('   GET  /api/status - Server status')
-    console.log('   GET  /api/conversations - Get conversations')
-    console.log('   POST /api/telegram/setup - Setup Telegram webhook')
-    console.log('   GET  /api/telegram/bot-info - Get bot info')
-    console.log('   POST /api/telegram/test - Test message')
-    console.log('\n🔧 To setup Telegram webhook:')
-    console.log(`   curl -X POST http://${this.host}:${this.port}/api/telegram/setup \\`)
-    console.log('        -H "Content-Type: application/json" \\')
-    console.log('        -d \'{"webhookUrl": "https://your-domain.com/webhook/telegram"}\'')
-    console.log('\n')
+    // Suppressed terminal logs
+    this.logger.info('Server started', {
+      address: `http://${this.host}:${this.port}`,
+      environment: this.config.get('server.nodeEnv')
+    })
   }
 
   /**
