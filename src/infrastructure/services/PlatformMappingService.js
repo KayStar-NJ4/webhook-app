@@ -25,30 +25,54 @@ class PlatformMappingService {
    */
   async createMapping (mappingData, user) {
     try {
-      const { telegramBotId, chatwootAccountId, difyAppId } = mappingData
+      // Generic payload only (v2 schema)
+      const {
+        sourcePlatform,
+        sourceId,
+        targetPlatform,
+        targetId,
+        enableBidirectional = false,
+        isActive = true,
+        name
+      } = mappingData
 
-      // Validate that all platforms exist and are active
-      await this.validatePlatforms(telegramBotId, chatwootAccountId, difyAppId)
+      const normalized = { sourcePlatform, sourceId, targetPlatform, targetId, enableBidirectional, isActive, name }
+      if (!sourcePlatform || !sourceId || !targetPlatform || !targetId) {
+        throw new Error('Missing required fields: sourcePlatform, sourceId, targetPlatform, targetId')
+      }
 
-      // Check if mapping already exists
-      const existingMapping = await this.platformMappingRepository.findActiveMapping(
-        telegramBotId,
-        chatwootAccountId,
-        difyAppId
+      // Validate platforms (basic active checks using existing repos where applicable)
+      await this.validateByGeneric(normalized)
+
+      // Check if identical mapping already exists
+      const exists = await this.platformMappingRepository.existsByPair(
+        normalized.sourcePlatform,
+        normalized.sourceId,
+        normalized.targetPlatform,
+        normalized.targetId
       )
 
-      if (existingMapping) {
-        throw new Error('Mapping already exists for this combination of platforms')
+      if (exists) {
+        throw new Error('Mapping already exists for this source/target pair')
       }
 
       // Create the mapping
-      const mapping = await this.platformMappingRepository.create(mappingData, user)
+      const mapping = await this.platformMappingRepository.create({
+        sourcePlatform: normalized.sourcePlatform,
+        sourceId: normalized.sourceId,
+        targetPlatform: normalized.targetPlatform,
+        targetId: normalized.targetId,
+        enableBidirectional: normalized.enableBidirectional,
+        isActive: normalized.isActive,
+        name
+      }, user)
 
       this.logger.info('Platform mapping created successfully', {
         mappingId: mapping.id,
-        telegramBotId,
-        chatwootAccountId,
-        difyAppId,
+        sourcePlatform: normalized.sourcePlatform,
+        sourceId: normalized.sourceId,
+        targetPlatform: normalized.targetPlatform,
+        targetId: normalized.targetId,
         userId: user?.id
       })
 
@@ -254,9 +278,10 @@ class PlatformMappingService {
    */
   async getRoutingConfiguration (telegramBotId) {
     try {
-      const mappings = await this.platformMappingRepository.findByTelegramBotId(telegramBotId)
+      // v2: find routes where source=telegram/botId or bidirectional target
+      const routes = await this.platformMappingRepository.findRoutesFor('telegram', telegramBotId)
 
-      if (mappings.length === 0) {
+      if (routes.length === 0) {
         return {
           hasMapping: false,
           mappings: []
@@ -266,30 +291,28 @@ class PlatformMappingService {
       // Group mappings by configuration
       const routingConfig = {
         hasMapping: true,
-        mappings: mappings.map(mapping => ({
-          id: mapping.id,
-          chatwootAccountId: mapping.chatwoot_account_id,
-          chatwootAccountName: mapping.chatwoot_account_name,
-          difyAppId: mapping.dify_app_id,
-          difyAppName: mapping.dify_app_name,
-          telegramBotId: mapping.telegram_bot_id,
+        mappings: routes.map(r => ({
+          id: r.id,
+          telegramBotId: telegramBotId,
+          chatwootAccountId: r.target_platform === 'chatwoot' ? r.target_id : (r.source_platform === 'chatwoot' ? r.source_id : null),
+          difyAppId: r.target_platform === 'dify' ? r.target_id : (r.source_platform === 'dify' ? r.source_id : null),
           routing: {
-            telegramToChatwoot: mapping.enable_telegram_to_chatwoot,
-            telegramToDify: mapping.enable_telegram_to_dify,
-            chatwootToTelegram: mapping.enable_chatwoot_to_telegram,
-            difyToChatwoot: mapping.enable_dify_to_chatwoot,
-            difyToTelegram: mapping.enable_dify_to_telegram
+            telegramToChatwoot: (r.source_platform === 'telegram' && r.target_platform === 'chatwoot'),
+            telegramToDify: (r.source_platform === 'telegram' && r.target_platform === 'dify'),
+            chatwootToTelegram: (r.enable_bidirectional && ((r.source_platform === 'chatwoot' && r.target_platform === 'telegram') || (r.source_platform === 'telegram' && r.target_platform === 'chatwoot'))),
+            difyToChatwoot: (r.enable_bidirectional && ((r.source_platform === 'dify' && r.target_platform === 'chatwoot') || (r.source_platform === 'chatwoot' && r.target_platform === 'dify'))),
+            difyToTelegram: (r.enable_bidirectional && ((r.source_platform === 'dify' && r.target_platform === 'telegram') || (r.source_platform === 'telegram' && r.target_platform === 'dify')))
           },
           autoConnect: {
-            telegramChatwoot: mapping.auto_connect_telegram_chatwoot,
-            telegramDify: mapping.auto_connect_telegram_dify
+            telegramChatwoot: false,
+            telegramDify: false
           }
         }))
       }
 
       this.logger.info('Retrieved routing configuration', {
         telegramBotId,
-        mappingCount: mappings.length
+        mappingCount: routes.length
       })
 
       return routingConfig
@@ -399,6 +422,40 @@ class PlatformMappingService {
         difyAppId
       })
       throw error
+    }
+  }
+
+  /**
+   * Validate generic source/target platforms
+   */
+  async validateByGeneric ({ sourcePlatform, sourceId, targetPlatform, targetId }) {
+    const platform = (p) => (p || '').toLowerCase()
+    // Validate source
+    if (platform(sourcePlatform) === 'telegram') {
+      const bot = await this.telegramBotRepository.findById(sourceId)
+      if (!bot || !bot.is_active) throw new Error('Source Telegram bot not found or inactive')
+    } else if (platform(sourcePlatform) === 'chatwoot') {
+      const acc = await this.chatwootAccountRepository.findById(sourceId)
+      if (!acc || !acc.is_active) throw new Error('Source Chatwoot account not found or inactive')
+    } else if (platform(sourcePlatform) === 'dify') {
+      const app = await this.difyAppRepository.findById(sourceId)
+      if (!app || !app.is_active) throw new Error('Source Dify app not found or inactive')
+    } else {
+      throw new Error(`Unsupported source platform: ${sourcePlatform}`)
+    }
+
+    // Validate target
+    if (platform(targetPlatform) === 'telegram') {
+      const bot = await this.telegramBotRepository.findById(targetId)
+      if (!bot || !bot.is_active) throw new Error('Target Telegram bot not found or inactive')
+    } else if (platform(targetPlatform) === 'chatwoot') {
+      const acc = await this.chatwootAccountRepository.findById(targetId)
+      if (!acc || !acc.is_active) throw new Error('Target Chatwoot account not found or inactive')
+    } else if (platform(targetPlatform) === 'dify') {
+      const app = await this.difyAppRepository.findById(targetId)
+      if (!app || !app.is_active) throw new Error('Target Dify app not found or inactive')
+    } else {
+      throw new Error(`Unsupported target platform: ${targetPlatform}`)
     }
   }
 
