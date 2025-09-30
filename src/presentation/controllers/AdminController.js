@@ -319,13 +319,27 @@ class AdminController {
    */
   async getChatwootAccounts (req, res) {
     try {
-      const { page = 1, limit = 10, search = '', isActive, sort_by } = req.query
+      const { page = 1, limit = 10, search = '', sort_by } = req.query
+
+      // Accept both camelCase and snake_case for compatibility
+      const rawIsActive = (req.query.isActive !== undefined)
+        ? req.query.isActive
+        : (req.query.is_active !== undefined ? req.query.is_active : null)
+
+      // Normalize isActive to boolean or null (no filter)
+      let normalizedIsActive = null
+      if (rawIsActive !== null) {
+        const val = String(rawIsActive).toLowerCase()
+        if (val === 'true' || val === '1') normalizedIsActive = true
+        else if (val === 'false' || val === '0') normalizedIsActive = false
+      }
+
       const result = await this.chatwootAccountRepository.findAll({
         page: parseInt(page),
         limit: parseInt(limit),
         search,
         sort_by,
-        isActive: isActive ? isActive === 'true' : null
+        isActive: normalizedIsActive
       })
 
       res.json({

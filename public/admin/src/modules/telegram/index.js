@@ -1,3 +1,6 @@
-export { default as TelegramBotsListComponent } from './TelegramBotsListComponent.vue'
-export { default as TelegramBotFormComponent } from './TelegramBotFormComponent.vue'
-export { default as TelegramBotsPageComponent } from './TelegramBotsPageComponent.vue'
+// CommonJS export for compatibility
+module.exports = {
+  TelegramBotFormComponent: require('./TelegramBotFormComponent.vue').default,
+  TelegramBotsListComponent: require('./TelegramBotsListComponent.vue').default,
+  TelegramBotsPageComponent: require('./TelegramBotsPageComponent.vue').default
+}

@@ -1,3 +1,6 @@
-export { default as DifyAppsListComponent } from './DifyAppsListComponent.vue'
-export { default as DifyAppFormComponent } from './DifyAppFormComponent.vue'
-export { default as DifyAppsPageComponent } from './DifyAppsPageComponent.vue'
+// CommonJS export for compatibility
+module.exports = {
+  DifyAppFormComponent: require('./DifyAppFormComponent.vue').default,
+  DifyAppsListComponent: require('./DifyAppsListComponent.vue').default,
+  DifyAppsPageComponent: require('./DifyAppsPageComponent.vue').default
+}

@@ -103,9 +103,9 @@ ON CONFLICT (key) DO NOTHING;
 
 -- Create default super admin user
 INSERT INTO users (username, email, password_hash, full_name, is_active) VALUES
-('superadmin', 'thuanpt182@gmail.com', '$2b$10$GL1z.pEHFeFgmL1LDfjGU.fu8GMOi4xXnnMZptP6zT1kmnOyZsvSG', 'Super Administrator', true)
+('superadmin', 'thuanpt182@gmail.com', '$2b$10$VjzqcB9/wd/4kBfH4/7nwexn10d8sTThzmRbNdkKmMkirKCKQSQfW', 'Super Administrator', true)
 ON CONFLICT (username) DO NOTHING;
-
+-- Admin@12345
 -- Assign super admin role to the default user
 INSERT INTO user_roles (user_id, role_id)
 SELECT u.id, r.id

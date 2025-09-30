@@ -12,7 +12,7 @@ class ChatwootAccountRepository extends BaseRepository {
     this.searchFields = ['name', 'base_url', 'account_id']
 
     // Define sortable fields
-    this.sortableFields = ['name', 'created_at', 'updated_at', 'is_active']
+    this.sortableFields = ['name', 'base_url', 'created_at', 'updated_at', 'is_active']
   }
 
   /**
@@ -75,13 +75,14 @@ class ChatwootAccountRepository extends BaseRepository {
       const result = await super.findAll(options)
 
       // Filter by isActive
-      const filteredRecords = result.records.filter(record => record.is_active === isActive)
+      const filteredRecords = result.records.filter(record => Boolean(record.is_active) === Boolean(isActive))
 
       return {
         accounts: filteredRecords,
         pagination: {
           ...result.pagination,
-          total: filteredRecords.length
+          total: filteredRecords.length,
+          pages: Math.ceil(filteredRecords.length / (options.limit || 10))
         }
       }
     }

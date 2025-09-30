@@ -67,10 +67,10 @@
                                         <input 
                                             type="checkbox" 
                                             class="form-check-input" 
-                                            id="isActive"
+                                            id="telegramBotActive"
                                             v-model="form.isActive"
                                         >
-                                        <label class="form-check-label" for="isActive">
+                                        <label class="form-check-label" for="telegramBotActive">
                                             Kích hoạt bot
                                         </label>
                                     </div>

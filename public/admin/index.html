@@ -246,7 +246,7 @@
         let ChatwootAccountListComponent, ChatwootAccountFormComponent, ChatwootAccountsPageComponent, DifyAppsListComponent, DifyAppFormComponent, DifyAppsPageComponent, TelegramBotsListComponent;
         let PlatformMappingListComponent, PlatformMappingFormComponent, PlatformMappingsPageComponent;
         let FormListingSortComponent, FormTableFiltersComponent, FormCheckBoxComponent, PaginateComponent, ActionButtonsComponent;
-        let FormInputTextComponent, FormImageComponent, FormSelectComponent, FormInputDateComponent, FormInputTextAreaComponent;
+        let FormInputTextComponent, FormImageComponent, FormSelectComponent, FormInputDateComponent, FormTextAreaComponent;
         
         async function loadComponents() {
             
@@ -378,8 +378,8 @@
             FormInputDateComponent = await loadVueComponent('/admin/src/components/shared/FormInputDateComponent.vue');
             window.FormInputDateComponent = FormInputDateComponent;
             
-            FormInputTextAreaComponent = await loadVueComponent('/admin/src/components/shared/FormInputTextAreaComponent.vue');
-            window.FormInputTextAreaComponent = FormInputTextAreaComponent;
+            FormTextAreaComponent = await loadVueComponent('/admin/src/components/shared/FormTextAreaComponent.vue');
+            window.FormTextAreaComponent = FormTextAreaComponent;
             
         }
 
@@ -719,7 +719,7 @@
             if (window.FormImageComponent) app.component('FormImageComponent', window.FormImageComponent);
             if (window.FormSelectComponent) app.component('FormSelectComponent', window.FormSelectComponent);
             if (window.FormInputDateComponent) app.component('FormInputDateComponent', window.FormInputDateComponent);
-            if (window.FormInputTextAreaComponent) app.component('FormInputTextAreaComponent', window.FormInputTextAreaComponent);
+            if (window.FormTextAreaComponent) app.component('FormTextAreaComponent', window.FormTextAreaComponent);
         }
 
         app.use(router);
