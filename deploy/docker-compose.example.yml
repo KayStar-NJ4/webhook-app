@@ -14,7 +14,7 @@ services:
       - turbo-webhook-redis
     networks:
       - docker_default
-    command: sh -c "sleep 10 && yarn migrate && yarn start"
+    command: sh -c "sleep 10 && yarn migrate && yarn seed && yarn start"
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/webhook/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
       interval: 30s
