@@ -2,7 +2,15 @@
  * Telegram Service - Frontend service layer
  * Handles Telegram bot API calls
  */
-class TelegramService extends BaseService {
+const _BaseServiceTelegram = (typeof window !== 'undefined' && window.BaseService)
+  ? window.BaseService
+  : null;
+
+if (!_BaseServiceTelegram && !window.BaseService) {
+  window.BaseService = function () {};
+}
+
+class TelegramService extends (window.BaseService || _BaseServiceTelegram) {
   constructor() {
     super()
     this.endpoint = '/telegram-bots'

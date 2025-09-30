@@ -1,3 +1,5 @@
+const _axios = (typeof window !== 'undefined' && window.axios) ? window.axios : null;
+
 class BaseService {
   constructor() {
     this.baseURL = '/api/admin'
@@ -6,7 +8,7 @@ class BaseService {
 
   setupInterceptors() {
     // Request interceptor để thêm token
-    axios.interceptors.request.use(
+    _axios.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem('token')
 
@@ -26,7 +28,7 @@ class BaseService {
     )
 
     // Response interceptor để xử lý lỗi
-    axios.interceptors.response.use(
+    _axios.interceptors.response.use(
       (response) => {
         return response;
       },
@@ -50,23 +52,23 @@ class BaseService {
   }
 
   get(url, params = {}) {
-    return axios.get(`${this.baseURL}${url}`, { params })
+    return _axios.get(`${this.baseURL}${url}`, { params })
   }
 
   post(url, data = {}) {
-    return axios.post(`${this.baseURL}${url}`, data)
+    return _axios.post(`${this.baseURL}${url}`, data)
   }
 
   put(url, data = {}) {
-    return axios.put(`${this.baseURL}${url}`, data)
+    return _axios.put(`${this.baseURL}${url}`, data)
   }
 
   delete(url, data = {}) {
-    return axios.delete(`${this.baseURL}${url}`, { data })
+    return _axios.delete(`${this.baseURL}${url}`, { data })
   }
 
   patch(url, data = {}) {
-    return axios.patch(`${this.baseURL}${url}`, data)
+    return _axios.patch(`${this.baseURL}${url}`, data)
   }
 }
 

@@ -1,5 +1,12 @@
+const _BaseServiceDify = (typeof window !== 'undefined' && window.BaseService)
+  ? window.BaseService
+  : null;
 
-class DifyService extends BaseService {
+if (!_BaseServiceDify && !window.BaseService) {
+  window.BaseService = function () {};
+}
+
+class DifyService extends (window.BaseService || _BaseServiceDify) {
   constructor() {
     super()
     this.endpoint = '/dify-apps'

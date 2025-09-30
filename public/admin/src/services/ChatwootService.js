@@ -1,4 +1,12 @@
-class ChatwootService extends BaseService {
+const _BaseServiceChatwoot = (typeof window !== 'undefined' && window.BaseService)
+  ? window.BaseService
+  : null;
+
+if (!_BaseServiceChatwoot && !window.BaseService) {
+  window.BaseService = function () {};
+}
+
+class ChatwootService extends (window.BaseService || _BaseServiceChatwoot) {
   constructor() {
     super()
     this.endpoint = '/chatwoot-accounts'

@@ -1,4 +1,12 @@
-class AuthService extends BaseService {
+const _BaseServiceAuth = (typeof window !== 'undefined' && window.BaseService)
+  ? window.BaseService
+  : null;
+
+if (!_BaseServiceAuth && !window.BaseService) {
+  window.BaseService = function () {};
+}
+
+class AuthService extends (window.BaseService || _BaseServiceAuth) {
   constructor() {
     super()
     this.baseURL = ''

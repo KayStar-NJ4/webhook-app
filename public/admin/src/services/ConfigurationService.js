@@ -1,4 +1,12 @@
-class ConfigurationService extends BaseService {
+const _BaseServiceConfig = (typeof window !== 'undefined' && window.BaseService)
+  ? window.BaseService
+  : null;
+
+if (!_BaseServiceConfig && !window.BaseService) {
+  window.BaseService = function () {};
+}
+
+class ConfigurationService extends (window.BaseService || _BaseServiceConfig) {
   constructor() {
     super()
     this.endpoint = '/configurations'

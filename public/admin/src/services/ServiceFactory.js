@@ -18,6 +18,7 @@ class ServiceFactory {
       telegram: window.TelegramService,
       chatwoot: window.ChatwootService,
       dify: window.DifyService,
+      platformMappings: window.PlatformMappingService,
       configuration: window.ConfigurationService,
     }
   }

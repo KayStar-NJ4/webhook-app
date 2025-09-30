@@ -1,4 +1,12 @@
-class UserService extends BaseService {
+const _BaseServiceUser = (typeof window !== 'undefined' && window.BaseService)
+  ? window.BaseService
+  : null;
+
+if (!_BaseServiceUser && !window.BaseService) {
+  window.BaseService = function () {};
+}
+
+class UserService extends (window.BaseService || _BaseServiceUser) {
   constructor() {
     super()
     this.endpoint = '/users'
@@ -26,7 +34,7 @@ class UserService extends BaseService {
 
   // Xóa user
   delete(id) {
-    return this.delete(`${this.endpoint}/${id}`)
+    return super.delete(`${this.endpoint}/${id}`)
   }
 
   // Cập nhật trạng thái user
@@ -81,7 +89,7 @@ class UserService extends BaseService {
 
   // Xóa role khỏi user
   removeUserRole(userId, roleId) {
-    return this.delete(`${this.endpoint}/${userId}/roles/${roleId}`)
+    return super.delete(`${this.endpoint}/${userId}/roles/${roleId}`)
   }
 
   // Cập nhật tất cả roles của user
