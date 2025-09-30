@@ -7,19 +7,67 @@ require('dotenv').config()
 
 class MigrationManager {
   constructor () {
-    this.pool = new Pool({
+    this.targetDbConfig = {
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || 5432,
       database: process.env.DB_NAME || 'turbo_chatwoot_webhook',
       user: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASSWORD || 'password'
-    })
+    }
+
+    // Connection config to a control database to create target DB if missing
+    this.controlDbConfig = {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
+      database: process.env.DB_SUPER_DB || 'postgres',
+      user: process.env.DB_SUPER_USER || process.env.DB_USER || 'postgres',
+      password: process.env.DB_SUPER_PASSWORD || process.env.DB_PASSWORD || 'password'
+    }
+
+	this.pool = new Pool(this.targetDbConfig)
 
     this.migrationsDir = path.join(__dirname, 'migrations')
   }
 
+  async ensureDatabaseExists () {
+    const dbName = this.targetDbConfig.database
+    const controlPool = new Pool(this.controlDbConfig)
+    let controlClient
+    try {
+      controlClient = await controlPool.connect()
+      const existsResult = await controlClient.query(
+        'SELECT 1 FROM pg_database WHERE datname = $1',
+        [dbName]
+      )
+      if (existsResult.rowCount === 0) {
+        console.log(`🛠️  Creating database: ${dbName}`)
+        // Use template0 to avoid collation version mismatch from template1
+        await controlClient.query(`CREATE DATABASE "${dbName}" TEMPLATE template0`)
+
+        // Optionally grant privileges to target user if different from creator
+        const targetUser = this.targetDbConfig.user
+        if (targetUser) {
+          try {
+            await controlClient.query(`GRANT ALL PRIVILEGES ON DATABASE "${dbName}" TO "${targetUser}"`)
+          } catch (_) {
+            // Ignore grant errors (e.g., insufficient privilege); DB is created anyway
+          }
+        }
+        console.log(`✅ Database created: ${dbName}`)
+      }
+    } catch (error) {
+      console.error('❌ Failed ensuring database exists:', error.message)
+      // Continue to try connect; connection will fail with clear error if DB truly unusable
+    } finally {
+      if (controlClient) controlClient.release()
+      await controlPool.end()
+    }
+  }
+
   async connect () {
     try {
+      // Ensure DB exists before connecting to it
+      await this.ensureDatabaseExists()
       this.client = await this.pool.connect()
       console.log('✅ Connected to database')
     } catch (error) {
