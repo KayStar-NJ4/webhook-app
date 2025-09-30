@@ -159,27 +159,30 @@ class MigrationManager {
     console.log('🚀 Starting migration process...')
 
     await this.connect()
-    await this.createMigrationsTable()
+    try {
+      await this.createMigrationsTable()
 
-    const pendingMigrations = await this.getPendingMigrations()
+      const pendingMigrations = await this.getPendingMigrations()
 
-    if (pendingMigrations.length === 0) {
-      console.log('✅ No pending migrations')
-      return
-    }
-
-    console.log(`📋 Found ${pendingMigrations.length} pending migrations:`)
-    pendingMigrations.forEach(migration => console.log(`  - ${migration}`))
-
-    for (const migration of pendingMigrations) {
-      const success = await this.executeMigration(migration)
-      if (!success) {
-        console.error('❌ Migration failed, stopping process')
-        break
+      if (pendingMigrations.length === 0) {
+        console.log('✅ No pending migrations')
+        return
       }
+
+      console.log(`📋 Found ${pendingMigrations.length} pending migrations:`)
+      pendingMigrations.forEach(migration => console.log(`  - ${migration}`))
+
+      for (const migration of pendingMigrations) {
+        const success = await this.executeMigration(migration)
+        if (!success) {
+          console.error('❌ Migration failed, stopping process')
+          break
+        }
+      }
+    } finally {
+      await this.disconnect()
     }
 
-    await this.disconnect()
     console.log('🎉 Migration process completed')
   }
 
