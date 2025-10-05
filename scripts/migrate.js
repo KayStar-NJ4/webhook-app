@@ -166,7 +166,7 @@ class MigrationManager {
 
       if (pendingMigrations.length === 0) {
         console.log('✅ No pending migrations')
-        return
+        process.exit(0)
       }
 
       console.log(`📋 Found ${pendingMigrations.length} pending migrations:`)
@@ -184,6 +184,7 @@ class MigrationManager {
     }
 
     console.log('🎉 Migration process completed')
+    process.exit(0)
   }
 
   async showStatus () {

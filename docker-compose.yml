@@ -35,6 +35,8 @@ services:
   webhook-postgres:
     image: postgres:16-alpine
     container_name: webhook-postgres
+    ports:
+      - "5433:5432"
     environment:
       - POSTGRES_DB=${DB_NAME:-webhook_staging}
       - POSTGRES_USER=${DB_USER:-postgres}
