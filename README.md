@@ -15,8 +15,8 @@ Webhook trung gian kết nối các platform với Chatwoot và Dify AI.
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/KayStar-NJ4/turbo-chatwoot-webhook.git
-cd turbo-chatwoot-webhook
+git clone https://github.com/KayStar-NJ4/webhook-app.git
+cd webhook-app
 
 # 2. Cài đặt dependencies
 yarn install
@@ -48,12 +48,12 @@ Chỉ cần tải các file mẫu và cấu hình sau:
 
 ```bash
 # 1) Tạo thư mục deploy và chuyển vào đó
-mkdir -p /opt/turbo-chatwoot-webhook && cd /opt/turbo-chatwoot-webhook
+mkdir -p /opt/webhook-app && cd /opt/webhook-app
 
 # 2) Tải file ví dụ docker-compose và nginx
-curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/KayStar-NJ4/turbo-chatwoot-webhook/master/deploy/docker-compose.example.yml
+curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/KayStar-NJ4/webhook-app/master/deploy/docker-compose.example.yml
 mkdir -p nginx
-curl -fsSL -o nginx/nginx.conf https://raw.githubusercontent.com/KayStar-NJ4/turbo-chatwoot-webhook/master/deploy/nginx/nginx.example.conf
+curl -fsSL -o nginx/nginx.conf https://raw.githubusercontent.com/KayStar-NJ4/webhook-app/master/deploy/nginx/nginx.example.conf
 
 # 3) Tạo file .env (production) theo biến ở mục "Environment Variables"
 touch .env
@@ -79,8 +79,8 @@ docker-compose pull && docker-compose up -d
 
 ```bash
 # 1) Clone repo và vào thư mục dự án
-git clone https://github.com/KayStar-NJ4/turbo-chatwoot-webhook.git
-cd turbo-chatwoot-webhook
+git clone https://github.com/KayStar-NJ4/webhook-app.git
+cd webhook-app
 
 # 2) Tạo file .env (production)
 #    Cấu hình DB_*, REDIS_*, JWT_SECRET và các token/key cần thiết
@@ -104,7 +104,7 @@ curl -sS http://<SERVER_IP>/webhook/health
 
 ```bash
 # Pull latest image
-docker pull ghcr.io/kaystar-nj4/turbo-chatwoot-webhook:latest
+docker pull ghcr.io/kaystar-nj4/webhook-app:latest
 
 # Deploy
 docker-compose up -d
@@ -155,10 +155,10 @@ public/
 
 ```bash
 # Build image
-docker build -t turbo-chatwoot-webhook .
+docker build -t webhook-app .
 
 # Run container
-docker run -p 3000:3000 --env-file .env turbo-chatwoot-webhook
+docker run -p 3000:3000 --env-file .env webhook-app
 
 # Docker Compose
 docker-compose up -d --build
