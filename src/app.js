@@ -193,9 +193,25 @@ class Application {
    */
   async start () {
     try {
+      console.log('🚀 Starting Turbo Chatwoot Webhook Application...')
+      console.log('📋 Initializing services...')
+      
       await this.initialize()
+      console.log('✅ Application initialized successfully')
+      
+      console.log('🌐 Starting server...')
       await this.server.start()
+      
+      const port = this.serviceRegistry.get('config').get('server.port')
+      console.log('🎉 Application started successfully!')
+      console.log('📍 Server is running on:', `http://localhost:${port}`)
+      console.log('📊 Admin panel available at:', `http://localhost:${port}/admin`)
+      console.log('🔗 Webhook endpoints available at:', `http://localhost:${port}/webhook`)
+      
     } catch (error) {
+      console.error('❌ Failed to start application:', error.message)
+      console.error('📋 Error details:', error.stack)
+      
       try {
         const logger = this.serviceRegistry?.get?.('logger') || { error: () => {} }
         logger.error('Failed to start application', { error: error.message, stack: error.stack })
