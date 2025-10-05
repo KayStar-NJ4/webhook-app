@@ -1,41 +1,55 @@
 services:
-  turbo-webhook-app:
-    image: ghcr.io/kaystar-nj4/turbo-chatwoot-webhook:latest
-    container_name: turbo-webhook-app
+  webhook-app:
+    image: ghcr.io/kaystar-nj4/webhook-app:latest
+    container_name: webhook-app
     ports:
       - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=webhook-postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-webhook_staging}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - REDIS_HOST=webhook-redis
+      - REDIS_PORT=6379
     env_file:
       - .env
     volumes:
       - ./logs:/app/logs
+      - ./.env:/app/.env
     restart: unless-stopped
     depends_on:
-      - turbo-webhook-postgres
-      - turbo-webhook-redis
+      - webhook-postgres
+      - webhook-redis
     networks:
       - docker_default
-    command: sh -c "sleep 10 && yarn migrate && yarn seed && yarn start"
+    command: sh -c "sleep 10 && yarn migrate && echo 'Migration completed, starting application...' && yarn start"
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/webhook/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
 
-  turbo-webhook-postgres:
+  webhook-postgres:
     image: postgres:16-alpine
-    container_name: turbo-webhook-postgres
-    env_file:
-      - .env
+    container_name: webhook-postgres
+    ports:
+      - "5444:5432"
+    environment:
+      - POSTGRES_DB=${DB_NAME:-webhook_staging}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     networks:
       - docker_default
 
-  turbo-webhook-redis:
+  webhook-redis:
     image: redis:7-alpine
-    container_name: turbo-webhook-redis
+    container_name: webhook-redis
     volumes:
       - redis_data:/data
     restart: unless-stopped
@@ -56,4 +70,3 @@ volumes:
 networks:
   docker_default:
     external: true
-
