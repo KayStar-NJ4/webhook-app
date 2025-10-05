@@ -166,6 +166,7 @@ class MigrationManager {
 
       if (pendingMigrations.length === 0) {
         console.log('✅ No pending migrations')
+        console.log('🎉 Migration process completed')
         process.exit(0)
       }
 
