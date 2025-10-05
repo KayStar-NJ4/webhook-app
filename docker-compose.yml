@@ -1,6 +1,6 @@
 services:
   webhook-app:
-    image: ghcr.io/kaystar-nj4/turbo-chatwoot-webhook:4b621fa0d2e1ed0a78bb7957c89a0592a6b388ea
+    image: ghcr.io/kaystar-nj4/turbo-chatwoot-webhook:latest
     container_name: turbo-chatwoot-webhook
     ports:
       - "3001:3000"
@@ -43,7 +43,6 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     restart: unless-stopped
     networks:
       - docker_default
