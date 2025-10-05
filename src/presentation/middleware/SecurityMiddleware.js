@@ -85,9 +85,9 @@ class SecurityMiddleware {
         directives: {
           defaultSrc: ["'self'"],
           styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com', 'https://fonts.googleapis.com'],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://unpkg.com', 'https://cdn.jsdelivr.net', 'https://code.jquery.com'],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://unpkg.com', 'https://cdn.jsdelivr.net', 'https://code.jquery.com', 'https://static.cloudflareinsights.com'],
           imgSrc: ["'self'", 'data:', 'https:'],
-          connectSrc: ["'self'", 'https://unpkg.com', 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com'],
+          connectSrc: ["'self'", 'https://unpkg.com', 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com', 'https://cloudflareinsights.com'],
           fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://fonts.gstatic.com', 'https://fonts.googleapis.com'],
           objectSrc: ["'none'"],
           mediaSrc: ["'self'"],
