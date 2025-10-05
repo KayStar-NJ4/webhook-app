@@ -142,29 +142,6 @@ public/
     └── js/
 ```
 
-## 🔧 Environment Variables
-
-```bash
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=chatwoot_webhook
-DB_USER=postgres
-DB_PASSWORD=password
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# JWT
-JWT_SECRET=your-secret-key
-
-# Services
-CHATWOOT_ACCESS_TOKEN=your-token
-TELEGRAM_BOT_TOKEN=your-bot-token
-DIFY_API_KEY=your-api-key
-```
-
 ## 📡 API Endpoints
 
 - `GET /` - API information
