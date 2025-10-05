@@ -55,11 +55,11 @@ jobs:
         platforms: linux/amd64
         push: false
         load: true
-        tags: turbo-chatwoot-webhook:test
+        tags: webhook-app:test
         cache-from: type=gha
         cache-to: type=gha,mode=max
         
     - name: Test Docker image
       run: |
-        docker run --rm turbo-chatwoot-webhook:test node --version
-        docker run --rm turbo-chatwoot-webhook:test yarn --version
+        docker run --rm webhook-app:test node --version
+        docker run --rm webhook-app:test yarn --version

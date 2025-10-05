@@ -1,5 +1,5 @@
 {
-  "name": "turbo-chatwoot-webhook",
+  "name": "webhook-app",
   "version": "3.0.0",
   "description": "Webhook trung gian kết nối các platform với Chatwoot và Dify AI",
   "main": "src/app.js",
