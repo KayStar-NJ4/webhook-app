@@ -193,7 +193,7 @@ class Application {
    */
   async start () {
     try {
-      console.log('🚀 Starting Turbo Chatwoot Webhook Application...')
+      console.log('🚀 Starting Turbo Webhook App Application...')
       console.log('📋 Initializing services...')
       
       await this.initialize()
