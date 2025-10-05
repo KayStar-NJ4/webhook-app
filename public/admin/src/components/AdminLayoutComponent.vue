@@ -28,7 +28,7 @@
       <div class="float-right d-none d-sm-block">
         <b>Version</b> 3.0.0
       </div>
-      <strong>Copyright &copy; 2025 <a href="#">Turbo Chatwoot Webhook</a>.</strong>
+      <strong>Copyright &copy; 2025 <a href="#">Turbo Webhook App</a>.</strong>
       All rights reserved.
     </footer>
   </div>

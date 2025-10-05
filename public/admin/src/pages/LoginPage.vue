@@ -3,7 +3,7 @@
     <div class="login-container">
       <div class="login-card">
         <div class="login-header">
-          <h2>Turbo Chatwoot Webhook</h2>
+          <h2>Turbo Webhook App</h2>
           <p>Admin Panel</p>
         </div>
         
