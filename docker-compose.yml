@@ -1,7 +1,7 @@
 services:
   webhook-app:
-    image: ghcr.io/kaystar-nj4/turbo-chatwoot-webhook:latest
-    container_name: turbo-chatwoot-webhook
+    image: ghcr.io/kaystar-nj4/turbo-webhook:latest
+    container_name: webhook-app
     ports:
       - "3001:3000"
     environment:
