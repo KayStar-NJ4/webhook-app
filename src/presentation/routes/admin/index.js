@@ -83,6 +83,7 @@ class AdminRoutesIndex {
       telegramService,
       chatwootService,
       difyService,
+      configurationService,
       authMiddleware: this.authMiddleware,
       permissionMiddleware: this.permissionMiddleware,
       logger

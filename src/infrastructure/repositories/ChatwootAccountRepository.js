@@ -8,8 +8,8 @@ class ChatwootAccountRepository extends BaseRepository {
   constructor ({ db, logger }) {
     super({ db, logger, tableName: 'chatwoot_accounts' })
 
-    // Define searchable fields
-    this.searchFields = ['name', 'base_url', 'account_id']
+    // Define searchable fields (account_id is BIGINT, so search as text)
+    this.searchFields = ['name', 'base_url']
 
     // Define sortable fields
     this.sortableFields = ['name', 'base_url', 'created_at', 'updated_at', 'is_active']
@@ -22,14 +22,13 @@ class ChatwootAccountRepository extends BaseRepository {
    * @returns {Promise<Object>} - Created account
    */
   async create (accountData, user = null) {
-    const { name, baseUrl, accessToken, accountId, inboxId, isActive } = accountData
+    const { name, baseUrl, accessToken, accountId, isActive } = accountData
 
     const data = {
       name,
       base_url: baseUrl,
       access_token: accessToken,
       account_id: accountId,
-      inbox_id: inboxId || 1,
       is_active: isActive !== undefined ? isActive : true
     }
 
@@ -109,7 +108,6 @@ class ChatwootAccountRepository extends BaseRepository {
       base_url: baseUrl,
       access_token: accessToken,
       account_id: accountId,
-      inbox_id: inboxId || 1,
       is_active: isActive !== undefined ? isActive : true
     }
 

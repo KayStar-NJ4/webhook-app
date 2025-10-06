@@ -14,6 +14,7 @@ class TelegramRoutes {
     telegramService,
     chatwootService,
     difyService,
+    configurationService,
     authMiddleware,
     permissionMiddleware,
     logger
@@ -27,6 +28,7 @@ class TelegramRoutes {
       telegramService,
       chatwootService,
       difyService,
+      configurationService,
       logger
     })
     this.authMiddleware = authMiddleware

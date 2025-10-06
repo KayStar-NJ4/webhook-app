@@ -52,15 +52,6 @@
               :is_row="false"
             />
           </div>
-          <div class="col-md-6">
-            <!-- Inbox ID -->
-            <form-input-text-component
-              v-model="form.inbox_id"
-              :placeholder="'Nhập Inbox ID (mặc định: 1)'"
-              :label="'Inbox ID'"
-              :is_row="false"
-            />
-          </div>
         </div>
         
         <div class="row">
@@ -153,7 +144,6 @@ export default {
         name: '',
         base_url: '',
         account_id: '',
-        inbox_id: '',
         access_token: '',
         is_active: true
       }
@@ -179,7 +169,6 @@ export default {
           this.form.name = newVal.name || '';
           this.form.base_url = newVal.base_url || '';
           this.form.account_id = newVal.account_id || '';
-          this.form.inbox_id = newVal.inbox_id || '';
           this.form.access_token = newVal.access_token || '';
           this.form.is_active = newVal.is_active !== undefined ? newVal.is_active : true;
         }
@@ -203,15 +192,9 @@ export default {
         const data = {
           name: this.form.name.trim(),
           baseUrl: this.form.base_url.trim(),
-          base_url: this.form.base_url.trim(),
           accountId: this.form.account_id.trim(),
-          account_id: this.form.account_id.trim(),
           accessToken: this.form.access_token.trim(),
-          access_token: this.form.access_token.trim(),
-          inboxId: this.form.inbox_id || 1,
-          inbox_id: this.form.inbox_id || 1,
-          isActive: this.form.is_active,
-          is_active: this.form.is_active
+          isActive: this.form.is_active
         };
 
         if (this.isEdit) {
@@ -235,7 +218,6 @@ export default {
                name: '',
                base_url: '',
                account_id: '',
-               inbox_id: '',
                access_token: '',
                is_active: true
              };

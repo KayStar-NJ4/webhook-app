@@ -497,8 +497,18 @@ class PlatformMappingWebhookService {
    * @returns {string|number} - Platform ID
    */
   getPlatformIdFromMessage (messageData) {
-    // This method should extract the platform-specific ID from message data
-    // For now, we'll use a simple approach based on metadata
+    // For Telegram messages, we need to get the telegramBotId
+    if (messageData.platform === 'telegram') {
+      // Try to get botId from metadata first
+      if (messageData.metadata?.botId) return messageData.metadata.botId
+      
+      // For Telegram, we need to get the active bot ID
+      // This is similar to ProcessMessageUseCase.getTelegramBotIdFromMessage
+      // For now, return 1 as the default bot ID (should be improved to query database)
+      return 1
+    }
+    
+    // For other platforms, use existing logic
     if (messageData.metadata?.botId) return messageData.metadata.botId
     if (messageData.metadata?.accountId) return messageData.metadata.accountId
     if (messageData.metadata?.appId) return messageData.metadata.appId

@@ -112,35 +112,74 @@ class ChatwootService {
     return { Authorization: `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' }
   }
 
-  async getOrCreateApiInbox () {
+  async getOrCreatePlatformInbox (platform) {
     try {
-      this.logger.info('Looking for existing API inbox...')
+      // Normalize platform name
+      const platformName = this.getPlatformDisplayName(platform)
+      
+      this.logger.info(`Looking for existing ${platformName} inbox...`)
       const response = await axios.get(`${this.baseUrl}/api/v1/accounts/${this.accountId}/inboxes`, {
         headers: this.getHeaders()
       })
 
       const inboxes = response.data.payload || []
-      const apiInbox = inboxes.find(inbox => inbox.channel_type === 'Channel::Api')
-      if (apiInbox) {
-        this.logger.info('Found existing API inbox', { inboxId: apiInbox.id, inboxName: apiInbox.name })
-        return apiInbox.id.toString()
+      const platformInbox = inboxes.find(inbox => 
+        inbox.channel_type === 'Channel::Api' && 
+        inbox.name === platformName
+      )
+      
+      if (platformInbox) {
+        this.logger.info(`Found existing ${platformName} inbox`, { 
+          inboxId: platformInbox.id, 
+          inboxName: platformInbox.name,
+          platform 
+        })
+        return platformInbox.id.toString()
       }
 
-      this.logger.info('API inbox not found, creating new one...')
+      this.logger.info(`${platformName} inbox not found, creating new one...`)
       const createResponse = await axios.post(
         `${this.baseUrl}/api/v1/accounts/${this.accountId}/inboxes`,
-        { name: 'API Inbox', channel: { type: 'api' } },
+        { name: platformName, channel: { type: 'api' } },
         { headers: this.getHeaders() }
       )
+      
+      this.logger.info(`Created new ${platformName} inbox`, {
+        inboxId: createResponse.data.id,
+        platform
+      })
+      
       return createResponse.data.id.toString()
     } catch (error) {
-      this.logger.error('Failed to get or create API inbox', {
+      this.logger.error(`Failed to get or create ${platform} inbox`, {
         error: error.message,
+        platform,
         status: error.response?.status,
         responseData: error.response?.data
       })
-      throw new Error(`Failed to get API inbox: ${error.message}`)
+      throw new Error(`Failed to get ${platform} inbox: ${error.message}`)
     }
+  }
+
+  getPlatformDisplayName (platform) {
+    const platformNames = {
+      'telegram': 'Telegram',
+      'zalo': 'Zalo',
+      'facebook': 'Facebook Messenger',
+      'whatsapp': 'WhatsApp',
+      'web': 'Website',
+      'line': 'LINE'
+    }
+    return platformNames[platform] || platform.charAt(0).toUpperCase() + platform.slice(1)
+  }
+
+  async getOrCreateTelegramInbox () {
+    return this.getOrCreatePlatformInbox('telegram')
+  }
+
+  async getOrCreateApiInbox () {
+    // Fallback to Telegram inbox for backward compatibility
+    return this.getOrCreateTelegramInbox()
   }
 
   async createOrUpdateConversation (conversation, message, chatwootAccountId = null) {
@@ -158,8 +197,10 @@ class ChatwootService {
         await this.initialize()
       }
 
-      const inboxId = await this.getOrCreateApiInbox()
-      this.logger.info('Using API inbox for conversation', { inboxId })
+      // Get platform-specific inbox
+      const platform = conversation.platform || 'telegram'
+      const inboxId = await this.getOrCreatePlatformInbox(platform)
+      this.logger.info(`Using ${platform} inbox for conversation`, { inboxId, platform })
 
       let chatwootConversation
       if (conversation.chatwootId) {
@@ -196,8 +237,13 @@ class ChatwootService {
         })
       } catch (sendError) {
         this.logger.error('Failed to send message to Chatwoot conversation', { error: sendError.message })
+        // Don't throw, just log the error and continue
       }
 
+      if (!chatwootConversation) {
+        throw new Error('Failed to create Chatwoot conversation: no conversation returned')
+      }
+      
       return chatwootConversation
     } catch (error) {
       this.logger.error('Failed to create/update Chatwoot conversation', {
@@ -234,10 +280,21 @@ class ChatwootService {
   }
 
   async createConversation (conversation, message, inboxId, customSourceId = null) {
-    const contactName = conversation.getChatDisplayName() || message.senderName || 'Unknown'
+    // Use Telegram user info for contact name
+    const firstName = message.metadata?.firstName || conversation.senderFirstName || ''
+    const lastName = message.metadata?.lastName || conversation.senderLastName || ''
+    const username = message.metadata?.username || conversation.senderUsername || ''
+    
+    // Create display name: "FirstName LastName" or "@username" or "Telegram User"
+    let contactName = 'Telegram User'
+    if (firstName || lastName) {
+      contactName = `${firstName} ${lastName}`.trim()
+    } else if (username) {
+      contactName = `@${username}`
+    }
+    
     const senderId = conversation.senderId || message.senderId || message.metadata?.userId
     const chatId = conversation.chatId || message.metadata?.chatId
-    const senderUsername = conversation.senderUsername || message.metadata?.username
 
     const payload = {
       source_id: customSourceId || conversation.id,
@@ -245,15 +302,41 @@ class ChatwootService {
       contact: {
         name: contactName,
         identifier: senderId,
-        email: senderUsername ? `${senderUsername}_${Date.now()}@telegram.local` : null,
+        email: username ? `${username}_${Date.now()}@telegram.local` : null,
         phone_number: senderId
       },
-      additional_attributes: { platform: conversation.platform || 'telegram', conversation_id: conversation.id }
+      additional_attributes: { 
+        platform: conversation.platform || 'telegram', 
+        conversation_id: conversation.id,
+        telegram_username: username,
+        telegram_user_id: senderId
+      }
     }
+
+    this.logger.info('Creating Chatwoot conversation', {
+      contactName,
+      senderId,
+      username,
+      inboxId
+    })
 
     const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations`
     const response = await axios.post(url, payload, { headers: this.getHeaders() })
-    return response.data.payload || response.data.data || response.data
+    
+    this.logger.info('Chatwoot createConversation API response', {
+      status: response.status,
+      data: response.data,
+      hasPayload: !!response.data.payload,
+      hasData: !!response.data.data,
+      responseKeys: Object.keys(response.data || {})
+    })
+    
+    const result = response.data.payload || response.data.data || response.data
+    if (!result) {
+      throw new Error(`Chatwoot API returned empty response: ${JSON.stringify(response.data)}`)
+    }
+    
+    return result
   }
 
   async createConversationWithoutInbox (conversation, message) {
@@ -276,7 +359,13 @@ class ChatwootService {
     const payload = { source_id: contactIdentifier, contact_id: contactId, inbox_id: await this.getOrCreateApiInbox() }
     const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations`
     const response = await axios.post(url, payload, { headers: this.getHeaders() })
-    return response.data.payload || response.data.data || response.data
+    
+    const result = response.data.payload || response.data.data || response.data
+    if (!result) {
+      throw new Error(`Chatwoot API returned empty response: ${JSON.stringify(response.data)}`)
+    }
+    
+    return result
   }
 
   async getConversation (conversationId) {
@@ -284,7 +373,22 @@ class ChatwootService {
       `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations/${conversationId}`,
       { headers: this.getHeaders() }
     )
-    return response.data.payload
+    
+    this.logger.info('Chatwoot getConversation API response', {
+      status: response.status,
+      data: response.data,
+      hasPayload: !!response.data.payload,
+      hasData: !!response.data.data,
+      responseKeys: Object.keys(response.data || {})
+    })
+    
+    // Chatwoot API returns data directly, not wrapped in payload
+    const result = response.data
+    if (!result) {
+      throw new Error(`Chatwoot getConversation API returned empty response: ${JSON.stringify(response.data)}`)
+    }
+    
+    return result
   }
 
   async sendMessage (conversationId, content, options = {}) {
@@ -292,13 +396,13 @@ class ChatwootService {
       this.logger.info('Sending message to Chatwoot', {
         conversationId,
         content: content.substring(0, 100),
-        messageType: options.message_type || 'outgoing',
+        messageType: options.message_type || 'incoming',
         conversation_id: conversationId
       })
 
       const payload = {
         content,
-        message_type: options.message_type || 'outgoing',
+        message_type: options.message_type || 'incoming',
         private: false,
         content_type: 'text',
         ...options
@@ -353,13 +457,42 @@ class ChatwootService {
 
   async testConnection () {
     try {
-      await axios.get(`${this.baseUrl}/api/v1/accounts/${this.accountId}`, { headers: this.getHeaders() })
-      const inboxId = await this.getOrCreateApiInbox()
-      await axios.get(`${this.baseUrl}/api/v1/accounts/${this.accountId}/inboxes/${inboxId}`, {
+      this.logger.info('Testing Chatwoot connection', {
+        url: `${this.baseUrl}/api/v1/accounts/${this.accountId}`,
+        headers: this.getHeaders(),
+        accountId: this.accountId,
+        baseUrl: this.baseUrl
+      })
+
+      // Test 1: Check if account exists and is accessible
+      const accountResponse = await axios.get(`${this.baseUrl}/api/v1/accounts/${this.accountId}`, { 
+        headers: this.getHeaders() 
+      })
+      
+      this.logger.info('Account access successful', {
+        accountName: accountResponse.data?.payload?.name || 'Unknown',
+        accountId: this.accountId
+      })
+
+      // Test 2: Check if we can list inboxes (without creating new ones)
+      const inboxesResponse = await axios.get(`${this.baseUrl}/api/v1/accounts/${this.accountId}/inboxes`, {
         headers: this.getHeaders()
       })
+      
+      this.logger.info('Inboxes access successful', {
+        inboxesCount: inboxesResponse.data?.payload?.length || 0
+      })
+      
+      this.logger.info('Chatwoot connection test successful')
       return true
-    } catch {
+    } catch (error) {
+      this.logger.error('Chatwoot connection test failed', {
+        error: error.message,
+        url: `${this.baseUrl}/api/v1/accounts/${this.accountId}`,
+        accountId: this.accountId,
+        response: error.response?.data,
+        status: error.response?.status
+      })
       return false
     }
   }
