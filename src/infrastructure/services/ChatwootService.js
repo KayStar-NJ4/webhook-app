@@ -298,7 +298,7 @@ class ChatwootService {
 
     // Try to get email from conversation (if user provided it)
     // Otherwise, leave as null since Telegram API doesn't provide real email addresses
-    let contactEmail = conversation.sender_email || null
+    const contactEmail = conversation.sender_email || null
 
     const payload = {
       source_id: customSourceId || conversation.id,
