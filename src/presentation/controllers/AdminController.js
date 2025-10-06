@@ -11,6 +11,7 @@ class AdminController {
     telegramService,
     chatwootService,
     difyService,
+    configurationService,
     logger
   }) {
     this.userRepository = userRepository
@@ -20,6 +21,7 @@ class AdminController {
     this.telegramService = telegramService
     this.chatwootService = chatwootService
     this.difyService = difyService
+    this.configurationService = configurationService
     this.logger = logger
   }
 
@@ -824,13 +826,86 @@ class AdminController {
 
       try {
         const result = await this.telegramService.getBotInfo()
+        
+        if (!result) {
+          return res.json({
+            success: false,
+            data: {
+              connected: false,
+              message: 'Connection failed',
+              botInfo: null
+            }
+          })
+        }
+
+        // Auto-set webhook if connection is successful
+        let webhookConfigured = false
+        let webhookUrl = null
+        let webhookError = null
+
+        try {
+          const axios = require('axios')
+          
+          // Get APP_URL from database configurations
+          let appUrl = process.env.APP_URL
+          if (!appUrl) {
+            try {
+              appUrl = await this.configurationService.get('app_url')
+            } catch (configError) {
+              this.logger.warn('Failed to get app_url from configurations', { error: configError.message })
+            }
+          }
+          
+          // Fallback to default URL if not configured
+          appUrl = appUrl || 'https://webhook-bot.turbo.vn'
+          webhookUrl = `${appUrl}/webhook/telegram`
+          
+          this.logger.info('Setting Telegram webhook', {
+            botToken: bot.bot_token ? '***' : 'MISSING',
+            webhookUrl,
+            botId: bot.id
+          })
+
+          const webhookResponse = await axios.post(`https://api.telegram.org/bot${bot.bot_token}/setWebhook`, {
+            url: webhookUrl,
+            allowed_updates: ['message']
+          }, {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 10000
+          })
+
+          if (webhookResponse.data.ok) {
+            webhookConfigured = true
+            this.logger.info('Telegram webhook set successfully', {
+              botId: bot.id,
+              webhookUrl,
+              response: webhookResponse.data
+            })
+          } else {
+            webhookError = webhookResponse.data
+            this.logger.warn('Failed to set Telegram webhook', {
+              botId: bot.id,
+              webhookUrl,
+              error: webhookResponse.data
+            })
+          }
+        } catch (webhookError) {
+          this.logger.error('Error setting Telegram webhook', {
+            botId: bot.id,
+            error: webhookError.message,
+            details: webhookError.response?.data
+          })
+        }
 
         res.json({
           success: true,
           data: {
-            connected: !!result,
-            message: result ? 'Connection successful' : 'Connection failed',
-            botInfo: result
+            connected: true,
+            message: webhookConfigured ? 'Connection successful and webhook configured' : 'Connection successful but webhook setup failed',
+            botInfo: result,
+            webhookConfigured,
+            webhookUrl,
+            webhookError
           }
         })
       } finally {

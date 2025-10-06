@@ -116,7 +116,6 @@ class Validation {
       // Conversation object (có thể có hoặc không tùy event)
       conversation: Joi.object({
         id: Joi.number().required(),
-        inbox_id: Joi.number().required()
       }).optional(),
 
       // Contact object (for contact_updated events)

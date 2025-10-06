@@ -11,6 +11,7 @@ class PlatformMappingService {
     telegramService,
     chatwootService,
     difyService,
+    configurationService,
     logger
   }) {
     this.platformMappingRepository = platformMappingRepository
@@ -18,6 +19,7 @@ class PlatformMappingService {
     this.chatwootAccountRepository = chatwootAccountRepository
     this.difyAppRepository = difyAppRepository
     this.telegramService = telegramService
+    this.configurationService = configurationService
     this.chatwootService = chatwootService
     this.difyService = difyService
     this.logger = logger
@@ -74,67 +76,21 @@ class PlatformMappingService {
         throw new Error('Flow already exists for this source platform')
       }
 
-      // Create multiple mappings for the flow
-      const mappings = []
-
-      // 1. Source → Chatwoot mapping
-      if (enableChatwoot) {
-        const chatwootMapping = await this.platformMappingRepository.create({
-          name: `${name} → Chatwoot`,
-          sourcePlatform: sourcePlatform,
-          sourceId: sourceId,
-          targetPlatform: 'chatwoot',
-          targetId: chatwootAccountId,
-          enableBidirectional: enableBidirectional && enableSync,
-          chatwootAccountId: chatwootAccountId,
-          difyAppId: difyAppId,
-          enableChatwoot: enableChatwoot,
-          enableDify: enableDify,
-          enableSync: enableSync,
-          isActive: isActive
-        }, user)
-        mappings.push(chatwootMapping)
-      }
-
-      // 2. Source → Dify mapping
-      if (enableDify) {
-        const difyMapping = await this.platformMappingRepository.create({
-          name: `${name} → Dify`,
-          sourcePlatform: sourcePlatform,
-          sourceId: sourceId,
-          targetPlatform: 'dify',
-          targetId: difyAppId,
-          enableBidirectional: enableBidirectional,
-          chatwootAccountId: chatwootAccountId,
-          difyAppId: difyAppId,
-          enableChatwoot: enableChatwoot,
-          enableDify: enableDify,
-          enableSync: enableSync,
-          isActive: isActive
-        }, user)
-        mappings.push(difyMapping)
-      }
-
-      // 3. Dify → Chatwoot mapping (for sync) - only if both enabled and sync is on
-      if (enableDify && enableChatwoot && enableSync) {
-        const syncMapping = await this.platformMappingRepository.create({
-          name: `${name} → Sync (Dify→Chatwoot)`,
-          sourcePlatform: 'dify',
-          sourceId: difyAppId,
-          targetPlatform: 'chatwoot',
-          targetId: chatwootAccountId,
-          enableBidirectional: false,
-          chatwootAccountId: chatwootAccountId,
-          difyAppId: difyAppId,
-          enableChatwoot: enableChatwoot,
-          enableDify: enableDify,
-          enableSync: enableSync,
-          isActive: isActive
-        }, user)
-        mappings.push(syncMapping)
-      }
-
-      const mapping = mappings[0] // Return first mapping as primary
+      // Create single mapping for the flow
+      const mapping = await this.platformMappingRepository.create({
+        name: name,
+        sourcePlatform: sourcePlatform,
+        sourceId: sourceId,
+        targetPlatform: enableChatwoot ? 'chatwoot' : 'dify', // Primary target
+        targetId: enableChatwoot ? chatwootAccountId : difyAppId, // Primary target ID
+        enableBidirectional: enableBidirectional,
+        chatwootAccountId: chatwootAccountId,
+        difyAppId: difyAppId,
+        enableChatwoot: enableChatwoot,
+        enableDify: enableDify,
+        enableSync: enableSync,
+        isActive: isActive
+      }, user)
 
       this.logger.info('Platform mapping created successfully', {
         mappingId: mapping.id,
@@ -142,7 +98,7 @@ class PlatformMappingService {
         sourceId: sourceId,
         chatwootAccountId: chatwootAccountId,
         difyAppId: difyAppId,
-        mappingsCount: mappings.length,
+        mappingsCount: 1,
         userId: user?.id
       })
 
@@ -369,20 +325,20 @@ class PlatformMappingService {
         }
       }
 
-      // Group mappings by configuration
+      // Use new database structure with enable_chatwoot, enable_dify, enable_sync
       const routingConfig = {
         hasMapping: true,
         mappings: routes.map(r => ({
           id: r.id,
           telegramBotId: telegramBotId,
-          chatwootAccountId: r.target_platform === 'chatwoot' ? r.target_id : (r.source_platform === 'chatwoot' ? r.source_id : null),
-          difyAppId: r.target_platform === 'dify' ? r.target_id : (r.source_platform === 'dify' ? r.source_id : null),
+          chatwootAccountId: r.chatwoot_account_id,
+          difyAppId: r.dify_app_id,
           routing: {
-            telegramToChatwoot: (r.source_platform === 'telegram' && r.target_platform === 'chatwoot'),
-            telegramToDify: (r.source_platform === 'telegram' && r.target_platform === 'dify'),
-            chatwootToTelegram: (r.enable_bidirectional && ((r.source_platform === 'chatwoot' && r.target_platform === 'telegram') || (r.source_platform === 'telegram' && r.target_platform === 'chatwoot'))),
-            difyToChatwoot: (r.enable_bidirectional && ((r.source_platform === 'dify' && r.target_platform === 'chatwoot') || (r.source_platform === 'chatwoot' && r.target_platform === 'dify'))),
-            difyToTelegram: (r.enable_bidirectional && ((r.source_platform === 'dify' && r.target_platform === 'telegram') || (r.source_platform === 'telegram' && r.target_platform === 'dify')))
+            telegramToChatwoot: r.enable_chatwoot === true || r.enable_chatwoot === 't',
+            telegramToDify: r.enable_dify === true || r.enable_dify === 't',
+            chatwootToTelegram: (r.enable_bidirectional === true || r.enable_bidirectional === 't') && (r.enable_chatwoot === true || r.enable_chatwoot === 't'),
+            difyToChatwoot: (r.enable_bidirectional === true || r.enable_bidirectional === 't') && (r.enable_dify === true || r.enable_dify === 't') && (r.enable_chatwoot === true || r.enable_chatwoot === 't'),
+            difyToTelegram: (r.enable_bidirectional === true || r.enable_bidirectional === 't') && (r.enable_dify === true || r.enable_dify === 't')
           },
           autoConnect: {
             telegramChatwoot: false,
@@ -694,21 +650,90 @@ class PlatformMappingService {
       const axios = require('axios')
 
       // Test bot token by calling getMe API
-      const response = await axios.get(`https://api.telegram.org/bot${telegramBot.bot_token}/getMe`, {
+      const getMeResponse = await axios.get(`https://api.telegram.org/bot${telegramBot.bot_token}/getMe`, {
         timeout: 10000
       })
 
-      if (response.data.ok) {
-        return {
-          success: true,
-          message: 'Telegram bot connection successful',
-          botInfo: response.data.result
-        }
-      } else {
+      if (!getMeResponse.data.ok) {
         return {
           success: false,
           error: 'Telegram API returned error',
-          details: response.data
+          details: getMeResponse.data
+        }
+      }
+
+      // Auto-set webhook if connection is successful
+      try {
+        // Get APP_URL from database configurations
+        let appUrl = process.env.APP_URL
+        if (!appUrl) {
+          try {
+            appUrl = await this.configurationService.get('app_url')
+          } catch (configError) {
+            this.logger.warn('Failed to get app_url from configurations', { error: configError.message })
+          }
+        }
+        
+        // Fallback to ngrok URL if not configured
+        appUrl = appUrl || 'https://webhook-bot.turbo.vn'
+        const webhookUrl = `${appUrl}/webhook/telegram`
+        
+        this.logger.info('Setting Telegram webhook', {
+          botToken: telegramBot.bot_token ? '***' : 'MISSING',
+          webhookUrl,
+          botId: telegramBot.id
+        })
+
+        const webhookResponse = await axios.post(`https://api.telegram.org/bot${telegramBot.bot_token}/setWebhook`, {
+          url: webhookUrl,
+          allowed_updates: ['message']
+        }, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 10000
+        })
+
+        if (webhookResponse.data.ok) {
+          this.logger.info('Telegram webhook set successfully', {
+            botId: telegramBot.id,
+            webhookUrl,
+            response: webhookResponse.data
+          })
+
+          return {
+            success: true,
+            message: 'Telegram bot connection successful and webhook configured',
+            botInfo: getMeResponse.data.result,
+            webhookConfigured: true,
+            webhookUrl
+          }
+        } else {
+          this.logger.warn('Failed to set Telegram webhook', {
+            botId: telegramBot.id,
+            webhookUrl,
+            error: webhookResponse.data
+          })
+
+          return {
+            success: true,
+            message: 'Telegram bot connection successful but webhook setup failed',
+            botInfo: getMeResponse.data.result,
+            webhookConfigured: false,
+            webhookError: webhookResponse.data
+          }
+        }
+      } catch (webhookError) {
+        this.logger.error('Error setting Telegram webhook', {
+          botId: telegramBot.id,
+          error: webhookError.message,
+          details: webhookError.response?.data
+        })
+
+        return {
+          success: true,
+          message: 'Telegram bot connection successful but webhook setup failed',
+          botInfo: getMeResponse.data.result,
+          webhookConfigured: false,
+          webhookError: webhookError.message
         }
       }
     } catch (error) {
@@ -729,19 +754,16 @@ class PlatformMappingService {
     try {
       const axios = require('axios')
 
-      // Use the exact headers that work from browser
+      // Use proper Chatwoot API headers with Bearer token
       const headers = {
-        'access-token': 'fsAasUTFZpJBWS7C-gFGYw',
-        client: 'ucC86ODq5-izqrwaa54EBw',
-        uid: 'thuanpt.work@gmail.com',
-        authorization: `Bearer ${chatwootAccount.access_token}`,
+        'Authorization': `Bearer ${chatwootAccount.access_token}`,
         'Content-Type': 'application/json',
-        Accept: 'application/json, text/plain, */*'
+        Accept: 'application/json'
       }
 
       this.logger.info('Testing Chatwoot connection', {
         url: `${chatwootAccount.base_url}/api/v1/accounts/${chatwootAccount.account_id}`,
-        headers: { ...headers, 'access-token': headers['access-token'] ? '***' : undefined }
+        headers: { ...headers, 'Authorization': headers['Authorization'] ? 'Bearer ***' : undefined }
       })
 
       // Test access token by calling accounts API
@@ -1517,10 +1539,7 @@ class PlatformMappingService {
       const axios = require('axios')
 
       const headers = {
-        'access-token': 'fsAasUTFZpJBWS7C-gFGYw',
-        client: 'ucC86ODq5-izqrwaa54EBw',
-        uid: 'thuanpt.work@gmail.com',
-        authorization: `Bearer ${chatwootAccount.access_token}`,
+        'access-token': chatwootAccount.access_token,
         'Content-Type': 'application/json'
       }
 
