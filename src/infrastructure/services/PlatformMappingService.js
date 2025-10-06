@@ -824,6 +824,7 @@ class PlatformMappingService {
    * @param {number} mappingId - Mapping ID
    * @returns {Promise<Object>} - Test result
    */
+
   async testConnection (mappingId) {
     try {
       const mapping = await this.platformMappingRepository.findById(mappingId)

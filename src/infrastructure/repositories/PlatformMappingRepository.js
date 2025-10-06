@@ -317,17 +317,26 @@ class PlatformMappingRepository extends BaseRepository {
    */
   async findRoutesFor (platform, platformId) {
     try {
+      // Convert platformId to appropriate type based on platform
+      let convertedPlatformId = platformId
+      if (platform === 'telegram' || platform === 'chatwoot') {
+        convertedPlatformId = parseInt(platformId, 10)
+        if (isNaN(convertedPlatformId)) {
+          throw new Error(`Invalid ${platform} ID: ${platformId}`)
+        }
+      }
+      
       const query = `
         SELECT pm.*
         FROM platform_mappings pm
-        WHERE pm.is_active = TRUE AND (
+        WHERE pm.is_active = TRUE AND pm.deleted_at IS NULL AND (
           (pm.source_platform = $1 AND pm.source_id = $2)
           OR
           (pm.target_platform = $1 AND pm.target_id = $2 AND pm.enable_bidirectional = TRUE)
         )
         ORDER BY pm.created_at DESC
       `
-      const result = await this.db.query(query, [platform, platformId])
+      const result = await this.db.query(query, [platform, convertedPlatformId])
       return result.rows
     } catch (error) {
       this.logger.error('Failed to find routes for platform', { error: error.message, platform, platformId })
