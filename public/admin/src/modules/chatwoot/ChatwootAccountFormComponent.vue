@@ -73,6 +73,12 @@
                   :type="showToken ? 'text' : 'password'" 
                   class="form-control" 
                   v-model="form.access_token" 
+                  autocomplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-bwignore="true"
+                  data-form-type="other"
+                  data-password-manager="disabled"
                   required
                   placeholder="Nhập Access Token"
                 >
@@ -161,6 +167,7 @@ export default {
   mounted() {
     this.clearFormData();
     this.setupModalEvents();
+    this.preventAutofill();
   },
   watch: {
     id: function (newVal, oldVal) {
@@ -249,8 +256,33 @@ export default {
                // Also listen for modal show to reset form when opening
                modal.addEventListener('show.bs.modal', () => {
                  this.resetForm();
+                 this.preventAutofill();
                });
              }
+           },
+           preventAutofill() {
+             this.$nextTick(() => {
+               // Prevent autofill on all inputs
+               const inputs = this.$el.querySelectorAll('input');
+               inputs.forEach(input => {
+                 input.setAttribute('autocomplete', 'off');
+                 input.setAttribute('data-lpignore', 'true');
+                 input.setAttribute('data-form-type', 'other');
+                 
+                 // For password fields, prevent password save prompts
+                 if (input.type === 'password') {
+                   input.setAttribute('autocomplete', 'off');
+                   input.setAttribute('data-password-manager', 'disabled');
+                   input.setAttribute('data-1p-ignore', 'true');
+                   input.setAttribute('data-bwignore', 'true');
+                 }
+                 
+                 // Clear any existing values that might be autofilled
+                 if (input.value && !this.form[input.name]) {
+                   input.value = '';
+                 }
+               });
+             });
            },
     showSuccess(message) {
       if (window.toast) {
@@ -332,5 +364,36 @@ export default {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+}
+
+/* Prevent autofill styling */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  -webkit-text-fill-color: #495057 !important;
+}
+
+/* Prevent browser autofill */
+input[autocomplete="off"] {
+  background-color: white !important;
+}
+
+input[autocomplete="new-password"] {
+  background-color: white !important;
+}
+
+/* Prevent password manager detection for access token */
+input[data-password-manager="disabled"] {
+  -webkit-text-security: disc;
+  text-security: disc;
+  background-color: white !important;
+}
+
+/* Hide text like password but don't trigger password save */
+input[data-original-type="password"] {
+  -webkit-text-security: disc;
+  text-security: disc;
 }
 </style>

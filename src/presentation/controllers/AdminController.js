@@ -8,12 +8,18 @@ class AdminController {
     telegramBotRepository,
     chatwootAccountRepository,
     difyAppRepository,
+    telegramService,
+    chatwootService,
+    difyService,
     logger
   }) {
     this.userRepository = userRepository
     this.telegramBotRepository = telegramBotRepository
     this.chatwootAccountRepository = chatwootAccountRepository
     this.difyAppRepository = difyAppRepository
+    this.telegramService = telegramService
+    this.chatwootService = chatwootService
+    this.difyService = difyService
     this.logger = logger
   }
 
@@ -785,6 +791,164 @@ class AdminController {
       res.status(500).json({
         success: false,
         message: 'Internal server error'
+      })
+    }
+  }
+
+  /**
+   * Test Telegram bot connection
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async testTelegramBotConnection (req, res) {
+    try {
+      const { id } = req.params
+
+      const bot = await this.telegramBotRepository.findById(id)
+      if (!bot) {
+        return res.status(404).json({
+          success: false,
+          message: 'Telegram bot not found'
+        })
+      }
+
+      // Initialize Telegram service with bot configuration
+      const originalConfig = {
+        botToken: this.telegramService.botToken,
+        apiUrl: this.telegramService.apiUrl
+      }
+
+      this.telegramService.botToken = bot.bot_token
+      // Hardcode API URL as it's always the same for Telegram
+      this.telegramService.apiUrl = `https://api.telegram.org/bot${bot.bot_token}`
+
+      try {
+        const result = await this.telegramService.getBotInfo()
+
+        res.json({
+          success: true,
+          data: {
+            connected: !!result,
+            message: result ? 'Connection successful' : 'Connection failed',
+            botInfo: result
+          }
+        })
+      } finally {
+        // Restore original configuration
+        this.telegramService.botToken = originalConfig.botToken
+        this.telegramService.apiUrl = originalConfig.apiUrl
+      }
+    } catch (error) {
+      this.logger.error('Test Telegram bot connection failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Connection test failed: ' + error.message
+      })
+    }
+  }
+
+  /**
+   * Test Chatwoot account connection
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async testChatwootAccountConnection (req, res) {
+    try {
+      const { id } = req.params
+
+      const account = await this.chatwootAccountRepository.findById(id)
+      if (!account) {
+        return res.status(404).json({
+          success: false,
+          message: 'Chatwoot account not found'
+        })
+      }
+
+      // Initialize Chatwoot service with account configuration
+      const originalConfig = {
+        baseUrl: this.chatwootService.baseUrl,
+        accountId: this.chatwootService.accountId,
+        accessToken: this.chatwootService.accessToken
+      }
+
+      this.chatwootService.baseUrl = account.base_url
+      this.chatwootService.accountId = account.account_id
+      this.chatwootService.accessToken = account.access_token
+
+      try {
+        const isConnected = await this.chatwootService.testConnection()
+
+        res.json({
+          success: true,
+          data: {
+            connected: isConnected,
+            message: isConnected ? 'Connection successful' : 'Connection failed'
+          }
+        })
+      } finally {
+        // Restore original configuration
+        this.chatwootService.baseUrl = originalConfig.baseUrl
+        this.chatwootService.accountId = originalConfig.accountId
+        this.chatwootService.accessToken = originalConfig.accessToken
+      }
+    } catch (error) {
+      this.logger.error('Test Chatwoot account connection failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Connection test failed: ' + error.message
+      })
+    }
+  }
+
+  /**
+   * Test Dify app connection
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async testDifyAppConnection (req, res) {
+    try {
+      const { id } = req.params
+
+      const app = await this.difyAppRepository.findById(id)
+      if (!app) {
+        return res.status(404).json({
+          success: false,
+          message: 'Dify app not found'
+        })
+      }
+
+      // Initialize Dify service with app configuration
+      const originalConfig = {
+        apiUrl: this.difyService.apiUrl,
+        apiKey: this.difyService.apiKey,
+        appId: this.difyService.appId
+      }
+
+      this.difyService.apiUrl = app.api_url
+      this.difyService.apiKey = app.api_key
+      this.difyService.appId = app.app_id
+
+      try {
+        const isConnected = await this.difyService.testConnection()
+
+        res.json({
+          success: true,
+          data: {
+            connected: isConnected,
+            message: isConnected ? 'Connection successful' : 'Connection failed'
+          }
+        })
+      } finally {
+        // Restore original configuration
+        this.difyService.apiUrl = originalConfig.apiUrl
+        this.difyService.apiKey = originalConfig.apiKey
+        this.difyService.appId = originalConfig.appId
+      }
+    } catch (error) {
+      this.logger.error('Test Dify app connection failed', { error: error.message })
+      res.status(500).json({
+        success: false,
+        message: 'Connection test failed: ' + error.message
       })
     }
   }

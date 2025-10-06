@@ -17,7 +17,6 @@ class Server {
     webhookRoutes,
     apiRoutes,
     metricsRoutes,
-    logRoutes,
     adminRoutes,
     errorHandler,
     metrics,
@@ -31,7 +30,6 @@ class Server {
     this.webhookRoutes = webhookRoutes
     this.apiRoutes = apiRoutes
     this.metricsRoutes = metricsRoutes
-    this.logRoutes = logRoutes
     this.adminRoutes = adminRoutes
     this.errorHandler = errorHandler
     this.metrics = metrics
@@ -99,13 +97,7 @@ class Server {
       this.apiRoutes.getRouter()
     )
 
-    // Log routes (protected)
-    if (this.logRoutes) {
-      this.app.use('/api/logs',
-        this.securityMiddleware.getApiKeyAuth(this.config.get('admin.apiKey') || 'admin'),
-        this.logRoutes.getRouter()
-      )
-    }
+    // Log routes are now handled by AdminRoutes
 
     // Admin routes
     if (this.adminRoutes) {

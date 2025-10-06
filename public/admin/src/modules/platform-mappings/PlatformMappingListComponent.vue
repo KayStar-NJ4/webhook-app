@@ -62,14 +62,6 @@
                   >
                     <i class="fa fa-trash-alt"></i>
                   </button>
-                  <button 
-                    v-if="hasPermission('platform_mappings', 'read')"
-                    class="btn btn-sm btn-info"
-                    @click="testConnection(mapping)"
-                    title="Kiểm tra kết nối"
-                  >
-                    <i class="fas fa-plug"></i>
-                  </button>
                 </div>
               </td>
               <td>
@@ -201,24 +193,6 @@ export default {
         document.addEventListener('keydown', handleEsc);
       });
     },
-    async testConnection(mapping) {
-      try {
-        const response = await window.PlatformMappingService.testConnection(mapping.id)
-        if (response.data.success) {
-          if (this.$toast && this.$toast.success) {
-            this.$toast.success('Kết nối thành công')
-          }
-        } else {
-          if (this.$toast && this.$toast.error) {
-            this.$toast.error('Kết nối thất bại')
-          }
-        }
-      } catch (error) {
-        if (this.$toast && this.$toast.error) {
-          this.$toast.error('Lỗi kết nối mạng')
-        }
-      }
-    }
   }
 }
 </script>

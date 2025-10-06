@@ -45,6 +45,11 @@ class TelegramService extends (window.BaseService || _BaseServiceTelegram) {
   getActive() {
     return this.get(`${this.endpoint}/active`)
   }
+
+  // Test connection
+  testConnection(id) {
+    return this.post(`${this.endpoint}/${id}/test-connection`)
+  }
 }
 
 // Initialize service

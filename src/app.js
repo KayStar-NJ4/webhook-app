@@ -22,7 +22,7 @@ const MetricsMiddleware = require('./presentation/middleware/MetricsMiddleware')
 const WebhookRoutes = require('./presentation/routes/WebhookRoutes')
 const ApiRoutes = require('./presentation/routes/ApiRoutes')
 const MetricsRoutes = require('./presentation/routes/MetricsRoutes')
-const LogRoutes = require('./presentation/routes/LogRoutes')
+// LogRoutes is now part of AdminRoutes
 
 // Infrastructure
 const Metrics = require('./infrastructure/monitoring/Metrics')
@@ -136,7 +136,7 @@ class Application {
         errorHandler
       })
 
-      const logRoutes = new LogRoutes(logController)
+      // logRoutes is now part of AdminRoutes
 
       // Initialize admin routes
       const AdminRoutes = require('./presentation/routes/AdminRoutes')
@@ -153,6 +153,9 @@ class Application {
         logsService: this.serviceRegistry.get('logsService'),
         permissionService: this.serviceRegistry.get('permissionService'),
         platformMappingService: this.serviceRegistry.get('platformMappingService'),
+        telegramService: this.serviceRegistry.get('telegramService'),
+        chatwootService: this.serviceRegistry.get('chatwootService'),
+        difyService: this.serviceRegistry.get('difyService'),
         logger: logger.child({ component: 'AdminRoutes' })
       })
 
@@ -166,7 +169,7 @@ class Application {
         webhookRoutes,
         apiRoutes,
         metricsRoutes,
-        logRoutes,
+        // logRoutes is now part of AdminRoutes
         adminRoutes,
         errorHandler,
         metrics,

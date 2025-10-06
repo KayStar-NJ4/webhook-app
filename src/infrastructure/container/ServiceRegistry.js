@@ -23,6 +23,7 @@ const DatabaseService = require('../services/DatabaseService')
 const LogsService = require('../../application/services/LogsService')
 const ConfigurationService = require('../services/ConfigurationService')
 const PlatformMappingService = require('../services/PlatformMappingService')
+const PlatformMappingWebhookService = require('../services/PlatformMappingWebhookService')
 
 // Use Cases
 const ProcessMessageUseCase = require('../../application/useCases/ProcessMessageUseCase')
@@ -161,6 +162,17 @@ class ServiceRegistry {
       telegramBotRepository: container.get('telegramBotRepository'),
       chatwootAccountRepository: container.get('chatwootAccountRepository'),
       difyAppRepository: container.get('difyAppRepository'),
+      telegramService: container.get('telegramService'),
+      chatwootService: container.get('chatwootService'),
+      difyService: container.get('difyService'),
+      logger: container.get('logger')
+    }), true)
+
+    this.container.register('platformMappingWebhookService', (container) => new PlatformMappingWebhookService({
+      platformMappingRepository: container.get('platformMappingRepository'),
+      telegramService: container.get('telegramService'),
+      chatwootService: container.get('chatwootService'),
+      difyService: container.get('difyService'),
       logger: container.get('logger')
     }), true)
 
@@ -177,6 +189,7 @@ class ServiceRegistry {
       difyService: container.get('difyService'),
       configurationService: container.get('configurationService'),
       platformMappingService: container.get('platformMappingService'),
+      platformMappingWebhookService: container.get('platformMappingWebhookService'),
       databaseService: container.get('databaseService'),
       logger: container.get('logger')
     }), true)

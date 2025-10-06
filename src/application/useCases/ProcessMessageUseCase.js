@@ -15,6 +15,7 @@ class ProcessMessageUseCase {
     difyService,
     configurationService,
     platformMappingService,
+    platformMappingWebhookService,
     databaseService,
     logger
   }) {
@@ -25,6 +26,7 @@ class ProcessMessageUseCase {
     this.difyService = difyService
     this.configurationService = configurationService
     this.platformMappingService = platformMappingService
+    this.platformMappingWebhookService = platformMappingWebhookService
     this.databaseService = databaseService
     this.logger = logger
 
@@ -152,7 +154,26 @@ class ProcessMessageUseCase {
       // 6. Save message
       await this.messageRepository.save(message)
 
-      // 7. Process based on platform
+      // 6.5. Process platform mapping webhook if available
+      let platformMappingResult = null
+      if (this.platformMappingWebhookService) {
+        try {
+          platformMappingResult = await this.platformMappingWebhookService.handleIncomingMessage(messageData)
+          this.logger.info('Platform mapping webhook processed', {
+            messageId: message.id,
+            forwarded: platformMappingResult.forwarded,
+            successfulRoutes: platformMappingResult.successfulRoutes
+          })
+        } catch (error) {
+          this.logger.error('Platform mapping webhook processing failed', {
+            error: error.message,
+            messageId: message.id
+          })
+          // Continue with normal processing even if webhook fails
+        }
+      }
+
+      // 7. Process based on platform (existing logic)
       const result = await this.processByPlatform(message, conversation)
 
       // 8. Mark message as processed
@@ -162,10 +183,17 @@ class ProcessMessageUseCase {
       this.logger.info('Message processed successfully', {
         messageId: message.id,
         conversationId: conversation.id,
-        conversation_id: message.conversationId
+        conversation_id: message.conversationId,
+        platformMappingForwarded: platformMappingResult?.forwarded || false
       })
 
-      return result
+      // Include platform mapping result in response
+      const finalResult = {
+        ...result,
+        platformMapping: platformMappingResult
+      }
+
+      return finalResult
     } catch (error) {
       // Cleanup on error - use the same key as when adding to processingMessages
       const message = this.createMessageEntity(messageData)

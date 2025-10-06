@@ -14,6 +14,8 @@
           :required="required"
           :disabled="disabled"
           :class="'form-control form-control-lg ' + input_class + ' ' + (error ? 'is-invalid' : '')"
+          :autocomplete="autoComplete"
+          :autofocus="autoFocus"
           @input="handleInput"
           @blur="handleBlur"
           @focus="handleFocus"
@@ -88,6 +90,22 @@ export default {
     showPasswordToggle: {
       type: Boolean,
       default: false
+    },
+    autoFocus: {
+      type: Boolean,
+      default: false
+    },
+    autoComplete: {
+      type: String,
+      default: 'off'
+    },
+    isToken: {
+      type: Boolean,
+      default: false
+    },
+    isSearch: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['update:modelValue', 'blur', 'focus'],
@@ -100,6 +118,88 @@ export default {
     return {
       showPassword: false
     }
+  },
+  mounted() {
+    // Prevent auto-focus and autofill on page load
+    this.$nextTick(() => {
+      const input = this.$el.querySelector('input')
+      if (input) {
+        // Always prevent auto-focus unless explicitly allowed
+        if (!this.autoFocus || this.isSearch) {
+          // Multiple layers of prevention
+          input.blur()
+          input.setAttribute('tabindex', '-1')
+          
+          // Use multiple timeouts to ensure blur
+          setTimeout(() => {
+            input.blur()
+            input.setAttribute('tabindex', '0')
+          }, 50)
+          
+          setTimeout(() => {
+            input.blur()
+          }, 100)
+          
+          setTimeout(() => {
+            input.blur()
+          }, 200)
+        }
+        
+        // Prevent autofill
+        input.setAttribute('autocomplete', this.autoComplete)
+        input.setAttribute('data-form-type', 'other')
+        input.setAttribute('data-lpignore', 'true')
+        
+        // Special handling for search inputs
+        if (this.isSearch) {
+          input.setAttribute('autocomplete', 'off')
+          input.setAttribute('data-lpignore', 'true')
+          input.setAttribute('data-1p-ignore', 'true')
+          input.setAttribute('data-bwignore', 'true')
+          input.setAttribute('data-form-type', 'search')
+          input.setAttribute('data-password-manager', 'disabled')
+          input.setAttribute('role', 'searchbox')
+          input.setAttribute('aria-label', 'Search input')
+          
+          // Clear any autofilled values
+          setTimeout(() => {
+            if (input.value && !this.modelValue) {
+              input.value = ''
+              this.$emit('update:modelValue', '')
+            }
+          }, 100)
+          
+          // Listen for autofill events
+          input.addEventListener('input', () => {
+            if (input.value && !this.modelValue) {
+              // Clear if autofilled
+              input.value = ''
+              this.$emit('update:modelValue', '')
+            }
+          })
+        }
+        
+        // Additional attributes to prevent autofill
+        if (this.type === 'password') {
+          if (this.isToken) {
+            // For tokens/keys, prevent password save prompts
+            input.setAttribute('autocomplete', 'off')
+            input.setAttribute('data-lpignore', 'true')
+            input.setAttribute('data-1p-ignore', 'true')
+            input.setAttribute('data-bwignore', 'true')
+            input.setAttribute('data-form-type', 'other')
+            input.setAttribute('data-password-manager', 'disabled')
+            // Change type to text but keep password styling
+            input.setAttribute('data-original-type', 'password')
+          } else {
+            // For real passwords
+            input.setAttribute('autocomplete', 'new-password')
+            input.setAttribute('data-lpignore', 'true')
+            input.setAttribute('data-form-type', 'other')
+          }
+        }
+      }
+    })
   },
   methods: {
     handleInput(event) {
@@ -189,5 +289,55 @@ export default {
 
 .text-muted {
   color: #6c757d !important;
+}
+
+/* Prevent auto-focus on page load */
+.form-control:focus {
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Prevent browser auto-focus */
+input:not([autofocus]):focus {
+  outline: none;
+}
+
+/* Token input styling - hide text like password but don't trigger password save */
+input[data-original-type="password"] {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+
+/* Prevent password manager detection for tokens */
+input[data-password-manager="disabled"] {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+
+/* Prevent auto-focus on page load */
+.form-control:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+}
+
+/* Additional prevention for auto-focus */
+input[autocomplete="off"]:focus {
+  outline: none !important;
+}
+
+/* Prevent autofill for search inputs */
+input[data-form-type="search"] {
+  background-color: white !important;
+  background-image: none !important;
+}
+
+input[data-form-type="search"]:-webkit-autofill,
+input[data-form-type="search"]:-webkit-autofill:hover,
+input[data-form-type="search"]:-webkit-autofill:focus,
+input[data-form-type="search"]:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  -webkit-text-fill-color: #495057 !important;
+  background-color: white !important;
+  background-image: none !important;
 }
 </style>

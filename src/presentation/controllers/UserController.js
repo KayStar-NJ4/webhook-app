@@ -420,7 +420,10 @@ class UserController {
 
       res.json({
         success: true,
-        data: user.roles || []
+        data: {
+          roles: user.roles || [],
+          permissions: user.permissions || []
+        }
       })
     } catch (error) {
       this.logger.error('Get user roles failed', { error: error.message })

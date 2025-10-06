@@ -3,7 +3,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="userPermissionsModalLabel">
-          Quyền của {{ user.name }}
+          Vai trò của {{ user.name }}
         </h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
@@ -17,41 +17,44 @@
         <div v-else>
           <div class="row">
             <div class="col-md-6">
-              <h6>Quyền có sẵn</h6>
-              <div class="permission-list">
+              <h6>Vai trò có sẵn</h6>
+              <div class="roles-list">
                 <div 
-                  v-for="permission in availablePermissions" 
-                  :key="permission.id"
-                  class="form-check"
+                  v-for="role in availableRoles" 
+                  :key="role.id"
+                  class="form-check role-item"
                 >
                   <input 
                     class="form-check-input" 
                     type="checkbox" 
-                    :id="`permission_${permission.id}`"
-                    :value="permission.id"
-                    v-model="selectedPermissions"
+                    :id="`role_${role.id}`"
+                    :value="role.id"
+                    v-model="selectedRoles"
                   >
-                  <label class="form-check-label" :for="`permission_${permission.id}`">
-                    <strong>{{ permission.resource }}</strong>: {{ permission.action }}
-                    <small class="text-muted d-block">{{ permission.description }}</small>
+                  <label class="form-check-label" :for="`role_${role.id}`">
+                    <div class="role-info">
+                      <strong>{{ role.name }}</strong>
+                      <small class="text-muted d-block">{{ role.description }}</small>
+                      <small class="text-info">Số quyền: {{ role.permissions ? role.permissions.length : 0 }}</small>
+                    </div>
                   </label>
                 </div>
               </div>
             </div>
             <div class="col-md-6">
-              <h6>Quyền đã chọn</h6>
-              <div class="selected-permissions">
+              <h6>Vai trò đã chọn</h6>
+              <div class="selected-roles">
                 <div 
-                  v-for="permissionId in selectedPermissions" 
-                  :key="permissionId"
-                  class="selected-permission-item"
+                  v-for="roleId in selectedRoles" 
+                  :key="roleId"
+                  class="selected-role-item"
                 >
-                  <span class="badge badge-primary">
-                    {{ getPermissionById(permissionId).resource }}:{{ getPermissionById(permissionId).action }}
+                  <span class="badge badge-primary mr-1">
+                    {{ getRoleById(roleId).name }}
                   </span>
                 </div>
-                <div v-if="selectedPermissions.length === 0" class="text-muted">
-                  Chưa chọn quyền nào
+                <div v-if="selectedRoles.length === 0" class="text-muted">
+                  Chưa chọn vai trò nào
                 </div>
               </div>
             </div>
@@ -92,8 +95,8 @@ export default {
   data() {
     return {
       user: {},
-      availablePermissions: [],
-      selectedPermissions: [],
+      availableRoles: [],
+      selectedRoles: [],
       isLoading: false,
       isSaving: false
     }
@@ -103,53 +106,57 @@ export default {
       handler(newVal) {
         if (newVal && Object.keys(newVal).length > 0) {
           this.user = newVal
-          this.loadUserPermissions()
+          this.loadUserRoles()
         }
       },
       immediate: true
     }
   },
   mounted() {
-    this.loadAvailablePermissions()
+    this.loadAvailableRoles()
   },
   methods: {
-    async loadAvailablePermissions() {
+    async loadAvailableRoles() {
       this.isLoading = true
       try {
-        const response = await window.PermissionService.getList()
+        const response = await window.RoleService.getList()
+        console.log('Available roles response:', response.data)
         if (response.data.success) {
-          this.availablePermissions = response.data.data.permissions || response.data.data
+          this.availableRoles = response.data.data.roles || response.data.data
+          console.log('Available roles:', this.availableRoles)
         }
       } catch (error) {
-        console.error('Error loading permissions:', error)
+        console.error('Error loading roles:', error)
       } finally {
         this.isLoading = false
       }
     },
-    async loadUserPermissions() {
+    async loadUserRoles() {
       if (!this.id) return
       
       try {
-        const response = await window.UserService.getUserPermissions(this.id)
+        const response = await window.UserService.getUserRoles(this.id)
+        console.log('User roles response:', response.data)
         if (response.data.success) {
-          this.selectedPermissions = (response.data.data.permissions || []).map(p => p.id)
+          // API trả về { roles: [...], permissions: [...] }
+          this.selectedRoles = (response.data.data.roles || []).map(r => r.id)
         }
       } catch (error) {
-        console.error('Error loading user permissions:', error)
+        console.error('Error loading user roles:', error)
       }
     },
-    getPermissionById(id) {
-      return this.availablePermissions.find(p => p.id === id) || {}
+    getRoleById(id) {
+      return this.availableRoles.find(r => r.id === id) || {}
     },
     async handleSave() {
       this.isSaving = true
       try {
-        const response = await window.UserService.updateUserPermissions(this.id, this.selectedPermissions)
+        const response = await window.UserService.updateUserRoles(this.id, this.selectedRoles)
         if (response.data.success) {
           this.$emit('success', response.data.data)
         }
       } catch (error) {
-        console.error('Error saving user permissions:', error)
+        console.error('Error saving user roles:', error)
       } finally {
         this.isSaving = false
       }
@@ -159,7 +166,7 @@ export default {
 </script>
 
 <style scoped>
-.permission-list {
+.roles-list {
   max-height: 400px;
   overflow-y: auto;
   border: 1px solid #dee2e6;
@@ -167,7 +174,23 @@ export default {
   border-radius: 4px;
 }
 
-.selected-permissions {
+.role-item {
+  margin-bottom: 10px;
+  padding: 8px;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+}
+
+.role-item:hover {
+  background-color: #e9ecef;
+}
+
+.role-info {
+  margin-left: 5px;
+}
+
+.selected-roles {
   max-height: 400px;
   overflow-y: auto;
   border: 1px solid #dee2e6;
@@ -175,7 +198,7 @@ export default {
   border-radius: 4px;
 }
 
-.selected-permission-item {
+.selected-role-item {
   margin-bottom: 5px;
 }
 </style>

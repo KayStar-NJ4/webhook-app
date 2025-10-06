@@ -307,7 +307,13 @@ class RoleController {
 
       res.json({
         success: true,
-        data: permissions.map(p => p.name)
+        data: permissions.map(p => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          resource: p.resource,
+          action: p.action
+        }))
       })
     } catch (error) {
       this.logger.error('Get role permissions failed', { error: error.message })
