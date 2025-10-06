@@ -204,15 +204,16 @@ export default {
       })
     },
     async testConnection(mapping, event) {
+      let testBtn = null
       try {
+        
         // Show loading
-        const testBtn = event.target.closest('button')
+        testBtn = event.target.closest('button')
         if (!testBtn) {
           console.error('Test button not found')
           return
         }
         
-        const originalIcon = testBtn.innerHTML
         testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'
         testBtn.disabled = true
 
@@ -220,16 +221,23 @@ export default {
         const response = await window.PlatformMappingService.testConnection(mapping.id)
         
         // Show result
-        if (response.data.success) {
+        if (response.data && response.data.success) {
           this.showSuccessMessage('Kết nối thành công!')
         } else {
-          this.showErrorMessage('Kết nối thất bại: ' + (response.data.error || 'Unknown error'))
+          const errorMsg = response.data?.error || response.data?.message || 'Unknown error'
+          this.showErrorMessage('Kết nối thất bại: ' + errorMsg)
         }
       } catch (error) {
-        this.showErrorMessage('Lỗi khi test kết nối: ' + error.message)
+        console.error('Test connection error:', error)
+        let errorMessage = 'Lỗi khi test kết nối'
+        if (error.response && error.response.data) {
+          errorMessage += ': ' + (error.response.data.error || error.response.data.message || error.message)
+        } else {
+          errorMessage += ': ' + error.message
+        }
+        this.showErrorMessage(errorMessage)
       } finally {
         // Restore button
-        const testBtn = event.target.closest('button')
         if (testBtn) {
           testBtn.innerHTML = '<i class="fa fa-plug"></i>'
           testBtn.disabled = false
@@ -269,8 +277,10 @@ export default {
       
       toastContainer.appendChild(toast)
       
-      // Show toast
-      const bsToast = new bootstrap.Toast(toast)
+      // Show toast with longer duration
+      const bsToast = new bootstrap.Toast(toast, {
+        delay: 5000 // Show for 5 seconds instead of default 2-3 seconds
+      })
       bsToast.show()
       
       // Remove toast element after it's hidden
