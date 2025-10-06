@@ -11,6 +11,9 @@ class TelegramRoutes {
     telegramBotRepository,
     chatwootAccountRepository,
     difyAppRepository,
+    telegramService,
+    chatwootService,
+    difyService,
     authMiddleware,
     permissionMiddleware,
     logger
@@ -21,6 +24,9 @@ class TelegramRoutes {
       telegramBotRepository,
       chatwootAccountRepository,
       difyAppRepository,
+      telegramService,
+      chatwootService,
+      difyService,
       logger
     })
     this.authMiddleware = authMiddleware
@@ -66,6 +72,12 @@ class TelegramRoutes {
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('telegram', 'delete'),
       (req, res) => this.adminController.deleteTelegramBot(req, res)
+    )
+    
+    this.router.post('/:id/test-connection',
+      this.authMiddleware.verifyToken,
+      this.permissionMiddleware.requirePermission('telegram', 'read'),
+      (req, res) => this.adminController.testTelegramBotConnection(req, res)
     )
   }
 

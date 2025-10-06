@@ -153,6 +153,9 @@ class Application {
         logsService: this.serviceRegistry.get('logsService'),
         permissionService: this.serviceRegistry.get('permissionService'),
         platformMappingService: this.serviceRegistry.get('platformMappingService'),
+        telegramService: this.serviceRegistry.get('telegramService'),
+        chatwootService: this.serviceRegistry.get('chatwootService'),
+        difyService: this.serviceRegistry.get('difyService'),
         logger: logger.child({ component: 'AdminRoutes' })
       })
 

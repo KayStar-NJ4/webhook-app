@@ -11,6 +11,9 @@ class DifyRoutes {
     telegramBotRepository,
     chatwootAccountRepository,
     difyAppRepository,
+    telegramService,
+    chatwootService,
+    difyService,
     authMiddleware,
     permissionMiddleware,
     logger
@@ -21,6 +24,9 @@ class DifyRoutes {
       telegramBotRepository,
       chatwootAccountRepository,
       difyAppRepository,
+      telegramService,
+      chatwootService,
+      difyService,
       logger
     })
     this.authMiddleware = authMiddleware
@@ -78,6 +84,12 @@ class DifyRoutes {
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('dify', 'delete'),
       (req, res) => this.adminController.deleteMapping(req, res)
+    )
+    
+    this.router.post('/:id/test-connection',
+      this.authMiddleware.verifyToken,
+      this.permissionMiddleware.requirePermission('dify', 'read'),
+      (req, res) => this.adminController.testDifyAppConnection(req, res)
     )
   }
 

@@ -52,6 +52,11 @@ class DifyService extends (window.BaseService || _BaseServiceDify) {
   getConversationHistory(appId, params = {}) {
     return this.get(`${this.endpoint}/${appId}/conversations`, params)
   }
+
+  // Test connection
+  testConnection(id) {
+    return this.post(`${this.endpoint}/${id}/test-connection`)
+  }
 }
 
 // Export to global window object

@@ -147,6 +147,55 @@
           </div>
         </div>
 
+        <!-- Webhook Configuration Section -->
+        <div class="card mt-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Cấu hình Webhook</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="webhookUrl">Webhook URL</label>
+                  <input 
+                    type="url" 
+                    class="form-control" 
+                    id="webhookUrl"
+                    v-model="formData.webhook_url"
+                    :class="{ 'is-invalid': errors.webhook_url }"
+                    placeholder="https://your-domain.com"
+                  >
+                  <small class="form-text text-muted">
+                    URL cơ sở của ứng dụng để nhận webhook từ các platform (Telegram, Chatwoot, etc.)
+                  </small>
+                  <div v-if="errors.webhook_url" class="invalid-feedback">
+                    {{ errors.webhook_url[0] }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="webhookSecretToken">Secret Token</label>
+                  <input 
+                    type="password" 
+                    class="form-control" 
+                    id="webhookSecretToken"
+                    v-model="formData.webhook_secret_token"
+                    :class="{ 'is-invalid': errors.webhook_secret_token }"
+                    placeholder="Secret token để bảo mật webhook"
+                  >
+                  <small class="form-text text-muted">
+                    Token bí mật để xác thực webhook (tùy chọn)
+                  </small>
+                  <div v-if="errors.webhook_secret_token" class="invalid-feedback">
+                    {{ errors.webhook_secret_token[0] }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="form-group text-right">
           <button type="submit" class="btn btn-primary" :disabled="isSaving">
             <i v-if="isSaving" class="fas fa-spinner fa-spin"></i>
@@ -172,7 +221,9 @@ export default {
         session_timeout: 60,
         debug_mode: false,
         maintenance_mode: false,
-        maintenance_message: ''
+        maintenance_message: '',
+        webhook_url: '',
+        webhook_secret_token: ''
       },
       errors: {},
       isLoading: false,

@@ -14,10 +14,12 @@ class AdminRoutesIndex {
     permissionRepository,
     configurationRepository,
     configurationService,
-    logRepository,
     logsService,
     permissionService,
     platformMappingService,
+    telegramService,
+    chatwootService,
+    difyService,
     logger
   }) {
     this.router = express.Router()
@@ -78,6 +80,9 @@ class AdminRoutesIndex {
       telegramBotRepository,
       chatwootAccountRepository,
       difyAppRepository,
+      telegramService,
+      chatwootService,
+      difyService,
       authMiddleware: this.authMiddleware,
       permissionMiddleware: this.permissionMiddleware,
       logger
@@ -88,6 +93,9 @@ class AdminRoutesIndex {
       telegramBotRepository,
       chatwootAccountRepository,
       difyAppRepository,
+      telegramService,
+      chatwootService,
+      difyService,
       authMiddleware: this.authMiddleware,
       permissionMiddleware: this.permissionMiddleware,
       logger
@@ -98,6 +106,9 @@ class AdminRoutesIndex {
       telegramBotRepository,
       chatwootAccountRepository,
       difyAppRepository,
+      telegramService,
+      chatwootService,
+      difyService,
       authMiddleware: this.authMiddleware,
       permissionMiddleware: this.permissionMiddleware,
       logger

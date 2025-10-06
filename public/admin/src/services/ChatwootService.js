@@ -61,6 +61,11 @@ class ChatwootService extends (window.BaseService || _BaseServiceChatwoot) {
       return this.create(data)
     }
   }
+
+  // Test connection
+  testConnection(id) {
+    return this.post(`${this.endpoint}/${id}/test-connection`)
+  }
 }
 
 // Export to global window object

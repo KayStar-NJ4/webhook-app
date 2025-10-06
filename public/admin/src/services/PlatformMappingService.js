@@ -32,10 +32,7 @@ class PlatformMappingService extends (window.BaseService || _BaseServicePlatform
     return super.delete(`${this.endpoint}/${id}`);
   }
 
-  // Test connection
-  testConnection(id) {
-    return this.post(`${this.endpoint}/${id}/test-connection`);
-  }
+
 
   // Available platforms/resources
   getAvailablePlatforms() {

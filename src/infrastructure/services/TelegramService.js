@@ -47,7 +47,7 @@ class TelegramService {
 
       const bot = result.rows[0]
       this.botToken = bot.bot_token
-      this.apiUrl = `${bot.api_url || 'https://api.telegram.org'}/bot${this.botToken}`
+      this.apiUrl = `https://api.telegram.org/bot${this.botToken}`
 
       this.logger.info('Telegram service initialized with bot', {
         botId,
@@ -218,10 +218,15 @@ class TelegramService {
   }
 
   /**
-   * Set webhook for all active bots using base URL
-   * @param {string} baseUrl - e.g. https://<ngrok>.ngrok-free.app
+   * Set webhook for all active bots using system configuration
    */
-  async setWebhookForAllBots (baseUrl) {
+  async setWebhookForAllBots () {
+    // Get webhook URL from system configuration
+    const baseUrl = await this.configurationService.get('system.webhook_url', '')
+    if (!baseUrl) {
+      throw new Error('System webhook URL not configured. Please set it in system configuration.')
+    }
+
     // lazy import to avoid circular dep
     const { Pool } = require('pg')
     const pool = new Pool({
@@ -248,10 +253,16 @@ class TelegramService {
     await pool.end()
     const outcomes = []
     const endpoint = `${baseUrl.replace(/\/$/, '')}/webhook/telegram`
+    
+    // Get system webhook secret token
+    const systemSecretToken = await this.configurationService.get('system.webhook_secret_token', '')
+    
     for (const row of result.rows) {
       const url = endpoint
+      // Use bot-specific secret token if available, otherwise use system secret token
+      const secretToken = row.secret_token || systemSecretToken
       try {
-        const setRes = await this.setWebhookForBot(row.bot_token, url, row.secret_token)
+        const setRes = await this.setWebhookForBot(row.bot_token, url, secretToken)
         outcomes.push({ botId: row.id, ok: setRes.ok !== false, result: setRes })
       } catch (e) {
         outcomes.push({ botId: row.id, ok: false, error: e.message })
@@ -266,22 +277,45 @@ class TelegramService {
    */
   async getBotInfo () {
     try {
-      // Initialize if not already done
-      if (!this.apiUrl) {
-        await this.initialize()
-      }
-
       // Skip if no token configured
       if (!this.botToken || this.botToken === 'your-telegram-bot-token') {
         this.logger.warn('Telegram bot token not configured, skipping bot info check')
         return null
       }
 
-      const response = await axios.get(`${this.apiUrl}/getMe`)
-      return response.data.result
+      // Construct API URL if not already set
+      let apiUrl = this.apiUrl
+      if (!apiUrl) {
+        // Try to get base URL from configuration or use default
+        const baseApiUrl = await this.configurationService.get('telegram.apiUrl', 'https://api.telegram.org')
+        apiUrl = `${baseApiUrl}/bot${this.botToken}`
+      }
+
+      this.logger.info('Getting bot info from Telegram API', {
+        apiUrl: apiUrl.replace(this.botToken, '***'),
+        hasBotToken: !!this.botToken
+      })
+
+      const response = await axios.get(`${apiUrl}/getMe`, {
+        timeout: 10000
+      })
+
+      if (response.data.ok) {
+        this.logger.info('Successfully retrieved bot info', {
+          botId: response.data.result.id,
+          botUsername: response.data.result.username
+        })
+        return response.data.result
+      } else {
+        this.logger.warn('Telegram API returned error for getMe', {
+          error: response.data.description
+        })
+        return null
+      }
     } catch (error) {
-      this.logger.warn('Failed to get bot info, continuing without Telegram service', {
-        error: error.message
+      this.logger.error('Failed to get bot info from Telegram API', {
+        error: error.message,
+        response: error.response?.data
       })
       return null
     }

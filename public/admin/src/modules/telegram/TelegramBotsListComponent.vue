@@ -33,6 +33,9 @@
                       class="form-control" 
                       v-model="params.search" 
                       placeholder="Tìm kiếm theo tên bot..."
+                      autocomplete="off"
+                      data-lpignore="true"
+                      data-form-type="other"
                     />
                   </div>
                 </div>
@@ -57,8 +60,6 @@
                     <th class="text-center text-nowrap">Tên Bot</th>
                     <th class="text-center text-nowrap">Bot Token</th>
                     <th class="text-center text-nowrap">Secret Token</th>
-                    <th class="text-center text-nowrap">Webhook URL</th>
-                    <th class="text-center text-nowrap">API URL</th>
                     <th class="text-center text-nowrap">Trạng thái</th>
                     <th class="text-center text-nowrap">Ngày tạo</th>
                   </tr>
@@ -78,6 +79,14 @@
                           <i class="fa fa-pencil-alt"></i>
                         </button>
                         <button 
+                          v-if="hasPermission('telegram', 'read')"
+                          class="btn btn-sm btn-info"
+                          @click="testConnection(item)"
+                          title="Test kết nối"
+                        >
+                          <i class="fas fa-exchange-alt"></i>
+                        </button>
+                        <button 
                           v-if="hasPermission('telegram', 'delete')"
                           class="btn btn-sm btn-danger"
                           @click="showDeleteConfirm(item)"
@@ -90,8 +99,6 @@
                     <td class="align-middle">{{ item.name || '' }}</td>
                     <td class="align-middle">{{ item.bot_token ? '***' + item.bot_token.slice(-4) : '' }}</td>
                     <td class="align-middle">{{ item.secret_token ? '***' + item.secret_token.slice(-4) : '' }}</td>
-                    <td class="align-middle">{{ item.webhook_url || '' }}</td>
-                    <td class="align-middle">{{ item.api_url || '' }}</td>
                     <td class="align-middle text-center">
                       <span :class="item.is_active ? 'badge badge-success' : 'badge badge-danger'">
                         {{ item.is_active ? 'Hoạt động' : 'Không hoạt động' }}
@@ -228,6 +235,96 @@ export default {
         this.params.page = pageNum;
         this.fetchData();
       }
+    },
+    async testConnection(bot) {
+      try {
+        const response = await window.TelegramService.testConnection(bot.id);
+        
+        if (response.data.success && response.data.data.connected) {
+          this.showTestResult(bot, true, 'Kết nối thành công');
+        } else {
+          this.showTestResult(bot, false, response.data.data?.message || 'Kết nối thất bại');
+        }
+      } catch (error) {
+        this.showTestResult(bot, false, 'Lỗi: ' + error.message);
+      }
+    },
+    showTestResult(bot, success, message) {
+      const modalId = `test-result-${Date.now()}`;
+      const modalHTML = `
+        <div id="${modalId}" style="
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <div style="
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+          ">
+            <h4 style="margin: 0 0 16px 0; color: #333; font-size: 18px;">
+              Kết quả test kết nối
+            </h4>
+            <p style="margin: 0 0 16px 0; color: #666; line-height: 1.5;">
+              Bot: <strong>${bot.name}</strong>
+            </p>
+            <div style="
+              padding: 16px;
+              background: ${success ? '#d4edda' : '#f8d7da'};
+              border: 1px solid ${success ? '#c3e6cb' : '#f5c6cb'};
+              border-radius: 4px;
+              color: ${success ? '#155724' : '#721c24'};
+              margin-bottom: 16px;
+            ">
+              <strong>${success ? '✅ Thành công' : '❌ Thất bại'}</strong>
+              <br>
+              ${message}
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+              <button id="close-test-${modalId}" style="
+                padding: 8px 16px;
+                border: none;
+                background: #007bff;
+                color: white;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+              ">Đóng</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+      const modal = document.getElementById(modalId);
+      const closeBtn = document.getElementById(`close-test-${modalId}`);
+
+      const cleanup = () => {
+        if (modal && modal.parentNode) {
+          modal.parentNode.removeChild(modal);
+        }
+      };
+
+      closeBtn.addEventListener('click', cleanup);
+      modal.addEventListener('click', (e) => { if (e.target === modal) cleanup() });
+      
+      const handleEsc = (e) => { 
+        if (e.key === 'Escape') { 
+          cleanup();
+          document.removeEventListener('keydown', handleEsc);
+        } 
+      };
+      document.addEventListener('keydown', handleEsc);
     },
     updateLimit(value) {
       this.params.limit = value;

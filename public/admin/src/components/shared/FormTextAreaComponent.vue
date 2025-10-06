@@ -13,6 +13,7 @@
       :rows="rows"
       :maxlength="maxLength"
       :class="textareaClasses"
+      autocomplete="off"
       @input="handleInput"
       @blur="handleBlur"
       @focus="handleFocus"

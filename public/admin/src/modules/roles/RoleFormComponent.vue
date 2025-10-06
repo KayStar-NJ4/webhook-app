@@ -19,6 +19,7 @@
               id="roleName"
               v-model="formData.name"
               :class="{ 'is-invalid': errors.name }"
+              autocomplete="off"
               required
             >
             <div v-if="errors.name" class="invalid-feedback">
@@ -33,6 +34,7 @@
               id="roleDescription"
               v-model="formData.description"
               :class="{ 'is-invalid': errors.description }"
+              autocomplete="off"
               rows="3"
             ></textarea>
             <div v-if="errors.description" class="invalid-feedback">

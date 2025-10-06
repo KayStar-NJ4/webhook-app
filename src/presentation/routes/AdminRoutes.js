@@ -25,6 +25,9 @@ class AdminRoutes {
     logsService,
     permissionService,
     platformMappingService,
+    telegramService,
+    chatwootService,
+    difyService,
     logger
   }) {
     this.router = express.Router()
@@ -63,6 +66,9 @@ class AdminRoutes {
       logsService,
       permissionService,
       platformMappingService,
+      telegramService,
+      chatwootService,
+      difyService,
       logger
     })
 

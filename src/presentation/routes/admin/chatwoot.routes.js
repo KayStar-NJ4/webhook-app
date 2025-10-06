@@ -11,6 +11,9 @@ class ChatwootRoutes {
     telegramBotRepository,
     chatwootAccountRepository,
     difyAppRepository,
+    telegramService,
+    chatwootService,
+    difyService,
     authMiddleware,
     permissionMiddleware,
     logger
@@ -21,6 +24,9 @@ class ChatwootRoutes {
       telegramBotRepository,
       chatwootAccountRepository,
       difyAppRepository,
+      telegramService,
+      chatwootService,
+      difyService,
       logger
     })
     this.authMiddleware = authMiddleware
@@ -54,6 +60,12 @@ class ChatwootRoutes {
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('chatwoot', 'delete'),
       (req, res) => this.adminController.deleteChatwootAccount(req, res)
+    )
+    
+    this.router.post('/:id/test-connection',
+      this.authMiddleware.verifyToken,
+      this.permissionMiddleware.requirePermission('chatwoot', 'read'),
+      (req, res) => this.adminController.testChatwootAccountConnection(req, res)
     )
   }
 

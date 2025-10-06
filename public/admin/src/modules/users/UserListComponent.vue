@@ -30,6 +30,7 @@
                     v-model="params.search"
                     label="Tìm kiếm"
                     placeholder="Tìm kiếm..."
+                    :is-search="true"
                     @update:modelValue="debouncedSearch"
                   />
                 </div>

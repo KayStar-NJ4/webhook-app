@@ -33,6 +33,9 @@
                       class="form-control" 
                       v-model="params.search" 
                       placeholder="Tìm kiếm theo tên app..."
+                      autocomplete="off"
+                      data-lpignore="true"
+                      data-form-type="other"
                     />
                   </div>
                 </div>
@@ -75,6 +78,14 @@
                           title="Sửa"
                         >
                           <i class="fa fa-pencil-alt"></i>
+                        </button>
+                        <button 
+                          v-if="hasPermission('dify', 'read')"
+                          class="btn btn-sm btn-info"
+                          @click="testConnection(item)"
+                          title="Test kết nối"
+                        >
+                          <i class="fas fa-exchange-alt"></i>
                         </button>
                         <button 
                           v-if="hasPermission('dify', 'delete')"
@@ -226,6 +237,96 @@ export default {
         this.params.page = pageNum;
         this.fetchData();
       }
+    },
+    async testConnection(app) {
+      try {
+        const response = await window.DifyService.testConnection(app.id);
+        
+        if (response.data.success && response.data.data.connected) {
+          this.showTestResult(app, true, 'Kết nối thành công');
+        } else {
+          this.showTestResult(app, false, response.data.data?.message || 'Kết nối thất bại');
+        }
+      } catch (error) {
+        this.showTestResult(app, false, 'Lỗi: ' + error.message);
+      }
+    },
+    showTestResult(app, success, message) {
+      const modalId = `test-result-${Date.now()}`;
+      const modalHTML = `
+        <div id="${modalId}" style="
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <div style="
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+          ">
+            <h4 style="margin: 0 0 16px 0; color: #333; font-size: 18px;">
+              Kết quả test kết nối
+            </h4>
+            <p style="margin: 0 0 16px 0; color: #666; line-height: 1.5;">
+              App: <strong>${app.name}</strong>
+            </p>
+            <div style="
+              padding: 16px;
+              background: ${success ? '#d4edda' : '#f8d7da'};
+              border: 1px solid ${success ? '#c3e6cb' : '#f5c6cb'};
+              border-radius: 4px;
+              color: ${success ? '#155724' : '#721c24'};
+              margin-bottom: 16px;
+            ">
+              <strong>${success ? '✅ Thành công' : '❌ Thất bại'}</strong>
+              <br>
+              ${message}
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+              <button id="close-test-${modalId}" style="
+                padding: 8px 16px;
+                border: none;
+                background: #007bff;
+                color: white;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+              ">Đóng</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+      const modal = document.getElementById(modalId);
+      const closeBtn = document.getElementById(`close-test-${modalId}`);
+
+      const cleanup = () => {
+        if (modal && modal.parentNode) {
+          modal.parentNode.removeChild(modal);
+        }
+      };
+
+      closeBtn.addEventListener('click', cleanup);
+      modal.addEventListener('click', (e) => { if (e.target === modal) cleanup() });
+      
+      const handleEsc = (e) => { 
+        if (e.key === 'Escape') { 
+          cleanup();
+          document.removeEventListener('keydown', handleEsc);
+        } 
+      };
+      document.addEventListener('keydown', handleEsc);
     },
     updateLimit(value) {
       this.params.limit = value;
