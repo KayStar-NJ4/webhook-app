@@ -840,11 +840,12 @@ class ProcessMessageUseCase {
     // Update cooldown
     this.responseCooldown.set(conversationId, now)
 
-    // Send response to Chatwoot
+    // Send response to Chatwoot as outgoing message (from bot/agent)
     const singleResponse = response.trim()
     await this.chatwootService.sendMessage(
       chatwootConversationId,
-      singleResponse
+      singleResponse,
+      { message_type: 'outgoing' }
     )
 
     this.logger.info('Dify response sent to Chatwoot', {
