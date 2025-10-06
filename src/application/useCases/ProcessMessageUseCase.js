@@ -783,11 +783,14 @@ class ProcessMessageUseCase {
       conversation.chatwootInboxId = chatwootConversation.inbox_id || 'auto-created'
 
       try {
-        await this.conversationRepository.update(conversation)
+        await this.conversationRepository.updateFields(conversation.id, {
+          chatwoot_id: chatwootConversation.id,
+          chatwoot_inbox_id: chatwootConversation.inbox_id || 'auto-created'
+        })
         this.logger.info('Conversation updated successfully with Chatwoot IDs', {
           conversationId: conversation.id,
-          chatwootId: conversation.chatwootId,
-          chatwootInboxId: conversation.chatwootInboxId
+          chatwootId: chatwootConversation.id,
+          chatwootInboxId: chatwootConversation.inbox_id || 'auto-created'
         })
       } catch (updateError) {
         this.logger.error('Failed to update conversation with Chatwoot IDs', {
