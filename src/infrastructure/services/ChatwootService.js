@@ -296,13 +296,17 @@ class ChatwootService {
     const senderId = conversation.senderId || message.senderId || message.metadata?.userId
     const chatId = conversation.chatId || message.metadata?.chatId
 
+    // Try to get email from conversation (if user provided it)
+    // Otherwise, leave as null since Telegram API doesn't provide real email addresses
+    let contactEmail = conversation.sender_email || null
+
     const payload = {
       source_id: customSourceId || conversation.id,
       inbox_id: inboxId,
       contact: {
         name: contactName,
         identifier: senderId,
-        email: username ? `${username}_${Date.now()}@telegram.local` : null,
+        email: contactEmail,
         phone_number: senderId
       },
       additional_attributes: { 
@@ -345,9 +349,11 @@ class ChatwootService {
     let contactId
 
     try {
+      // Telegram API doesn't provide real email addresses for privacy reasons
+      // We'll leave email as null and let Chatwoot handle it
       const contactResponse = await axios.post(
         `${this.baseUrl}/api/v1/accounts/${this.accountId}/contacts`,
-        { name: contactName, email: `${contactIdentifier}_${Date.now()}@telegram.local` },
+        { name: contactName, email: null },
         { headers: this.getHeaders() }
       )
       contactId = contactResponse.data.payload?.contact?.id || contactResponse.data.payload?.id || contactResponse.data.id
