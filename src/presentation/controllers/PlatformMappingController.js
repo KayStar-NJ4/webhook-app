@@ -353,6 +353,7 @@ class PlatformMappingController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
+
   async testConnection (req, res) {
     try {
       const { id } = req.params

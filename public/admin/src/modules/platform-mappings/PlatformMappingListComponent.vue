@@ -217,7 +217,7 @@ export default {
         testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'
         testBtn.disabled = true
 
-        // Call test API
+        // Test connection
         const response = await window.PlatformMappingService.testConnection(mapping.id)
         
         // Show result

@@ -66,13 +66,19 @@ class DatabaseService {
     const expiry = this.botTokenCacheExpiry.get(cacheKey)
 
     if (cached && expiry && Date.now() < expiry) {
-      this.logger.debug('Bot token retrieved from cache', { botId })
+      this.logger.info('Bot token retrieved from cache', { botId })
       return cached
     }
 
     try {
       const pool = this.getPool()
       const result = await pool.query('SELECT bot_token FROM telegram_bots WHERE id = $1 AND is_active = true', [botId])
+
+      this.logger.info('Bot token query result', { 
+        botId, 
+        rowsCount: result.rows.length,
+        hasToken: result.rows.length > 0 ? !!result.rows[0].bot_token : false
+      })
 
       if (result.rows.length === 0) {
         this.logger.warn('Bot not found or inactive', { botId })
@@ -85,7 +91,7 @@ class DatabaseService {
       this.botTokenCache.set(cacheKey, token)
       this.botTokenCacheExpiry.set(cacheKey, Date.now() + this.cacheTimeout)
 
-      this.logger.debug('Bot token retrieved from database and cached', { botId })
+      this.logger.info('Bot token retrieved from database and cached', { botId })
       return token
     } catch (error) {
       this.logger.error('Failed to get bot token', { error: error.message, botId })
@@ -107,7 +113,7 @@ class DatabaseService {
     const expiry = this.botTokenCacheExpiry.get(cacheKey)
 
     if (cached && expiry && Date.now() < expiry) {
-      this.logger.debug('Bot ID retrieved from cache', { secretToken })
+      this.logger.info('Bot ID retrieved from cache', { secretToken })
       return cached
     }
 
@@ -129,7 +135,7 @@ class DatabaseService {
       this.botTokenCache.set(cacheKey, botId)
       this.botTokenCacheExpiry.set(cacheKey, Date.now() + this.cacheTimeout)
 
-      this.logger.debug('Bot ID retrieved from database and cached', { secretToken, botId })
+      this.logger.info('Bot ID retrieved from database and cached', { secretToken, botId })
       return botId
     } catch (error) {
       this.logger.error('Failed to get bot ID by secret token', { error: error.message, secretToken })
@@ -152,7 +158,7 @@ class DatabaseService {
       }
 
       const botId = result.rows[0].id
-      this.logger.debug('First active bot ID retrieved', { botId })
+      this.logger.info('First active bot ID retrieved', { botId })
       return botId
     } catch (error) {
       this.logger.error('Failed to get first active bot ID', { error: error.message })
