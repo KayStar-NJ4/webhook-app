@@ -160,7 +160,7 @@
     <script src="/admin/src/services/index.js"></script>
     
     <!-- Utils -->
-    <script src="/admin/src/utils/auth.js"></script>
+        <script src="/admin/src/utils/auth.js"></script>
     
     <!-- Theme Manager -->
     <script src="/admin/src/assets/js/theme-manager.js"></script>
@@ -249,7 +249,7 @@
         // Load Vue components
         let SidebarComponent, HeaderComponent, AdminLayoutComponent, ListComponent, PageComponent;
         let DashboardPageComponent, UsersPageComponent, UserListComponent, UserFormComponent, UserPasswordFormComponent, UserPermissionsComponent, UserRolesComponent, SystemConfigurationComponent;
-        let RolePageComponent, RoleListComponent, RoleFormComponent, RolePermissionsComponent;
+        let RolePageComponent, RoleListComponent, RoleFormComponent;
         let ChatwootAccountListComponent, ChatwootAccountFormComponent, ChatwootAccountsPageComponent, DifyAppsListComponent, DifyAppFormComponent, DifyAppsPageComponent, TelegramBotsListComponent;
         let PlatformMappingListComponent, PlatformMappingFormComponent, PlatformMappingsPageComponent;
         let FormListingSortComponent, FormTableFiltersComponent, FormCheckBoxComponent, PaginateComponent, ActionButtonsComponent;
@@ -299,9 +299,6 @@
             
             RoleFormComponent = await loadVueComponent('/admin/src/modules/roles/RoleFormComponent.vue');
             window.RoleFormComponent = RoleFormComponent;
-            
-            RolePermissionsComponent = await loadVueComponent('/admin/src/modules/roles/RolePermissionsComponent.vue');
-            window.RolePermissionsComponent = RolePermissionsComponent;
             
             // Load module components (after sub-components are loaded)
             DashboardPageComponent = await loadVueComponent('/admin/src/modules/dashboard/DashboardPageComponent.vue');
@@ -702,7 +699,6 @@
             if (window.RolePageComponent) app.component('RolePageComponent', window.RolePageComponent);
             if (window.RoleListComponent) app.component('RoleListComponent', window.RoleListComponent);
             if (window.RoleFormComponent) app.component('RoleFormComponent', window.RoleFormComponent);
-            if (window.RolePermissionsComponent) app.component('RolePermissionsComponent', window.RolePermissionsComponent);
             if (window.SystemConfigurationComponent) app.component('SystemConfigurationComponent', window.SystemConfigurationComponent);
             if (window.ChatwootAccountListComponent) app.component('ChatwootAccountListComponent', window.ChatwootAccountListComponent);
             if (window.ChatwootAccountFormComponent) app.component('ChatwootAccountFormComponent', window.ChatwootAccountFormComponent);

@@ -44,30 +44,15 @@ class PermissionController {
     try {
       const permissions = await this.permissionService.getAllPermissions()
 
-      // Group permissions by resource
-      const groupedPermissions = {}
-      permissions.forEach(permission => {
-        const resource = permission.resource
-
-        if (!groupedPermissions[resource]) {
-          groupedPermissions[resource] = []
-        }
-
-        groupedPermissions[resource].push({
+      res.json({
+        success: true,
+        data: permissions.map(permission => ({
           id: permission.id,
           name: permission.name,
           description: permission.description,
           resource: permission.resource,
-          action: permission.action,
-          createdAt: permission.createdAt
-        })
-      })
-
-      res.json({
-        success: true,
-        data: {
-          permissions: groupedPermissions
-        }
+          action: permission.action
+        }))
       })
     } catch (error) {
       this.logger.error('Get permissions failed', { error: error.message })
