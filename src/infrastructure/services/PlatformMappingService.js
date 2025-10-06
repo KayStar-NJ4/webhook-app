@@ -24,61 +24,125 @@ class PlatformMappingService {
   }
 
   /**
-   * Create a new platform mapping
+   * Create a new platform mapping (Flow-based)
    * @param {Object} mappingData - Mapping data
    * @param {Object} user - User object
    * @returns {Promise<Object>} - Created mapping
    */
   async createMapping (mappingData, user) {
     try {
-      // Generic payload only (v2 schema)
+      // New flow-based payload
       const {
         sourcePlatform,
         sourceId,
-        targetPlatform,
-        targetId,
+        chatwootAccountId,
+        difyAppId,
+        enableChatwoot = true,
+        enableDify = true,
         enableBidirectional = false,
+        enableSync = true,
         isActive = true,
         name
       } = mappingData
 
-      const normalized = { sourcePlatform, sourceId, targetPlatform, targetId, enableBidirectional, isActive, name }
-      if (!sourcePlatform || !sourceId || !targetPlatform || !targetId) {
-        throw new Error('Missing required fields: sourcePlatform, sourceId, targetPlatform, targetId')
+      if (!sourcePlatform || !sourceId) {
+        throw new Error('Missing required fields: sourcePlatform, sourceId')
+      }
+      
+      if (!enableChatwoot && !enableDify) {
+        throw new Error('At least one target must be enabled: enableChatwoot or enableDify')
+      }
+      
+      if (enableChatwoot && !chatwootAccountId) {
+        throw new Error('chatwootAccountId is required when enableChatwoot is true')
+      }
+      
+      if (enableDify && !difyAppId) {
+        throw new Error('difyAppId is required when enableDify is true')
       }
 
-      // Validate platforms (basic active checks using existing repos where applicable)
-      await this.validateByGeneric(normalized)
+      // Validate platforms (only validate selected ones)
+      const validationData = { sourcePlatform, sourceId }
+      if (enableChatwoot) validationData.chatwootAccountId = chatwootAccountId
+      if (enableDify) validationData.difyAppId = difyAppId
+      
+      await this.validateFlowPlatforms(validationData)
 
-      // Check if identical mapping already exists
-      const exists = await this.platformMappingRepository.existsByPair(
-        normalized.sourcePlatform,
-        normalized.sourceId,
-        normalized.targetPlatform,
-        normalized.targetId
-      )
-
-      if (exists) {
-        throw new Error('Mapping already exists for this source/target pair')
+      // Check if flow already exists for this source
+      const existingFlows = await this.platformMappingRepository.findBySourcePlatformAndId(sourcePlatform, sourceId)
+      if (existingFlows.length > 0) {
+        throw new Error('Flow already exists for this source platform')
       }
 
-      // Create the mapping
-      const mapping = await this.platformMappingRepository.create({
-        sourcePlatform: normalized.sourcePlatform,
-        sourceId: normalized.sourceId,
-        targetPlatform: normalized.targetPlatform,
-        targetId: normalized.targetId,
-        enableBidirectional: normalized.enableBidirectional,
-        isActive: normalized.isActive,
-        name
-      }, user)
+      // Create multiple mappings for the flow
+      const mappings = []
+
+      // 1. Source → Chatwoot mapping
+      if (enableChatwoot) {
+        const chatwootMapping = await this.platformMappingRepository.create({
+          name: `${name} → Chatwoot`,
+          sourcePlatform: sourcePlatform,
+          sourceId: sourceId,
+          targetPlatform: 'chatwoot',
+          targetId: chatwootAccountId,
+          enableBidirectional: enableBidirectional && enableSync,
+          chatwootAccountId: chatwootAccountId,
+          difyAppId: difyAppId,
+          enableChatwoot: enableChatwoot,
+          enableDify: enableDify,
+          enableSync: enableSync,
+          isActive: isActive
+        }, user)
+        mappings.push(chatwootMapping)
+      }
+
+      // 2. Source → Dify mapping
+      if (enableDify) {
+        const difyMapping = await this.platformMappingRepository.create({
+          name: `${name} → Dify`,
+          sourcePlatform: sourcePlatform,
+          sourceId: sourceId,
+          targetPlatform: 'dify',
+          targetId: difyAppId,
+          enableBidirectional: enableBidirectional,
+          chatwootAccountId: chatwootAccountId,
+          difyAppId: difyAppId,
+          enableChatwoot: enableChatwoot,
+          enableDify: enableDify,
+          enableSync: enableSync,
+          isActive: isActive
+        }, user)
+        mappings.push(difyMapping)
+      }
+
+      // 3. Dify → Chatwoot mapping (for sync) - only if both enabled and sync is on
+      if (enableDify && enableChatwoot && enableSync) {
+        const syncMapping = await this.platformMappingRepository.create({
+          name: `${name} → Sync (Dify→Chatwoot)`,
+          sourcePlatform: 'dify',
+          sourceId: difyAppId,
+          targetPlatform: 'chatwoot',
+          targetId: chatwootAccountId,
+          enableBidirectional: false,
+          chatwootAccountId: chatwootAccountId,
+          difyAppId: difyAppId,
+          enableChatwoot: enableChatwoot,
+          enableDify: enableDify,
+          enableSync: enableSync,
+          isActive: isActive
+        }, user)
+        mappings.push(syncMapping)
+      }
+
+      const mapping = mappings[0] // Return first mapping as primary
 
       this.logger.info('Platform mapping created successfully', {
         mappingId: mapping.id,
-        sourcePlatform: normalized.sourcePlatform,
-        sourceId: normalized.sourceId,
-        targetPlatform: normalized.targetPlatform,
-        targetId: normalized.targetId,
+        sourcePlatform: sourcePlatform,
+        sourceId: sourceId,
+        chatwootAccountId: chatwootAccountId,
+        difyAppId: difyAppId,
+        mappingsCount: mappings.length,
         userId: user?.id
       })
 
@@ -443,6 +507,37 @@ class PlatformMappingService {
   }
 
   /**
+   * Validate flow-based platforms
+   */
+  async validateFlowPlatforms ({ sourcePlatform, sourceId, chatwootAccountId, difyAppId }) {
+    const platform = (p) => (p || '').toLowerCase()
+    
+    // Validate source platform
+    if (platform(sourcePlatform) === 'telegram') {
+      const bot = await this.telegramBotRepository.findById(sourceId)
+      if (!bot || !bot.is_active) throw new Error('Source Telegram bot not found or inactive')
+    } else {
+      throw new Error(`Unsupported source platform: ${sourcePlatform}`)
+    }
+
+    // Validate Chatwoot account (if provided)
+    if (chatwootAccountId) {
+      const chatwootAccount = await this.chatwootAccountRepository.findById(chatwootAccountId)
+      if (!chatwootAccount || !chatwootAccount.is_active) {
+        throw new Error('Chatwoot account not found or inactive')
+      }
+    }
+
+    // Validate Dify app (if provided)
+    if (difyAppId) {
+      const difyApp = await this.difyAppRepository.findById(difyAppId)
+      if (!difyApp || !difyApp.is_active) {
+        throw new Error('Dify app not found or inactive')
+      }
+    }
+  }
+
+  /**
    * Validate generic source/target platforms
    */
   async validateByGeneric ({ sourcePlatform, sourceId, targetPlatform, targetId }) {
@@ -723,6 +818,37 @@ class PlatformMappingService {
     }
   }
 
+
+  /**
+   * Test connection for a mapping by ID
+   * @param {number} mappingId - Mapping ID
+   * @returns {Promise<Object>} - Test result
+   */
+  async testConnection (mappingId) {
+    try {
+      const mapping = await this.platformMappingRepository.findById(mappingId)
+      if (!mapping) {
+        throw new Error('Mapping not found')
+      }
+
+      const result = await this.testSourceToTargetFlow(mapping)
+      return {
+        success: result.success,
+        message: result.message,
+        error: result.error,
+        details: result.details
+      }
+    } catch (error) {
+      this.logger.error('Failed to test mapping connection', {
+        error: error.message,
+        mappingId
+      })
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+  }
 
   /**
    * Test source to target connection

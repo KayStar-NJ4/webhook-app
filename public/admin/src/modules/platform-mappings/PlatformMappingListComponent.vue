@@ -34,10 +34,13 @@
         <table class="table table-bordered table-hover">
           <thead class="table-header">
             <tr>
-              <th style="width: 120px;"></th>
-              <th>Platform nguồn</th>
-              <th>Platform đích</th>
+              <th style="width: 120px;">Thao tác</th>
+              <th>Tên luồng</th>
+              <th>Nguồn</th>
+              <th>Đích</th>
+              <th>Cấu hình</th>
               <th>Trạng thái</th>
+              <th>Ngày tạo</th>
             </tr>
           </thead>
           <tbody>
@@ -62,24 +65,73 @@
                   >
                     <i class="fa fa-trash-alt"></i>
                   </button>
+                  <button 
+                    class="btn btn-sm btn-info"
+                    @click="testConnection(mapping, $event)"
+                    title="Test kết nối"
+                  >
+                    <i class="fa fa-plug"></i>
+                  </button>
                 </div>
               </td>
               <td>
-                <span class="badge badge-info">
-                  {{ mapping.source_platform }}
-                </span>
+                <strong>{{ mapping.name || 'Không có tên' }}</strong>
+                <br>
+                <small class="text-muted">ID: {{ mapping.id }}</small>
               </td>
               <td>
-                <span class="badge badge-success">
-                  {{ mapping.target_platform }}
-                </span>
+                <div class="d-flex align-items-center">
+                  <span class="badge badge-primary">
+                    <i :class="getPlatformIcon(mapping.source_platform)"></i>
+                    {{ getPlatformName(mapping.source_platform) }}
+                  </span>
+                </div>
+                <div class="mt-1">
+                  <small class="text-muted">
+                    {{ getSourceName(mapping) }}
+                  </small>
+                </div>
+              </td>
+              <td>
+                <div class="d-flex flex-column">
+                  <span v-if="mapping.target_platform === 'chatwoot'" class="badge badge-success mb-1">
+                    <i class="fas fa-comments"></i> Chatwoot
+                  </span>
+                  <span v-if="mapping.target_platform === 'dify'" class="badge badge-info">
+                    <i class="fas fa-robot"></i> Dify
+                  </span>
+                  <span v-if="mapping.target_platform === 'telegram'" class="badge badge-primary">
+                    <i class="fab fa-telegram-plane"></i> Telegram
+                  </span>
+                </div>
+                <div class="mt-1">
+                  <small class="text-muted">
+                    {{ getTargetName(mapping) }}
+                  </small>
+                </div>
+              </td>
+              <td>
+                <div class="d-flex flex-column">
+                  <span v-if="mapping.enable_bidirectional" class="badge badge-warning mb-1">
+                    <i class="fas fa-exchange-alt"></i> AI Reply
+                  </span>
+                  <span v-if="mapping.enable_sync" class="badge badge-info">
+                    <i class="fas fa-sync"></i> Sync
+                  </span>
+                  <span v-if="!mapping.enable_bidirectional && !mapping.enable_sync" class="badge badge-secondary">
+                    <i class="fas fa-arrow-right"></i> Forward Only
+                  </span>
+                </div>
               </td>
               <td>
                 <span :class="mapping.is_active ? 'badge badge-success' : 'badge badge-danger'">
+                  <i :class="mapping.is_active ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
                   {{ mapping.is_active ? 'Hoạt động' : 'Không hoạt động' }}
                 </span>
               </td>
-              
+              <td>
+                <small>{{ formatDate(mapping.created_at) }}</small>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -109,6 +161,132 @@ export default {
     hasPermission(resource, action) {
       if (!this.userPermissions[resource]) return false;
       return this.userPermissions[resource].some(p => p.action === action);
+    },
+    getPlatformIcon(platform) {
+      const icons = {
+        telegram: 'fab fa-telegram-plane',
+        chatwoot: 'fas fa-comments',
+        dify: 'fas fa-robot',
+        zalo: 'fas fa-comment-dots',
+        facebook: 'fab fa-facebook-messenger',
+        whatsapp: 'fab fa-whatsapp'
+      }
+      return icons[platform] || 'fas fa-link'
+    },
+    getPlatformName(platform) {
+      const names = {
+        telegram: 'Telegram',
+        chatwoot: 'Chatwoot',
+        dify: 'Dify',
+        zalo: 'Zalo',
+        facebook: 'Facebook Messenger',
+        whatsapp: 'WhatsApp'
+      }
+      return names[platform] || platform
+    },
+    getSourceName(mapping) {
+      if (mapping.source_name) return mapping.source_name
+      return `${mapping.source_platform} #${mapping.source_id}`
+    },
+    getTargetName(mapping) {
+      if (mapping.target_name) return mapping.target_name
+      return `${mapping.target_platform} #${mapping.target_id}`
+    },
+    formatDate(dateString) {
+      if (!dateString) return ''
+      const date = new Date(dateString)
+      return date.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    },
+    async testConnection(mapping, event) {
+      let testBtn = null
+      try {
+        
+        // Show loading
+        testBtn = event.target.closest('button')
+        if (!testBtn) {
+          console.error('Test button not found')
+          return
+        }
+        
+        testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'
+        testBtn.disabled = true
+
+        // Call test API
+        const response = await window.PlatformMappingService.testConnection(mapping.id)
+        
+        // Show result
+        if (response.data && response.data.success) {
+          this.showSuccessMessage('Kết nối thành công!')
+        } else {
+          const errorMsg = response.data?.error || response.data?.message || 'Unknown error'
+          this.showErrorMessage('Kết nối thất bại: ' + errorMsg)
+        }
+      } catch (error) {
+        console.error('Test connection error:', error)
+        let errorMessage = 'Lỗi khi test kết nối'
+        if (error.response && error.response.data) {
+          errorMessage += ': ' + (error.response.data.error || error.response.data.message || error.message)
+        } else {
+          errorMessage += ': ' + error.message
+        }
+        this.showErrorMessage(errorMessage)
+      } finally {
+        // Restore button
+        if (testBtn) {
+          testBtn.innerHTML = '<i class="fa fa-plug"></i>'
+          testBtn.disabled = false
+        }
+      }
+    },
+    showSuccessMessage(message) {
+      this.showToast(message, 'success')
+    },
+    showErrorMessage(message) {
+      this.showToast(message, 'error')
+    },
+    showToast(message, type = 'info') {
+      const toast = document.createElement('div')
+      toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} border-0`
+      toast.setAttribute('role', 'alert')
+      toast.setAttribute('aria-live', 'assertive')
+      toast.setAttribute('aria-atomic', 'true')
+      
+      toast.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">
+            ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      `
+      
+      // Add to toast container or create one
+      let toastContainer = document.querySelector('.toast-container')
+      if (!toastContainer) {
+        toastContainer = document.createElement('div')
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3'
+        toastContainer.style.zIndex = '9999'
+        document.body.appendChild(toastContainer)
+      }
+      
+      toastContainer.appendChild(toast)
+      
+      // Show toast with longer duration
+      const bsToast = new bootstrap.Toast(toast, {
+        delay: 5000 // Show for 5 seconds instead of default 2-3 seconds
+      })
+      bsToast.show()
+      
+      // Remove toast element after it's hidden
+      toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove()
+      })
     },
     showDeleteConfirm(mapping) {
       this.showConfirmDialog(
