@@ -219,15 +219,48 @@ class ChatwootService {
           }
         }
       } else {
+        // Try multiple source_id patterns to find existing conversation
         let existingConversation = await this.findConversationBySourceId(conversation.id, inboxId)
-        if (!existingConversation && conversation.senderId) { existingConversation = await this.findConversationBySourceId(conversation.senderId, inboxId) }
-        if (!existingConversation && conversation.chatId) { existingConversation = await this.findConversationBySourceId(conversation.chatId, inboxId) }
+        if (!existingConversation && conversation.senderId) { 
+          existingConversation = await this.findConversationBySourceId(conversation.senderId, inboxId) 
+        }
+        if (!existingConversation && conversation.chatId) { 
+          existingConversation = await this.findConversationBySourceId(conversation.chatId, inboxId) 
+        }
+        if (!existingConversation) {
+          // Try with telegram_ prefix
+          existingConversation = await this.findConversationBySourceId(`telegram_${conversation.chatId}`, inboxId)
+        }
 
-        const uniqueSourceId = `telegram_${conversation.chatId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        try {
-          chatwootConversation = await this.createConversation(conversation, message, inboxId, uniqueSourceId)
-        } catch {
-          chatwootConversation = await this.createConversationWithoutInbox(conversation, message)
+        if (existingConversation) {
+          this.logger.info('Found existing Chatwoot conversation', {
+            conversationId: conversation.id,
+            chatwootId: existingConversation.id,
+            sourceId: existingConversation.source_id
+          })
+          chatwootConversation = existingConversation
+        } else {
+          // Create new conversation with original source_id first
+          try {
+            chatwootConversation = await this.createConversation(conversation, message, inboxId)
+          } catch (createError) {
+            this.logger.warn('Failed to create conversation with original source_id, trying unique source_id', {
+              error: createError.message,
+              sourceId: conversation.id
+            })
+            
+            // If that fails, try with unique source_id
+            const uniqueSourceId = `telegram_${conversation.chatId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            try {
+              chatwootConversation = await this.createConversation(conversation, message, inboxId, uniqueSourceId)
+            } catch (uniqueError) {
+              this.logger.warn('Failed to create conversation with unique source_id, trying without inbox', {
+                error: uniqueError.message,
+                uniqueSourceId
+              })
+              chatwootConversation = await this.createConversationWithoutInbox(conversation, message)
+            }
+          }
         }
       }
 
@@ -242,6 +275,23 @@ class ChatwootService {
 
       if (!chatwootConversation) {
         throw new Error('Failed to create Chatwoot conversation: no conversation returned')
+      }
+
+      // Update conversation in database with chatwootId if we have one
+      if (chatwootConversation.id && !conversation.chatwootId) {
+        try {
+          // This will be handled by the calling code to update the conversation
+          this.logger.info('Chatwoot conversation created/found, should update database conversation', {
+            conversationId: conversation.id,
+            chatwootId: chatwootConversation.id
+          })
+        } catch (updateError) {
+          this.logger.warn('Failed to update conversation with chatwootId', {
+            error: updateError.message,
+            conversationId: conversation.id,
+            chatwootId: chatwootConversation.id
+          })
+        }
       }
       
       return chatwootConversation
