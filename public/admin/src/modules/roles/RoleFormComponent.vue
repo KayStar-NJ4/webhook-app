@@ -284,8 +284,6 @@ export default {
               
               await window.RoleService.updateRolePermissions(roleId, permissionStrings)
             } catch (permError) {
-              console.warn('Error updating permissions:', permError)
-              // Don't fail the whole operation if permissions fail
             }
           }
           
@@ -298,7 +296,6 @@ export default {
         if (error.response && error.response.data && error.response.data.errors) {
           this.errors = error.response.data.errors
         } else {
-          console.error('Error saving role:', error)
           if (window.ToastService && window.ToastService.error) {
             window.ToastService.error('Lỗi khi lưu vai trò')
           }
@@ -315,7 +312,6 @@ export default {
         
         if (response && response.data.success) {
           const permissions = response.data.data
-          console.log('Raw permissions data:', permissions)
           
           // Convert to the format we need
           this.availablePermissions = permissions.map(permission => ({
@@ -329,9 +325,7 @@ export default {
           this.availablePermissions = []
         }
         
-        console.log('Loaded available permissions from API:', this.availablePermissions.length)
       } catch (error) {
-        console.error('Error loading permissions from API:', error)
         this.availablePermissions = []
       } finally {
         this.isLoading = false
@@ -349,7 +343,6 @@ export default {
           this.selectedPermissions = permissions.map(p => p.id)
         }
       } catch (error) {
-        console.error('Error loading role permissions:', error)
         this.selectedPermissions = []
       }
     },
