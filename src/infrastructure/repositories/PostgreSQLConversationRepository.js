@@ -304,6 +304,53 @@ class PostgreSQLConversationRepository extends ConversationRepository {
   }
 
   /**
+   * Update specific fields of a conversation
+   * @param {string} conversationId - Conversation ID
+   * @param {Object} updateData - Data to update
+   * @returns {Promise<Conversation>}
+   */
+  async updateFields (conversationId, updateData) {
+    try {
+      const existing = await this.findById(conversationId)
+      if (!existing) {
+        throw new Error(`Conversation with ID ${conversationId} not found`)
+      }
+
+      // Build dynamic update query
+      const fields = Object.keys(updateData)
+      const setClause = fields.map((field, index) => `${field} = $${index + 2}`).join(', ')
+      const values = [conversationId, ...fields.map(field => updateData[field])]
+
+      const query = `
+        UPDATE conversations 
+        SET ${setClause}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+      `
+
+      const result = await this.pool.query(query, values)
+      
+      if (result.rows.length === 0) {
+        throw new Error(`Failed to update conversation ${conversationId}`)
+      }
+
+      this.logger.info('Conversation fields updated', {
+        conversationId,
+        updatedFields: fields
+      })
+
+      return new Conversation(result.rows[0])
+    } catch (error) {
+      this.logger.error('Failed to update conversation fields', {
+        error: error.message,
+        conversationId,
+        updateData
+      })
+      throw error
+    }
+  }
+
+  /**
    * Update conversation
    * @param {Conversation} conversation - Conversation entity
    * @returns {Promise<Conversation>}

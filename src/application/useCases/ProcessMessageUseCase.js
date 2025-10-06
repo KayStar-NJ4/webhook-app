@@ -467,6 +467,91 @@ class ProcessMessageUseCase {
   }
 
   /**
+   * Handle email command from user
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @returns {Promise<Object>}
+   */
+  async handleEmailCommand (message, conversation) {
+    try {
+      const content = message.content?.trim().toLowerCase()
+      
+      // Check if message starts with /email command
+      if (!content?.startsWith('/email')) {
+        return { handled: false }
+      }
+
+      // Extract email from command: /email user@example.com
+      const emailMatch = content.match(/\/email\s+(.+)/)
+      if (!emailMatch) {
+        // Send help message
+        await this.telegramService.sendMessage(conversation.chatId, 
+          '📧 <b>Cách sử dụng lệnh email:</b>\n\n' +
+          '<code>/email your.email@example.com</code>\n\n' +
+          'Ví dụ: <code>/email john.doe@gmail.com</code>\n\n' +
+          'Email này sẽ được sử dụng để tạo contact trong hệ thống hỗ trợ.',
+          { botToken: message.metadata?.botToken }
+        )
+        return { handled: true, success: true, message: 'Email help sent' }
+      }
+
+      const email = emailMatch[1].trim()
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) {
+        await this.telegramService.sendMessage(conversation.chatId,
+          '❌ <b>Email không hợp lệ!</b>\n\n' +
+          'Vui lòng nhập email đúng định dạng:\n' +
+          '<code>/email your.email@example.com</code>',
+          { botToken: message.metadata?.botToken }
+        )
+        return { handled: true, success: false, message: 'Invalid email format' }
+      }
+
+      // Update conversation with email
+      await this.conversationRepository.updateFields(conversation.id, {
+        sender_email: email
+      })
+
+      // Send confirmation
+      await this.telegramService.sendMessage(conversation.chatId,
+        '✅ <b>Email đã được cập nhật thành công!</b>\n\n' +
+        `Email: <code>${email}</code>\n\n` +
+        'Email này sẽ được sử dụng để tạo contact trong hệ thống hỗ trợ.',
+        { botToken: message.metadata?.botToken }
+      )
+
+      this.logger.info('Email updated for conversation', {
+        conversationId: conversation.id,
+        email,
+        senderId: message.senderId
+      })
+
+      return { handled: true, success: true, message: 'Email updated successfully' }
+    } catch (error) {
+      this.logger.error('Failed to handle email command', {
+        error: error.message,
+        conversationId: conversation.id,
+        messageId: message.id
+      })
+      
+      // Send error message to user
+      try {
+        await this.telegramService.sendMessage(conversation.chatId,
+          '❌ <b>Có lỗi xảy ra khi cập nhật email!</b>\n\n' +
+          'Vui lòng thử lại sau.',
+          { botToken: message.metadata?.botToken }
+        )
+      } catch (sendError) {
+        this.logger.error('Failed to send error message', { error: sendError.message })
+      }
+      
+      return { handled: true, success: false, message: 'Failed to update email' }
+    }
+  }
+
+  /**
    * Process Telegram message
    * @param {Message} message - Message entity
    * @param {Conversation} conversation - Conversation entity
@@ -474,6 +559,12 @@ class ProcessMessageUseCase {
    */
   async processTelegramMessage (message, conversation) {
     try {
+      // 0. Check if this is an email command from user
+      const emailResult = await this.handleEmailCommand(message, conversation)
+      if (emailResult.handled) {
+        return emailResult
+      }
+
       // 1. Get platform mapping configuration for this Telegram bot
       const telegramBotId = await this.getTelegramBotIdFromMessage(message)
       const routingConfig = await this.platformMappingService.getRoutingConfiguration(telegramBotId)

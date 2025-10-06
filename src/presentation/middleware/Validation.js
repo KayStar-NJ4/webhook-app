@@ -121,9 +121,9 @@ class Validation {
       // Contact object (for contact_updated events)
       name: Joi.string().optional(),
       email: Joi.string().email().allow(null).optional(),
-      avatar: Joi.string().uri().optional(),
+      avatar: Joi.string().uri().allow('').optional(),
       blocked: Joi.boolean().optional(),
-      thumbnail: Joi.string().uri().optional(),
+      thumbnail: Joi.string().uri().allow('').optional(),
       identifier: Joi.string().allow(null).optional(),
       phone_number: Joi.string().allow(null).optional(),
       custom_attributes: Joi.object().optional(),
