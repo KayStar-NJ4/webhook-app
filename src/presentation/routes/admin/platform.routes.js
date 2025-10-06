@@ -83,6 +83,12 @@ class PlatformRoutes {
       this.permissionMiddleware.requirePermission('platform_mappings', 'delete'),
       (req, res) => this.platformMappingController.deleteMapping(req, res)
     )
+    
+    this.router.post('/:id/test-connection',
+      this.authMiddleware.verifyToken,
+      this.permissionMiddleware.requirePermission('platform_mappings', 'read'),
+      (req, res) => this.platformMappingController.testConnection(req, res)
+    )
   }
 
   getRouter () {

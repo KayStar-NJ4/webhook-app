@@ -18,8 +18,10 @@ class PlatformMappingRepository extends BaseRepository {
   getSelectableFields () {
     return [
       'id',
+      'name',
       'source_platform', 'source_id', 'target_platform', 'target_id', 'enable_bidirectional',
-      'is_active', 'created_by', 'created_at', 'updated_at'
+      'chatwoot_account_id', 'dify_app_id', 'enable_chatwoot', 'enable_dify', 'enable_sync',
+      'is_active', 'created_by', 'updated_by', 'created_at', 'updated_at', 'deleted_at'
     ]
   }
 
@@ -36,15 +38,27 @@ class PlatformMappingRepository extends BaseRepository {
       targetPlatform,
       targetId,
       enableBidirectional = false,
-      isActive = true
+      isActive = true,
+      name,
+      chatwootAccountId,
+      difyAppId,
+      enableChatwoot,
+      enableDify,
+      enableSync
     } = mappingData
 
     const data = {
+      name: name,
       source_platform: sourcePlatform,
       source_id: sourceId,
       target_platform: targetPlatform,
       target_id: targetId,
       enable_bidirectional: enableBidirectional,
+      chatwoot_account_id: chatwootAccountId,
+      dify_app_id: difyAppId,
+      enable_chatwoot: enableChatwoot,
+      enable_dify: enableDify,
+      enable_sync: enableSync,
       is_active: isActive
     }
 
@@ -67,7 +81,7 @@ class PlatformMappingRepository extends BaseRepository {
         LEFT JOIN telegram_bots tb ON pm.telegram_bot_id = tb.id
         LEFT JOIN chatwoot_accounts ca ON pm.chatwoot_account_id = ca.id
         LEFT JOIN dify_apps da ON pm.dify_app_id = da.id
-        WHERE pm.telegram_bot_id = $1 AND pm.is_active = true
+        WHERE pm.telegram_bot_id = $1 AND pm.is_active = true AND pm.deleted_at IS NULL
         ORDER BY pm.created_at DESC
       `
 
@@ -131,7 +145,7 @@ class PlatformMappingRepository extends BaseRepository {
         LEFT JOIN telegram_bots tb ON pm.telegram_bot_id = tb.id
         LEFT JOIN chatwoot_accounts ca ON pm.chatwoot_account_id = ca.id
         LEFT JOIN dify_apps da ON pm.dify_app_id = da.id
-        WHERE pm.chatwoot_account_id = $1 AND pm.is_active = true
+        WHERE pm.chatwoot_account_id = $1 AND pm.is_active = true AND pm.deleted_at IS NULL
         ORDER BY pm.created_at DESC
       `
 
@@ -162,7 +176,7 @@ class PlatformMappingRepository extends BaseRepository {
         LEFT JOIN telegram_bots tb ON pm.telegram_bot_id = tb.id
         LEFT JOIN chatwoot_accounts ca ON pm.chatwoot_account_id = ca.id
         LEFT JOIN dify_apps da ON pm.dify_app_id = da.id
-        WHERE pm.dify_app_id = $1 AND pm.is_active = true
+        WHERE pm.dify_app_id = $1 AND pm.is_active = true AND pm.deleted_at IS NULL
         ORDER BY pm.created_at DESC
       `
 
@@ -198,7 +212,8 @@ class PlatformMappingRepository extends BaseRepository {
         WHERE pm.telegram_bot_id = $1 
           AND pm.chatwoot_account_id = $2 
           AND pm.dify_app_id = $3 
-          AND pm.is_active = true
+          AND pm.is_active = true 
+          AND pm.deleted_at IS NULL
         LIMIT 1
       `
 
@@ -235,7 +250,7 @@ class PlatformMappingRepository extends BaseRepository {
             WHEN 'dify' THEN (SELECT name FROM dify_apps WHERE id = pm.target_id)
           END AS target_name
         FROM platform_mappings pm
-        WHERE 1=1
+        WHERE pm.deleted_at IS NULL
       `
 
       const params = []
@@ -348,20 +363,79 @@ class PlatformMappingRepository extends BaseRepository {
    */
   async updateConfiguration (id, updateData, user = null) {
     const {
+      // New flow-based fields
+      name,
+      chatwootAccountId,
+      difyAppId,
+      enableChatwoot,
+      enableDify,
+      enableBidirectional,
+      enableSync,
+      isActive,
+      // Legacy fields (for backward compatibility)
       enableTelegramToChatwoot,
       enableTelegramToDify,
       enableChatwootToTelegram,
       enableDifyToChatwoot,
       enableDifyToTelegram,
       autoConnectTelegramChatwoot,
-      autoConnectTelegramDify,
-      isActive
+      autoConnectTelegramDify
     } = updateData
 
     const updateFields = []
     const params = []
     let paramCount = 0
 
+    // Handle new flow-based fields
+    if (name !== undefined) {
+      paramCount++
+      updateFields.push(`name = $${paramCount}`)
+      params.push(name)
+    }
+
+    if (chatwootAccountId !== undefined) {
+      paramCount++
+      updateFields.push(`chatwoot_account_id = $${paramCount}`)
+      params.push(chatwootAccountId)
+    }
+
+    if (difyAppId !== undefined) {
+      paramCount++
+      updateFields.push(`dify_app_id = $${paramCount}`)
+      params.push(difyAppId)
+    }
+
+    if (enableChatwoot !== undefined) {
+      paramCount++
+      updateFields.push(`enable_chatwoot = $${paramCount}`)
+      params.push(enableChatwoot)
+    }
+
+    if (enableDify !== undefined) {
+      paramCount++
+      updateFields.push(`enable_dify = $${paramCount}`)
+      params.push(enableDify)
+    }
+
+    if (enableBidirectional !== undefined) {
+      paramCount++
+      updateFields.push(`enable_bidirectional = $${paramCount}`)
+      params.push(enableBidirectional)
+    }
+
+    if (enableSync !== undefined) {
+      paramCount++
+      updateFields.push(`enable_sync = $${paramCount}`)
+      params.push(enableSync)
+    }
+
+    if (isActive !== undefined) {
+      paramCount++
+      updateFields.push(`is_active = $${paramCount}`)
+      params.push(isActive)
+    }
+
+    // Handle legacy fields (for backward compatibility)
     if (enableTelegramToChatwoot !== undefined) {
       paramCount++
       updateFields.push(`enable_telegram_to_chatwoot = $${paramCount}`)
@@ -404,18 +478,17 @@ class PlatformMappingRepository extends BaseRepository {
       params.push(autoConnectTelegramDify)
     }
 
-    if (isActive !== undefined) {
-      paramCount++
-      updateFields.push(`is_active = $${paramCount}`)
-      params.push(isActive)
-    }
-
     if (updateFields.length === 0) {
       throw new Error('No fields to update')
     }
 
-    paramCount++
     updateFields.push('updated_at = CURRENT_TIMESTAMP')
+    if (user && user.id) {
+      paramCount++
+      updateFields.push(`updated_by = $${paramCount}`)
+      params.push(user.id)
+    }
+    paramCount++
     params.push(id)
 
     const query = `
@@ -451,8 +524,8 @@ class PlatformMappingRepository extends BaseRepository {
     try {
       const query = `
         UPDATE platform_mappings 
-        SET is_active = false, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $1
+        SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND deleted_at IS NULL
         RETURNING id
       `
 
@@ -462,6 +535,35 @@ class PlatformMappingRepository extends BaseRepository {
       this.logger.error('Failed to delete mapping', {
         error: error.message,
         id
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Find mappings by source platform and ID (excluding deleted)
+   * @param {string} sourcePlatform - Source platform type
+   * @param {number} sourceId - Source ID
+   * @returns {Promise<Array>} - Array of mappings
+   */
+  async findBySourcePlatformAndId (sourcePlatform, sourceId) {
+    try {
+      const query = `
+        SELECT ${this.getSelectableFields().join(', ')}
+        FROM ${this.tableName}
+        WHERE source_platform = $1 
+          AND source_id = $2 
+          AND deleted_at IS NULL
+        ORDER BY created_at DESC
+      `
+
+      const result = await this.db.query(query, [sourcePlatform, sourceId])
+      return result.rows
+    } catch (error) {
+      this.logger.error('Failed to find mappings by source platform and ID', {
+        error: error.message,
+        sourcePlatform,
+        sourceId
       })
       throw error
     }

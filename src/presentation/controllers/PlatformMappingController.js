@@ -21,14 +21,15 @@ class PlatformMappingController {
       const mappingData = req.body
       const user = req.user
 
-      // Support new generic model: source/target + optional bidirectional
-      const hasGeneric = mappingData.sourcePlatform && mappingData.sourceId && mappingData.targetPlatform && mappingData.targetId
+      // Support new flow-based model: source + at least one target (chatwoot or dify)
+      const hasFlowBased = mappingData.sourcePlatform && mappingData.sourceId && 
+                          (mappingData.enableChatwoot || mappingData.enableDify)
       const hasLegacy = mappingData.telegramBotId && mappingData.chatwootAccountId && mappingData.difyAppId
 
-      if (!hasGeneric && !hasLegacy) {
+      if (!hasFlowBased && !hasLegacy) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: either (sourcePlatform, sourceId, targetPlatform, targetId) or (telegramBotId, chatwootAccountId, difyAppId)'
+          error: 'Missing required fields: sourcePlatform, sourceId, and at least one of (enableChatwoot, enableDify)'
         })
       }
 
@@ -338,6 +339,35 @@ class PlatformMappingController {
       this.logger.error('Failed to get available platforms', {
         error: error.message,
         userId: req.user?.id
+      })
+
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
+
+  /**
+   * Test platform mapping connection
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async testConnection (req, res) {
+    try {
+      const { id } = req.params
+
+      const result = await this.platformMappingService.testConnection(parseInt(id))
+
+      res.json({
+        success: result.success,
+        data: result,
+        message: result.success ? 'Connection test successful' : 'Connection test failed'
+      })
+    } catch (error) {
+      this.logger.error('Failed to test platform mapping connection', {
+        error: error.message,
+        mappingId: req.params.id
       })
 
       res.status(500).json({
