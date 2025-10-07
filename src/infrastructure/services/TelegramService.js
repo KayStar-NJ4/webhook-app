@@ -252,13 +252,13 @@ class TelegramService {
     }
     await pool.end()
     const outcomes = []
-    const endpoint = `${baseUrl.replace(/\/$/, '')}/webhook/telegram`
+    const baseEndpoint = `${baseUrl.replace(/\/$/, '')}/webhook/telegram`
     
     // Get system webhook secret token
     const systemSecretToken = await this.configurationService.get('system.webhook_secret_token', '')
     
     for (const row of result.rows) {
-      const url = endpoint
+      const url = `${baseEndpoint}/${row.id}`
       // Use bot-specific secret token if available, otherwise use system secret token
       const secretToken = row.secret_token || systemSecretToken
       try {

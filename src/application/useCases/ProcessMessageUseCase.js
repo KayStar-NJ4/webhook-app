@@ -955,7 +955,10 @@ class ProcessMessageUseCase {
    */
   async getTelegramBotIdFromMessage (message) {
     this.logger.info('Getting Telegram bot ID from message', {
-      messageKeys: Object.keys(message)
+      messageKeys: Object.keys(message),
+      hasMetadata: !!message.metadata,
+      hasBotId: !!message.botId,
+      hasMetadataBotId: !!message.metadata?.botId
     })
 
     // Try to get bot ID from message metadata (if available)
@@ -982,7 +985,7 @@ class ProcessMessageUseCase {
       // 2) fallback: get first active bot
       const botId = await this.databaseService.getFirstActiveBotId()
       if (botId) {
-        this.logger.info('Found active Telegram bot', { botId })
+        this.logger.info('First active bot ID retrieved', { botId })
         return botId
       }
     } catch (error) {

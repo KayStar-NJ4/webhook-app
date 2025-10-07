@@ -308,7 +308,7 @@ class PlatformMappingService {
         }
       }
 
-      // Use new database structure with enable_chatwoot, enable_dify, enable_sync
+      // Use new auto-detection logic based on non-null IDs
       const routingConfig = {
         hasMapping: true,
         mappings: routes.map(r => ({
@@ -317,15 +317,17 @@ class PlatformMappingService {
           chatwootAccountId: r.chatwoot_account_id,
           difyAppId: r.dify_app_id,
           routing: {
-            telegramToChatwoot: r.enable_chatwoot === true || r.enable_chatwoot === 't',
-            telegramToDify: r.enable_dify === true || r.enable_dify === 't',
-            chatwootToTelegram: (r.enable_bidirectional === true || r.enable_bidirectional === 't') && (r.enable_chatwoot === true || r.enable_chatwoot === 't'),
-            difyToChatwoot: (r.enable_bidirectional === true || r.enable_bidirectional === 't') && (r.enable_dify === true || r.enable_dify === 't') && (r.enable_chatwoot === true || r.enable_chatwoot === 't'),
-            difyToTelegram: (r.enable_bidirectional === true || r.enable_bidirectional === 't') && (r.enable_dify === true || r.enable_dify === 't')
+            // Auto-detect from non-null IDs
+            telegramToChatwoot: !!r.chatwoot_account_id,
+            telegramToDify: !!r.dify_app_id,
+            // Auto-sync behaviors
+            chatwootToTelegram: !!r.chatwoot_account_id, // Chatwoot employees auto-sync to source
+            difyToChatwoot: !!r.dify_app_id && !!r.chatwoot_account_id, // Dify auto-syncs to Chatwoot when both present
+            difyToTelegram: !!r.dify_app_id // Dify auto-replies to source
           },
           autoConnect: {
-            telegramChatwoot: false,
-            telegramDify: false
+            telegramChatwoot: !!r.chatwoot_account_id,
+            telegramDify: !!r.dify_app_id
           }
         }))
       }
@@ -659,7 +661,7 @@ class PlatformMappingService {
         
         // Fallback to ngrok URL if not configured
         appUrl = appUrl || 'https://webhook-bot.turbo.vn'
-        const webhookUrl = `${appUrl}/webhook/telegram`
+        const webhookUrl = `${appUrl}/webhook/telegram/${telegramBot.id}`
         
         this.logger.info('Setting Telegram webhook', {
           botToken: telegramBot.bot_token ? '***' : 'MISSING',
@@ -1323,7 +1325,7 @@ class PlatformMappingService {
         try {
           const telegramBot = await this.telegramBotRepository.findById(mapping.source_id)
           if (telegramBot && telegramBot.is_active) {
-            const webhookUrl = `${webhookBaseUrl}/webhook/telegram`
+            const webhookUrl = `${webhookBaseUrl}/webhook/telegram/${telegramBot.id}`
             await this.registerTelegramWebhook(telegramBot, webhookUrl)
             results.push({
               platform: 'telegram',
@@ -1351,7 +1353,7 @@ class PlatformMappingService {
         try {
           const telegramBot = await this.telegramBotRepository.findById(mapping.target_id)
           if (telegramBot && telegramBot.is_active) {
-            const webhookUrl = `${webhookBaseUrl}/webhook/telegram`
+            const webhookUrl = `${webhookBaseUrl}/webhook/telegram/${telegramBot.id}`
             await this.registerTelegramWebhook(telegramBot, webhookUrl)
             results.push({
               platform: 'telegram',

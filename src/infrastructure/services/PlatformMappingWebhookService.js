@@ -516,10 +516,13 @@ class PlatformMappingWebhookService {
       // Try to get botId from metadata first
       if (messageData.metadata?.botId) return messageData.metadata.botId
       
-      // For Telegram, we need to get the active bot ID
-      // This is similar to ProcessMessageUseCase.getTelegramBotIdFromMessage
-      // For now, return 1 as the default bot ID (should be improved to query database)
-      return 1
+      // Try to get botId from the message itself
+      if (messageData.botId) return messageData.botId
+      
+      // For Telegram, we need to get the correct bot ID from the webhook
+      // This should be passed from the webhook handler
+      this.logger.warn('No bot ID found in Telegram message data', { messageData })
+      return 1 // Fallback - should be improved
     }
     
     // For other platforms, use existing logic

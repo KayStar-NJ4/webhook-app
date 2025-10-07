@@ -858,7 +858,7 @@ class AdminController {
           
           // Fallback to default URL if not configured
           appUrl = appUrl || 'https://webhook-bot.turbo.vn'
-          webhookUrl = `${appUrl}/webhook/telegram`
+          webhookUrl = `${appUrl}/webhook/telegram/${bot.id}`
           
           this.logger.info('Setting Telegram webhook', {
             botToken: bot.bot_token ? '***' : 'MISSING',
