@@ -59,10 +59,10 @@ class PlatformMappingService {
       
       await this.validateFlowPlatforms(validationData)
 
-      // Check if flow already exists for this source
-      const existingFlows = await this.platformMappingRepository.findBySourcePlatformAndId(sourcePlatform, sourceId)
-      if (existingFlows.length > 0) {
-        throw new Error('Flow already exists for this source platform')
+      // Check if exact mapping combination already exists
+      const existsByPair = await this.platformMappingRepository.existsByPair(sourcePlatform, sourceId, chatwootAccountId, difyAppId)
+      if (existsByPair) {
+        throw new Error('This exact mapping combination already exists')
       }
 
       // Create single mapping for the flow
