@@ -252,7 +252,10 @@ class MessageBrokerService {
     }
 
     const isGroupChat = chat.type === 'group' || chat.type === 'supergroup'
-    const conversationId = isGroupChat ? chat.id.toString() : from.id.toString()
+    // Include bot ID in conversation ID to separate conversations between different bots
+    const botId = telegramData.bot?.id || telegramData.__bot_id
+    const baseConversationId = isGroupChat ? chat.id.toString() : from.id.toString()
+    const conversationId = botId ? `${baseConversationId}_bot_${botId}` : baseConversationId
 
     // For group chats, only respond when bot is mentioned
     const isBotMentioned = isGroupChat && message.text && (
@@ -310,7 +313,7 @@ class MessageBrokerService {
         firstName: from.first_name,
         lastName: from.last_name,
         languageCode: from.language_code,
-        botId: telegramData.__bot_id ? Number(telegramData.__bot_id) : (telegramData.bot?.id ? Number(telegramData.bot.id) : undefined),
+        botId: botId ? Number(botId) : undefined,
         secretToken: telegramData.__secret_token,
         chat: {
           id: chat.id,
