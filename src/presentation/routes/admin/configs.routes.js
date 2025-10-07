@@ -2,26 +2,19 @@ const express = require('express')
 const ConfigurationController = require('../../controllers/ConfigurationController')
 
 /**
- * Configurations Routes - Admin API
- * Handles configuration management routes
+ * Configuration Routes - Admin API
+ * Handles system configuration routes
  */
 class ConfigsRoutes {
   constructor ({
-    userRepository,
-    chatwootAccountRepository,
-    telegramBotRepository,
-    difyAppRepository,
     configurationRepository,
     authMiddleware,
     permissionMiddleware,
     logger
   }) {
     this.router = express.Router()
+    
     this.configurationController = new ConfigurationController({
-      userRepository,
-      chatwootAccountRepository,
-      telegramBotRepository,
-      difyAppRepository,
       configurationRepository,
       logger
     })
@@ -33,37 +26,7 @@ class ConfigsRoutes {
   }
 
   setupRoutes () {
-    // Configuration management API routes
-    this.router.get('/user',
-      this.authMiddleware.verifyToken,
-      this.permissionMiddleware.requirePermission('mappings', 'read'),
-      (req, res) => this.configurationController.getUserConfigurations(req, res)
-    )
-    
-    this.router.post('/user',
-      this.authMiddleware.verifyToken,
-      this.permissionMiddleware.requirePermission('mappings', 'create'),
-      (req, res) => this.configurationController.createUserConfiguration(req, res)
-    )
-    
-    this.router.put('/user/:id',
-      this.authMiddleware.verifyToken,
-      this.permissionMiddleware.requirePermission('mappings', 'update'),
-      (req, res) => this.configurationController.updateUserConfiguration(req, res)
-    )
-    
-    this.router.delete('/user/:id',
-      this.authMiddleware.verifyToken,
-      this.permissionMiddleware.requirePermission('mappings', 'delete'),
-      (req, res) => this.configurationController.deleteUserConfiguration(req, res)
-    )
-    
-    this.router.get('/resources',
-      this.authMiddleware.verifyToken,
-      this.permissionMiddleware.requirePermission('mappings', 'read'),
-      (req, res) => this.configurationController.getAvailableResources(req, res)
-    )
-    
+    // System configuration management API
     this.router.get('/system',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('configurations', 'read'),
@@ -82,16 +45,10 @@ class ConfigsRoutes {
       (req, res) => this.configurationController.getSystemConfigurationByKey(req, res)
     )
     
-    this.router.delete('/system/:id',
+    this.router.delete('/system/:key',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('configurations', 'delete'),
       (req, res) => this.configurationController.deleteSystemConfiguration(req, res)
-    )
-    
-    this.router.get('/test/:type/:id',
-      this.authMiddleware.verifyToken,
-      this.permissionMiddleware.requirePermission('mappings', 'read'),
-      (req, res) => this.configurationController.testConfiguration(req, res)
     )
   }
 

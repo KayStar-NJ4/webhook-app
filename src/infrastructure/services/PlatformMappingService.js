@@ -39,10 +39,6 @@ class PlatformMappingService {
         sourceId,
         chatwootAccountId,
         difyAppId,
-        enableChatwoot = true,
-        enableDify = true,
-        enableBidirectional = false,
-        enableSync = true,
         isActive = true,
         name
       } = mappingData
@@ -51,22 +47,15 @@ class PlatformMappingService {
         throw new Error('Missing required fields: sourcePlatform, sourceId')
       }
       
-      if (!enableChatwoot && !enableDify) {
-        throw new Error('At least one target must be enabled: enableChatwoot or enableDify')
-      }
-      
-      if (enableChatwoot && !chatwootAccountId) {
-        throw new Error('chatwootAccountId is required when enableChatwoot is true')
-      }
-      
-      if (enableDify && !difyAppId) {
-        throw new Error('difyAppId is required when enableDify is true')
+      // At least one target must be selected
+      if (!chatwootAccountId && !difyAppId) {
+        throw new Error('At least one target must be selected: provide chatwootAccountId or difyAppId')
       }
 
       // Validate platforms (only validate selected ones)
       const validationData = { sourcePlatform, sourceId }
-      if (enableChatwoot) validationData.chatwootAccountId = chatwootAccountId
-      if (enableDify) validationData.difyAppId = difyAppId
+      if (chatwootAccountId) validationData.chatwootAccountId = chatwootAccountId
+      if (difyAppId) validationData.difyAppId = difyAppId
       
       await this.validateFlowPlatforms(validationData)
 
@@ -81,14 +70,8 @@ class PlatformMappingService {
         name: name,
         sourcePlatform: sourcePlatform,
         sourceId: sourceId,
-        targetPlatform: enableChatwoot ? 'chatwoot' : 'dify', // Primary target
-        targetId: enableChatwoot ? chatwootAccountId : difyAppId, // Primary target ID
-        enableBidirectional: enableBidirectional,
         chatwootAccountId: chatwootAccountId,
         difyAppId: difyAppId,
-        enableChatwoot: enableChatwoot,
-        enableDify: enableDify,
-        enableSync: enableSync,
         isActive: isActive
       }, user)
 

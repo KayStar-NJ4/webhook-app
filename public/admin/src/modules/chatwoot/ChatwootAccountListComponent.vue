@@ -53,12 +53,13 @@
                       <th>Tên</th>
                       <th>Base URL</th>
                       <th>Account ID</th>
+                      <th>Bot AI Token</th>
                       <th>Trạng thái</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-if="accounts.length === 0">
-                      <td colspan="5" class="text-center py-4">
+                      <td colspan="6" class="text-center py-4">
                         <i class="fas fa-comments fa-3x text-muted mb-3"></i>
                         <h4 class="text-muted">Chưa có tài khoản Chatwoot</h4>
                         <p class="text-muted">Bạn chưa có tài khoản Chatwoot nào. Hãy tạo tài khoản đầu tiên.</p>
@@ -106,6 +107,12 @@
                       </td>
                       <td>
                         <span class="badge badge-info">{{ account.account_id }}</span>
+                      </td>
+                      <td>
+                        <span :class="account.ai_bot_access_token ? 'badge badge-success' : 'badge badge-warning'">
+                          <i :class="account.ai_bot_access_token ? 'fas fa-robot' : 'fas fa-exclamation-triangle'" class="mr-1"></i>
+                          {{ account.ai_bot_access_token ? 'Đã cấu hình' : 'Chưa cấu hình' }}
+                        </span>
                       </td>
                       <td>
                         <span :class="account.is_active ? 'badge badge-success' : 'badge badge-danger'">

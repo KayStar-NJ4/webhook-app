@@ -106,9 +106,10 @@ class PlatformMappingWebhookService {
 
       // Determine if this is a source-to-target or target-to-source message
       const isSourceToTarget = route.source_platform === messageData.platform && route.source_id === this.getPlatformIdFromMessage(messageData)
-      const isTargetToSource = route.target_platform === messageData.platform && route.target_id === this.getPlatformIdFromMessage(messageData) && route.enable_bidirectional
+      const isChatwootToSource = route.chatwoot_account_id && messageData.platform === 'chatwoot' && route.chatwoot_account_id === this.getPlatformIdFromMessage(messageData)
+      const isDifyToSource = route.dify_app_id && messageData.platform === 'dify' && route.dify_app_id === this.getPlatformIdFromMessage(messageData)
 
-      if (!isSourceToTarget && !isTargetToSource) {
+      if (!isSourceToTarget && !isChatwootToSource && !isDifyToSource) {
         return {
           success: false,
           error: 'Message does not match this route',
@@ -119,9 +120,22 @@ class PlatformMappingWebhookService {
       // Determine target platform and ID
       let targetPlatform, targetId
       if (isSourceToTarget) {
-        targetPlatform = route.target_platform
-        targetId = route.target_id
+        // Forward to available targets (prioritize Chatwoot if both available)
+        if (route.chatwoot_account_id) {
+          targetPlatform = 'chatwoot'
+          targetId = route.chatwoot_account_id
+        } else if (route.dify_app_id) {
+          targetPlatform = 'dify'
+          targetId = route.dify_app_id
+        } else {
+          return {
+            success: false,
+            error: 'No target platform available',
+            routeId: route.id
+          }
+        }
       } else {
+        // Forward back to source
         targetPlatform = route.source_platform
         targetId = route.source_id
       }

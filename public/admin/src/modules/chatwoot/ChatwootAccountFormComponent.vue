@@ -58,7 +58,7 @@
           <div class="col-md-12">
             <!-- Access Token -->
             <div class="form-group">
-              <label>Access Token <span class="text-danger">*</span></label>
+              <label>Access Token (Chatwoot) <span class="text-danger">*</span></label>
               <div class="input-group">
                 <input 
                   :type="showToken ? 'text' : 'password'" 
@@ -71,7 +71,7 @@
                   data-form-type="other"
                   data-password-manager="disabled"
                   required
-                  placeholder="Nhập Access Token"
+                  placeholder="Nhập Access Token của Chatwoot"
                 >
                 <div class="input-group-append">
                   <button 
@@ -83,6 +83,40 @@
                   </button>
                 </div>
               </div>
+              <small class="form-text text-muted">Token để truy cập API Chatwoot với quyền nhân viên</small>
+            </div>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-md-12">
+            <!-- AI Bot Access Token -->
+            <div class="form-group">
+              <label>Token truy cập Bot AI</label>
+              <div class="input-group">
+                <input 
+                  :type="showAiBotToken ? 'text' : 'password'" 
+                  class="form-control" 
+                  v-model="form.ai_bot_access_token" 
+                  autocomplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-bwignore="true"
+                  data-form-type="other"
+                  data-password-manager="disabled"
+                  placeholder="Nhập Token truy cập của Bot AI"
+                >
+                <div class="input-group-append">
+                  <button 
+                    type="button" 
+                    class="btn btn-outline-secondary" 
+                    @click="showAiBotToken = !showAiBotToken"
+                  >
+                    <i :class="showAiBotToken ? 'fa fa-eye-slash' : 'fa fa-eye'"></i>
+                  </button>
+                </div>
+              </div>
+              <small class="form-text text-muted">Token để Dify gửi tin nhắn thông qua Bot AI thay vì với vai trò nhân viên</small>
             </div>
           </div>
         </div>
@@ -140,11 +174,13 @@ export default {
     return {
       saving: false,
       showToken: false,
+      showAiBotToken: false,
       form: {
         name: '',
         base_url: '',
         account_id: '',
         access_token: '',
+        ai_bot_access_token: '',
         is_active: true
       }
     }
@@ -170,6 +206,7 @@ export default {
           this.form.base_url = newVal.base_url || '';
           this.form.account_id = newVal.account_id || '';
           this.form.access_token = newVal.access_token || '';
+          this.form.ai_bot_access_token = newVal.ai_bot_access_token || '';
           this.form.is_active = newVal.is_active !== undefined ? newVal.is_active : true;
         }
       },
@@ -194,6 +231,7 @@ export default {
           baseUrl: this.form.base_url.trim(),
           accountId: this.form.account_id.trim(),
           accessToken: this.form.access_token.trim(),
+          aiBotAccessToken: this.form.ai_bot_access_token.trim(),
           isActive: this.form.is_active
         };
 
@@ -219,9 +257,11 @@ export default {
                base_url: '',
                account_id: '',
                access_token: '',
+               ai_bot_access_token: '',
                is_active: true
              };
              this.showToken = false;
+             this.showAiBotToken = false;
            },
            resetForm() {
              this.clearFormData();

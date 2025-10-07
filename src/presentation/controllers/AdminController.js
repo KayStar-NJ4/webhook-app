@@ -374,7 +374,7 @@ class AdminController {
    */
   async createChatwootAccount (req, res) {
     try {
-      const { name, baseUrl, accessToken, accountId, inboxId } = req.body
+      const { name, baseUrl, accessToken, accountId, aiBotAccessToken } = req.body
 
       if (!name || !baseUrl || !accessToken || !accountId) {
         return res.status(400).json({
@@ -388,7 +388,7 @@ class AdminController {
         baseUrl,
         accessToken,
         accountId,
-        inboxId: inboxId || 1,
+        aiBotAccessToken,
         isActive: true
       }, req.user)
 
@@ -414,7 +414,7 @@ class AdminController {
   async updateChatwootAccount (req, res) {
     try {
       const { id } = req.params
-      const { name, baseUrl, accessToken, accountId, inboxId, isActive } = req.body
+      const { name, baseUrl, accessToken, accountId, aiBotAccessToken, isActive } = req.body
 
       if (!name || !baseUrl || !accessToken || !accountId) {
         return res.status(400).json({
@@ -428,7 +428,7 @@ class AdminController {
         baseUrl,
         accessToken,
         accountId,
-        inboxId: inboxId || 1,
+        aiBotAccessToken,
         isActive: isActive !== undefined ? isActive : true
       }, req.user)
 
