@@ -249,10 +249,20 @@ class ProcessMessageUseCase {
 
     // If not found by chatwootId, try the standard platform lookup
     if (!conversation) {
-      conversation = await this.conversationRepository.findByPlatformChatId(
-        message.platform,
-        message.conversationId
-      )
+      // For Telegram messages, try to find by conversation ID (which already includes bot ID)
+      if (message.platform === 'telegram') {
+        const fullConversationId = `${message.platform}_${message.conversationId}`
+        conversation = await this.conversationRepository.findById(fullConversationId)
+      }
+      
+      // Fallback to standard lookup
+      if (!conversation) {
+        conversation = await this.conversationRepository.findByPlatformChatId(
+          message.platform,
+          message.conversationId,
+          message.metadata?.botId
+        )
+      }
     }
 
     if (!conversation) {
@@ -294,10 +304,15 @@ class ProcessMessageUseCase {
    * @returns {Promise<Conversation>}
    */
   async createNewConversation (message) {
+    // Conversation ID already includes bot ID from MessageBrokerService
+    const conversationId = `${message.platform}_${message.conversationId}`
+    const botId = message.metadata?.botId
+    
     const conversationData = {
-      id: `${message.platform}_${message.conversationId}`,
+      id: conversationId,
       platform: message.platform,
       chatId: message.conversationId,
+      botId: botId,
       participants: [{
         id: message.senderId,
         name: message.senderName,
@@ -955,7 +970,10 @@ class ProcessMessageUseCase {
    */
   async getTelegramBotIdFromMessage (message) {
     this.logger.info('Getting Telegram bot ID from message', {
-      messageKeys: Object.keys(message)
+      messageKeys: Object.keys(message),
+      hasMetadata: !!message.metadata,
+      hasBotId: !!message.botId,
+      hasMetadataBotId: !!message.metadata?.botId
     })
 
     // Try to get bot ID from message metadata (if available)
@@ -982,7 +1000,7 @@ class ProcessMessageUseCase {
       // 2) fallback: get first active bot
       const botId = await this.databaseService.getFirstActiveBotId()
       if (botId) {
-        this.logger.info('Found active Telegram bot', { botId })
+        this.logger.info('First active bot ID retrieved', { botId })
         return botId
       }
     } catch (error) {

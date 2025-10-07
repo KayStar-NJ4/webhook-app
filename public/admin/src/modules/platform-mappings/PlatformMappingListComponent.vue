@@ -94,14 +94,14 @@
               </td>
               <td>
                 <div class="d-flex flex-column">
-                  <span v-if="mapping.target_platform === 'chatwoot'" class="badge badge-success mb-1">
+                  <span v-if="mapping.enable_chatwoot" class="badge badge-success mb-1">
                     <i class="fas fa-comments"></i> Chatwoot
                   </span>
-                  <span v-if="mapping.target_platform === 'dify'" class="badge badge-info">
+                  <span v-if="mapping.enable_dify" class="badge badge-info">
                     <i class="fas fa-robot"></i> Dify
                   </span>
-                  <span v-if="mapping.target_platform === 'telegram'" class="badge badge-primary">
-                    <i class="fab fa-telegram-plane"></i> Telegram
+                  <span v-if="!mapping.enable_chatwoot && !mapping.enable_dify" class="badge badge-warning">
+                    <i class="fas fa-exclamation-triangle"></i> Chưa cấu hình
                   </span>
                 </div>
                 <div class="mt-1">
@@ -112,14 +112,17 @@
               </td>
               <td>
                 <div class="d-flex flex-column">
-                  <span v-if="mapping.enable_bidirectional" class="badge badge-warning mb-1">
-                    <i class="fas fa-exchange-alt"></i> AI Reply
+                  <span v-if="mapping.enable_dify" class="badge badge-warning mb-1">
+                    <i class="fas fa-robot"></i> AI Auto Reply
                   </span>
-                  <span v-if="mapping.enable_sync" class="badge badge-info">
-                    <i class="fas fa-sync"></i> Sync
+                  <span v-if="mapping.enable_chatwoot && mapping.enable_dify" class="badge badge-info mb-1">
+                    <i class="fas fa-sync"></i> Auto Sync
                   </span>
-                  <span v-if="!mapping.enable_bidirectional && !mapping.enable_sync" class="badge badge-secondary">
-                    <i class="fas fa-arrow-right"></i> Forward Only
+                  <span v-if="mapping.enable_chatwoot" class="badge badge-primary">
+                    <i class="fas fa-exchange-alt"></i> Employee Sync
+                  </span>
+                  <span v-if="!mapping.enable_chatwoot && !mapping.enable_dify" class="badge badge-secondary">
+                    <i class="fas fa-exclamation-triangle"></i> Chưa cấu hình
                   </span>
                 </div>
               </td>
@@ -190,7 +193,17 @@ export default {
     },
     getTargetName(mapping) {
       if (mapping.target_name) return mapping.target_name
-      return `${mapping.target_platform} #${mapping.target_id}`
+      
+      // Build target name from enabled platforms
+      const targets = []
+      if (mapping.enable_chatwoot && mapping.chatwoot_account_id) {
+        targets.push(`Chatwoot #${mapping.chatwoot_account_id}`)
+      }
+      if (mapping.enable_dify && mapping.dify_app_id) {
+        targets.push(`Dify #${mapping.dify_app_id}`)
+      }
+      
+      return targets.length > 0 ? targets.join(' + ') : 'Chưa cấu hình'
     },
     formatDate(dateString) {
       if (!dateString) return ''

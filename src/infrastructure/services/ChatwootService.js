@@ -343,12 +343,30 @@ class ChatwootService {
       contactName = `@${username}`
     }
     
+    // Add bot ID to contact name to distinguish between different bots
+    if (conversation.platformMetadata?.botId) {
+      contactName = `${contactName} (Bot ${conversation.platformMetadata.botId})`
+    }
+    
     const senderId = conversation.senderId || message.senderId || message.metadata?.userId
     const chatId = conversation.chatId || message.metadata?.chatId
 
     // Try to get email from conversation (if user provided it)
     // Otherwise, leave as null since Telegram API doesn't provide real email addresses
     const contactEmail = conversation.sender_email || null
+
+    // Include bot ID in additional attributes for better tracking
+    const additionalAttributes = { 
+      platform: conversation.platform || 'telegram', 
+      conversation_id: conversation.id,
+      telegram_username: username,
+      telegram_user_id: senderId
+    }
+    
+    // Add bot ID if available in platform metadata
+    if (conversation.platformMetadata?.botId) {
+      additionalAttributes.telegram_bot_id = conversation.platformMetadata.botId
+    }
 
     const payload = {
       source_id: customSourceId || conversation.id,
@@ -359,12 +377,7 @@ class ChatwootService {
         email: contactEmail,
         phone_number: senderId
       },
-      additional_attributes: { 
-        platform: conversation.platform || 'telegram', 
-        conversation_id: conversation.id,
-        telegram_username: username,
-        telegram_user_id: senderId
-      }
+      additional_attributes: additionalAttributes
     }
 
     this.logger.info('Creating Chatwoot conversation', {

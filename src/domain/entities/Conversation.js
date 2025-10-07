@@ -26,6 +26,7 @@ class Conversation {
     chatwootId,
     chatwootInboxId,
     difyId,
+    botId,
     participants = [],
     platformMetadata = {},
     chatwootMetadata = {},
@@ -58,6 +59,7 @@ class Conversation {
     this.chatwootId = chatwootId
     this.chatwootInboxId = chatwootInboxId
     this.difyId = difyId
+    this.botId = botId
     this.participants = participants
     this.platformMetadata = platformMetadata
     this.chatwootMetadata = chatwootMetadata
@@ -234,6 +236,7 @@ class Conversation {
       chatwootId: this.chatwootId,
       chatwootInboxId: this.chatwootInboxId,
       difyId: this.difyId,
+      botId: this.botId,
       participants: this.participants,
       platformMetadata: this.platformMetadata,
       chatwootMetadata: this.chatwootMetadata,

@@ -19,8 +19,8 @@ class PlatformMappingRepository extends BaseRepository {
     return [
       'id',
       'name',
-      'source_platform', 'source_id', 'target_platform', 'target_id', 'enable_bidirectional',
-      'chatwoot_account_id', 'dify_app_id', 'enable_chatwoot', 'enable_dify', 'enable_sync',
+      'source_platform', 'source_id',
+      'chatwoot_account_id', 'dify_app_id',
       'is_active', 'created_by', 'updated_by', 'created_at', 'updated_at', 'deleted_at'
     ]
   }
@@ -35,30 +35,18 @@ class PlatformMappingRepository extends BaseRepository {
     const {
       sourcePlatform,
       sourceId,
-      targetPlatform,
-      targetId,
-      enableBidirectional = false,
       isActive = true,
       name,
       chatwootAccountId,
-      difyAppId,
-      enableChatwoot,
-      enableDify,
-      enableSync
+      difyAppId
     } = mappingData
 
     const data = {
       name: name,
       source_platform: sourcePlatform,
       source_id: sourceId,
-      target_platform: targetPlatform,
-      target_id: targetId,
-      enable_bidirectional: enableBidirectional,
       chatwoot_account_id: chatwootAccountId,
       dify_app_id: difyAppId,
-      enable_chatwoot: enableChatwoot,
-      enable_dify: enableDify,
-      enable_sync: enableSync,
       is_active: isActive
     }
 
@@ -244,11 +232,20 @@ class PlatformMappingRepository extends BaseRepository {
             WHEN 'chatwoot' THEN (SELECT name FROM chatwoot_accounts WHERE id = pm.source_id)
             WHEN 'dify' THEN (SELECT name FROM dify_apps WHERE id = pm.source_id)
           END AS source_name,
-          CASE pm.target_platform
-            WHEN 'telegram' THEN (SELECT name FROM telegram_bots WHERE id = pm.target_id)
-            WHEN 'chatwoot' THEN (SELECT name FROM chatwoot_accounts WHERE id = pm.target_id)
-            WHEN 'dify' THEN (SELECT name FROM dify_apps WHERE id = pm.target_id)
-          END AS target_name
+          CASE 
+            WHEN pm.chatwoot_account_id IS NOT NULL AND pm.dify_app_id IS NOT NULL THEN 
+              CONCAT(
+                'Chatwoot: ', (SELECT name FROM chatwoot_accounts WHERE id = pm.chatwoot_account_id),
+                ' + Dify: ', (SELECT name FROM dify_apps WHERE id = pm.dify_app_id)
+              )
+            WHEN pm.chatwoot_account_id IS NOT NULL THEN 
+              CONCAT('Chatwoot: ', (SELECT name FROM chatwoot_accounts WHERE id = pm.chatwoot_account_id))
+            WHEN pm.dify_app_id IS NOT NULL THEN 
+              CONCAT('Dify: ', (SELECT name FROM dify_apps WHERE id = pm.dify_app_id))
+            ELSE 'Chưa cấu hình'
+          END AS target_name,
+          (pm.chatwoot_account_id IS NOT NULL) AS enable_chatwoot,
+          (pm.dify_app_id IS NOT NULL) AS enable_dify
         FROM platform_mappings pm
         WHERE pm.deleted_at IS NULL
       `
@@ -262,7 +259,7 @@ class PlatformMappingRepository extends BaseRepository {
         params.push(filters.isActive)
       }
 
-      // Optional generic filters (v2)
+      // Source platform filters
       if (filters.sourcePlatform) {
         paramCount++
         query += ` AND pm.source_platform = $${paramCount}`
@@ -273,15 +270,24 @@ class PlatformMappingRepository extends BaseRepository {
         query += ` AND pm.source_id = $${paramCount}`
         params.push(filters.sourceId)
       }
-      if (filters.targetPlatform) {
+
+      // Specific target filters
+      if (filters.chatwootAccountId) {
         paramCount++
-        query += ` AND pm.target_platform = $${paramCount}`
-        params.push(filters.targetPlatform)
+        query += ` AND pm.chatwoot_account_id = $${paramCount}`
+        params.push(filters.chatwootAccountId)
       }
-      if (filters.targetId) {
+      if (filters.difyAppId) {
         paramCount++
-        query += ` AND pm.target_id = $${paramCount}`
-        params.push(filters.targetId)
+        query += ` AND pm.dify_app_id = $${paramCount}`
+        params.push(filters.difyAppId)
+      }
+
+      // Legacy filters for backward compatibility
+      if (filters.telegramBotId) {
+        paramCount++
+        query += ` AND pm.source_platform = 'telegram' AND pm.source_id = $${paramCount}`
+        params.push(filters.telegramBotId)
       }
 
       query += ' ORDER BY pm.created_at DESC'
@@ -310,8 +316,8 @@ class PlatformMappingRepository extends BaseRepository {
   }
 
   /**
-   * Find routes for a platform and id using generic source/target columns
-   * Returns active mappings where (source=platform,id) OR (target=platform,id and bidirectional)
+   * Find routes for a platform and id using specific target columns
+   * Returns active mappings where (source=platform,id) OR (chatwoot_account_id=id and enable_chatwoot) OR (dify_app_id=id and enable_dify)
    * @param {string} platform - telegram|chatwoot|dify
    * @param {number} platformId - id
    */
@@ -332,7 +338,9 @@ class PlatformMappingRepository extends BaseRepository {
         WHERE pm.is_active = TRUE AND pm.deleted_at IS NULL AND (
           (pm.source_platform = $1 AND pm.source_id = $2)
           OR
-          (pm.target_platform = $1 AND pm.target_id = $2 AND pm.enable_bidirectional = TRUE)
+          (pm.chatwoot_account_id = $2 AND pm.chatwoot_account_id IS NOT NULL AND $1 = 'chatwoot')
+          OR
+          (pm.dify_app_id = $2 AND pm.dify_app_id IS NOT NULL AND $1 = 'dify')
         )
         ORDER BY pm.created_at DESC
       `
@@ -347,18 +355,18 @@ class PlatformMappingRepository extends BaseRepository {
   /**
    * Check if mapping exists by exact source/target pair
    */
-  async existsByPair (sourcePlatform, sourceId, targetPlatform, targetId) {
+  async existsByPair (sourcePlatform, sourceId, chatwootAccountId, difyAppId) {
     try {
       const query = `
         SELECT 1 FROM platform_mappings
         WHERE source_platform = $1 AND source_id = $2
-          AND target_platform = $3 AND target_id = $4
+          AND (chatwoot_account_id = $3 OR dify_app_id = $4)
         LIMIT 1
       `
-      const result = await this.db.query(query, [sourcePlatform, sourceId, targetPlatform, targetId])
+      const result = await this.db.query(query, [sourcePlatform, sourceId, chatwootAccountId, difyAppId])
       return result.rows.length > 0
     } catch (error) {
-      this.logger.error('Failed to check mapping existence by pair', { error: error.message, sourcePlatform, sourceId, targetPlatform, targetId })
+      this.logger.error('Failed to check mapping existence by pair', { error: error.message, sourcePlatform, sourceId, chatwootAccountId, difyAppId })
       throw error
     }
   }
@@ -378,8 +386,6 @@ class PlatformMappingRepository extends BaseRepository {
       difyAppId,
       enableChatwoot,
       enableDify,
-      enableBidirectional,
-      enableSync,
       isActive,
       // Legacy fields (for backward compatibility)
       enableTelegramToChatwoot,
@@ -424,18 +430,6 @@ class PlatformMappingRepository extends BaseRepository {
       paramCount++
       updateFields.push(`enable_dify = $${paramCount}`)
       params.push(enableDify)
-    }
-
-    if (enableBidirectional !== undefined) {
-      paramCount++
-      updateFields.push(`enable_bidirectional = $${paramCount}`)
-      params.push(enableBidirectional)
-    }
-
-    if (enableSync !== undefined) {
-      paramCount++
-      updateFields.push(`enable_sync = $${paramCount}`)
-      params.push(enableSync)
     }
 
     if (isActive !== undefined) {

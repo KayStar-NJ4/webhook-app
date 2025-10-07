@@ -22,13 +22,14 @@ class ChatwootAccountRepository extends BaseRepository {
    * @returns {Promise<Object>} - Created account
    */
   async create (accountData, user = null) {
-    const { name, baseUrl, accessToken, accountId, isActive } = accountData
+    const { name, baseUrl, accessToken, accountId, aiBotAccessToken, isActive } = accountData
 
     const data = {
       name,
       base_url: baseUrl,
       access_token: accessToken,
       account_id: accountId,
+      ai_bot_access_token: aiBotAccessToken,
       is_active: isActive !== undefined ? isActive : true
     }
 
@@ -101,13 +102,14 @@ class ChatwootAccountRepository extends BaseRepository {
    * @returns {Promise<Object>} - Updated account
    */
   async update (id, updateData, user = null) {
-    const { name, baseUrl, accessToken, accountId, inboxId, isActive } = updateData
+    const { name, baseUrl, accessToken, accountId, aiBotAccessToken, isActive } = updateData
 
     const data = {
       name,
       base_url: baseUrl,
       access_token: accessToken,
       account_id: accountId,
+      ai_bot_access_token: aiBotAccessToken,
       is_active: isActive !== undefined ? isActive : true
     }
 

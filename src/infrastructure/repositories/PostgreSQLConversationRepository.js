@@ -87,6 +87,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
         chatwoot_id VARCHAR(255),
         chatwoot_inbox_id VARCHAR(255),
         dify_id VARCHAR(255),
+        bot_id VARCHAR(255),
         
         -- Metadata bổ sung
         participants JSONB DEFAULT '[]'::jsonb,
@@ -153,12 +154,20 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * Find conversation by platform and chat ID
    * @param {string} platform - Platform name
    * @param {string} chatId - Chat ID
+   * @param {string} botId - Bot ID (optional)
    * @returns {Promise<Conversation|null>}
    */
-  async findByPlatformChatId (platform, chatId) {
+  async findByPlatformChatId (platform, chatId, botId = null) {
     try {
-      const query = 'SELECT * FROM conversations WHERE platform = $1 AND chat_id = $2'
-      const result = await this.pool.query(query, [platform, chatId])
+      let query = 'SELECT * FROM conversations WHERE platform = $1 AND chat_id = $2'
+      const params = [platform, chatId]
+      
+      if (botId) {
+        query += ' AND bot_id = $3'
+        params.push(botId)
+      }
+      
+      const result = await this.pool.query(query, params)
 
       if (result.rows.length === 0) return null
 
@@ -168,7 +177,8 @@ class PostgreSQLConversationRepository extends ConversationRepository {
       this.logger.error('Failed to find conversation by platform and chat ID', {
         error: error.message,
         platform,
-        chatId
+        chatId,
+        botId
       })
       throw error
     }
@@ -211,11 +221,11 @@ class PostgreSQLConversationRepository extends ConversationRepository {
           id, platform, chat_type, chat_id, chat_title, chat_username, chat_description,
           sender_id, sender_username, sender_first_name, sender_last_name, sender_language_code, sender_is_bot,
           group_id, group_title, group_username, group_description, group_member_count, group_is_verified, group_is_restricted,
-          chatwoot_id, chatwoot_inbox_id, dify_id,
+          chatwoot_id, chatwoot_inbox_id, dify_id, bot_id,
           participants, platform_metadata, chatwoot_metadata,
           status, is_active, created_at, updated_at, last_message_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
         ON CONFLICT (id) DO UPDATE SET
           platform = EXCLUDED.platform,
           chat_type = EXCLUDED.chat_type,
@@ -239,6 +249,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
           chatwoot_id = EXCLUDED.chatwoot_id,
           chatwoot_inbox_id = EXCLUDED.chatwoot_inbox_id,
           dify_id = EXCLUDED.dify_id,
+          bot_id = EXCLUDED.bot_id,
           participants = EXCLUDED.participants,
           platform_metadata = EXCLUDED.platform_metadata,
           chatwoot_metadata = EXCLUDED.chatwoot_metadata,
@@ -273,6 +284,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
         conversation.chatwootId,
         conversation.chatwootInboxId,
         conversation.difyId,
+        conversation.botId,
         JSON.stringify(conversation.participants),
         JSON.stringify(conversation.platformMetadata),
         JSON.stringify(conversation.chatwootMetadata),
@@ -370,9 +382,9 @@ class PostgreSQLConversationRepository extends ConversationRepository {
           platform = $2, chat_type = $3, chat_id = $4, chat_title = $5, chat_username = $6, chat_description = $7,
           sender_id = $8, sender_username = $9, sender_first_name = $10, sender_last_name = $11, sender_language_code = $12, sender_is_bot = $13,
           group_id = $14, group_title = $15, group_username = $16, group_description = $17, group_member_count = $18, group_is_verified = $19, group_is_restricted = $20,
-          chatwoot_id = $21, chatwoot_inbox_id = $22, dify_id = $23,
-          participants = $24, platform_metadata = $25, chatwoot_metadata = $26,
-          status = $27, is_active = $28, updated_at = $29, last_message_at = $30
+          chatwoot_id = $21, chatwoot_inbox_id = $22, dify_id = $23, bot_id = $24,
+          participants = $25, platform_metadata = $26, chatwoot_metadata = $27,
+          status = $28, is_active = $29, updated_at = $30, last_message_at = $31
         WHERE id = $1
         RETURNING *
       `
@@ -401,6 +413,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
         conversation.chatwootId,
         conversation.chatwootInboxId,
         conversation.difyId,
+        conversation.botId,
         JSON.stringify(conversation.participants),
         JSON.stringify(conversation.platformMetadata),
         JSON.stringify(conversation.chatwootMetadata),
@@ -588,6 +601,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
       chatwootId: row.chatwoot_id,
       chatwootInboxId: row.chatwoot_inbox_id,
       difyId: row.dify_id,
+      botId: row.bot_id,
       participants: row.participants || [],
       platformMetadata: row.platform_metadata || {},
       chatwootMetadata: row.chatwoot_metadata || {},

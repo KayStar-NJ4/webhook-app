@@ -39,10 +39,6 @@ class PlatformMappingService {
         sourceId,
         chatwootAccountId,
         difyAppId,
-        enableChatwoot = true,
-        enableDify = true,
-        enableBidirectional = false,
-        enableSync = true,
         isActive = true,
         name
       } = mappingData
@@ -51,22 +47,15 @@ class PlatformMappingService {
         throw new Error('Missing required fields: sourcePlatform, sourceId')
       }
       
-      if (!enableChatwoot && !enableDify) {
-        throw new Error('At least one target must be enabled: enableChatwoot or enableDify')
-      }
-      
-      if (enableChatwoot && !chatwootAccountId) {
-        throw new Error('chatwootAccountId is required when enableChatwoot is true')
-      }
-      
-      if (enableDify && !difyAppId) {
-        throw new Error('difyAppId is required when enableDify is true')
+      // At least one target must be selected
+      if (!chatwootAccountId && !difyAppId) {
+        throw new Error('At least one target must be selected: provide chatwootAccountId or difyAppId')
       }
 
       // Validate platforms (only validate selected ones)
       const validationData = { sourcePlatform, sourceId }
-      if (enableChatwoot) validationData.chatwootAccountId = chatwootAccountId
-      if (enableDify) validationData.difyAppId = difyAppId
+      if (chatwootAccountId) validationData.chatwootAccountId = chatwootAccountId
+      if (difyAppId) validationData.difyAppId = difyAppId
       
       await this.validateFlowPlatforms(validationData)
 
@@ -81,14 +70,8 @@ class PlatformMappingService {
         name: name,
         sourcePlatform: sourcePlatform,
         sourceId: sourceId,
-        targetPlatform: enableChatwoot ? 'chatwoot' : 'dify', // Primary target
-        targetId: enableChatwoot ? chatwootAccountId : difyAppId, // Primary target ID
-        enableBidirectional: enableBidirectional,
         chatwootAccountId: chatwootAccountId,
         difyAppId: difyAppId,
-        enableChatwoot: enableChatwoot,
-        enableDify: enableDify,
-        enableSync: enableSync,
         isActive: isActive
       }, user)
 
@@ -325,7 +308,7 @@ class PlatformMappingService {
         }
       }
 
-      // Use new database structure with enable_chatwoot, enable_dify, enable_sync
+      // Use new auto-detection logic based on non-null IDs
       const routingConfig = {
         hasMapping: true,
         mappings: routes.map(r => ({
@@ -334,15 +317,17 @@ class PlatformMappingService {
           chatwootAccountId: r.chatwoot_account_id,
           difyAppId: r.dify_app_id,
           routing: {
-            telegramToChatwoot: r.enable_chatwoot === true || r.enable_chatwoot === 't',
-            telegramToDify: r.enable_dify === true || r.enable_dify === 't',
-            chatwootToTelegram: (r.enable_bidirectional === true || r.enable_bidirectional === 't') && (r.enable_chatwoot === true || r.enable_chatwoot === 't'),
-            difyToChatwoot: (r.enable_bidirectional === true || r.enable_bidirectional === 't') && (r.enable_dify === true || r.enable_dify === 't') && (r.enable_chatwoot === true || r.enable_chatwoot === 't'),
-            difyToTelegram: (r.enable_bidirectional === true || r.enable_bidirectional === 't') && (r.enable_dify === true || r.enable_dify === 't')
+            // Auto-detect from non-null IDs
+            telegramToChatwoot: !!r.chatwoot_account_id,
+            telegramToDify: !!r.dify_app_id,
+            // Auto-sync behaviors
+            chatwootToTelegram: !!r.chatwoot_account_id, // Chatwoot employees auto-sync to source
+            difyToChatwoot: !!r.dify_app_id && !!r.chatwoot_account_id, // Dify auto-syncs to Chatwoot when both present
+            difyToTelegram: !!r.dify_app_id // Dify auto-replies to source
           },
           autoConnect: {
-            telegramChatwoot: false,
-            telegramDify: false
+            telegramChatwoot: !!r.chatwoot_account_id,
+            telegramDify: !!r.dify_app_id
           }
         }))
       }
@@ -676,7 +661,7 @@ class PlatformMappingService {
         
         // Fallback to ngrok URL if not configured
         appUrl = appUrl || 'https://webhook-bot.turbo.vn'
-        const webhookUrl = `${appUrl}/webhook/telegram`
+        const webhookUrl = `${appUrl}/webhook/telegram/${telegramBot.id}`
         
         this.logger.info('Setting Telegram webhook', {
           botToken: telegramBot.bot_token ? '***' : 'MISSING',
@@ -1340,7 +1325,7 @@ class PlatformMappingService {
         try {
           const telegramBot = await this.telegramBotRepository.findById(mapping.source_id)
           if (telegramBot && telegramBot.is_active) {
-            const webhookUrl = `${webhookBaseUrl}/webhook/telegram`
+            const webhookUrl = `${webhookBaseUrl}/webhook/telegram/${telegramBot.id}`
             await this.registerTelegramWebhook(telegramBot, webhookUrl)
             results.push({
               platform: 'telegram',
@@ -1368,7 +1353,7 @@ class PlatformMappingService {
         try {
           const telegramBot = await this.telegramBotRepository.findById(mapping.target_id)
           if (telegramBot && telegramBot.is_active) {
-            const webhookUrl = `${webhookBaseUrl}/webhook/telegram`
+            const webhookUrl = `${webhookBaseUrl}/webhook/telegram/${telegramBot.id}`
             await this.registerTelegramWebhook(telegramBot, webhookUrl)
             results.push({
               platform: 'telegram',

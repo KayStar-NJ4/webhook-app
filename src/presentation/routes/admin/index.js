@@ -116,10 +116,6 @@ class AdminRoutesIndex {
     })
 
     this.configsRoutes = new ConfigsRoutes({
-      userRepository,
-      chatwootAccountRepository,
-      telegramBotRepository,
-      difyAppRepository,
       configurationRepository,
       authMiddleware: this.authMiddleware,
       permissionMiddleware: this.permissionMiddleware,

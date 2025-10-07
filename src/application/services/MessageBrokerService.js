@@ -91,6 +91,53 @@ class MessageBrokerService {
         } catch (dbError) {
           this.logger.warn('Failed to get bot info from database', { error: dbError.message })
         }
+      } else if (telegramData.__secret_token) {
+        // Try to resolve bot ID from secret token
+        try {
+          const databaseService = this.container.get('databaseService')
+          const botId = await databaseService.getBotIdBySecretToken(telegramData.__secret_token)
+          if (botId) {
+            const botToken = await databaseService.getBotToken(botId)
+            if (botToken) {
+              const tokenParts = botToken.split(':')
+              if (tokenParts.length >= 2) {
+                botInfo = {
+                  id: botId,
+                  username: `bot${tokenParts[0]}`
+                }
+              }
+            }
+          }
+        } catch (dbError) {
+          this.logger.warn('Failed to resolve bot ID from secret token', { error: dbError.message })
+        }
+      } else {
+        // Try to resolve bot ID from the message content or other means
+        // This is a fallback when no explicit bot ID or secret token is provided
+        try {
+          const databaseService = this.container.get('databaseService')
+          // For now, we'll use the first active bot as fallback
+          // But we should improve this to detect the correct bot
+          const botId = await databaseService.getFirstActiveBotId()
+          if (botId) {
+            const botToken = await databaseService.getBotToken(botId)
+            if (botToken) {
+              const tokenParts = botToken.split(':')
+              if (tokenParts.length >= 2) {
+                botInfo = {
+                  id: botId,
+                  username: `bot${tokenParts[0]}`
+                }
+                this.logger.warn('Using fallback bot ID - webhook should include bot ID or secret token', { 
+                  fallbackBotId: botId,
+                  webhookUrl: 'Consider using /webhook/telegram/:botId or secret token'
+                })
+              }
+            }
+          }
+        } catch (dbError) {
+          this.logger.warn('Failed to get fallback bot ID', { error: dbError.message })
+        }
       }
 
       this.logger.info('Received Telegram webhook', {
@@ -205,7 +252,10 @@ class MessageBrokerService {
     }
 
     const isGroupChat = chat.type === 'group' || chat.type === 'supergroup'
-    const conversationId = isGroupChat ? chat.id.toString() : from.id.toString()
+    // Include bot ID in conversation ID to separate conversations between different bots
+    const botId = telegramData.bot?.id || telegramData.__bot_id
+    const baseConversationId = isGroupChat ? chat.id.toString() : from.id.toString()
+    const conversationId = botId ? `${baseConversationId}_bot_${botId}` : baseConversationId
 
     // For group chats, only respond when bot is mentioned
     const isBotMentioned = isGroupChat && message.text && (
@@ -263,7 +313,7 @@ class MessageBrokerService {
         firstName: from.first_name,
         lastName: from.last_name,
         languageCode: from.language_code,
-        botId: telegramData.__bot_id ? Number(telegramData.__bot_id) : undefined,
+        botId: botId ? Number(botId) : undefined,
         secretToken: telegramData.__secret_token,
         chat: {
           id: chat.id,
