@@ -23,13 +23,13 @@ class PlatformMappingController {
 
       // Support new flow-based model: source + at least one target (chatwoot or dify)
       const hasFlowBased = mappingData.sourcePlatform && mappingData.sourceId && 
-                          (mappingData.enableChatwoot || mappingData.enableDify)
+                          (mappingData.chatwootAccountId || mappingData.difyAppId)
       const hasLegacy = mappingData.telegramBotId && mappingData.chatwootAccountId && mappingData.difyAppId
 
       if (!hasFlowBased && !hasLegacy) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: sourcePlatform, sourceId, and at least one of (enableChatwoot, enableDify)'
+          error: 'Missing required fields: sourcePlatform, sourceId, and at least one of (chatwootAccountId, difyAppId)'
         })
       }
 
@@ -46,6 +46,14 @@ class PlatformMappingController {
         body: req.body,
         userId: req.user?.id
       })
+
+      // Handle duplicate mapping with 409 Conflict
+      if (error.message.includes('already exists')) {
+        return res.status(409).json({
+          success: false,
+          error: error.message
+        })
+      }
 
       res.status(500).json({
         success: false,
