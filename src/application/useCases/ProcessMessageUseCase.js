@@ -1389,8 +1389,20 @@ class ProcessMessageUseCase {
         // Map Chatwoot conversation to original Telegram chat
         const telegramConversation = await this.conversationRepository.findByChatwootId(conversation.chatwootId)
         if (telegramConversation && telegramConversation.chatId) {
-          // Initialize Telegram service with bot ID from routing config
-          const telegramMapping = routingConfig.mappings.find(m => m.telegramBotId)
+          // Extract bot ID from chatId (format: {userId}_bot_{botId})
+          const botIdMatch = telegramConversation.chatId.match(/_bot_(\d+)$/)
+          const botId = botIdMatch ? botIdMatch[1] : null
+          
+          this.logger.info('Extracted bot ID from Telegram chatId for Dify response', {
+            chatId: telegramConversation.chatId,
+            extractedBotId: botId
+          })
+          
+          // Initialize Telegram service with bot ID from chatId
+          const telegramMapping = botId 
+            ? routingConfig.mappings.find(m => m.telegramBotId && String(m.telegramBotId) === String(botId))
+            : routingConfig.mappings.find(m => m.telegramBotId)
+          
           if (telegramMapping && telegramMapping.telegramBotId) {
             await this.telegramService.initializeWithBotId(telegramMapping.telegramBotId)
           }
@@ -1402,7 +1414,8 @@ class ProcessMessageUseCase {
           this.logger.info('Dify response forwarded to Telegram', {
             chatId: telegramConversation.chatId,
             chatwootConversationId: conversation.chatwootId,
-            conversationId: conversation.id
+            conversationId: conversation.id,
+            usedBotId: telegramMapping?.telegramBotId
           })
         } else {
           this.logger.warn('No linked Telegram conversation found to forward Dify response', {
@@ -1451,15 +1464,31 @@ class ProcessMessageUseCase {
         })
         
         if (telegramConversation && telegramConversation.chatId) {
-          // Initialize Telegram service with bot ID from routing config
-          const telegramMapping = routingConfig.mappings.find(m => m.telegramBotId)
+          // Extract bot ID from chatId (format: {userId}_bot_{botId})
+          const botIdMatch = telegramConversation.chatId.match(/_bot_(\d+)$/)
+          const botId = botIdMatch ? botIdMatch[1] : null
+          
+          this.logger.info('Extracted bot ID from Telegram chatId', {
+            chatId: telegramConversation.chatId,
+            extractedBotId: botId
+          })
+          
+          // Initialize Telegram service with bot ID from chatId
+          const telegramMapping = botId 
+            ? routingConfig.mappings.find(m => m.telegramBotId && String(m.telegramBotId) === String(botId))
+            : routingConfig.mappings.find(m => m.telegramBotId)
+          
           if (telegramMapping && telegramMapping.telegramBotId) {
             this.logger.info('Initializing Telegram service with bot ID', {
-              telegramBotId: telegramMapping.telegramBotId
+              telegramBotId: telegramMapping.telegramBotId,
+              matchedByBotId: !!botId
             })
             await this.telegramService.initializeWithBotId(telegramMapping.telegramBotId)
           } else {
-            this.logger.warn('No Telegram bot ID found in routing config')
+            this.logger.warn('No Telegram bot ID found in routing config', {
+              extractedBotId: botId,
+              availableMappings: routingConfig.mappings?.map(m => ({ id: m.id, botId: m.telegramBotId }))
+            })
           }
 
           await this.telegramService.sendMessage(
@@ -1470,7 +1499,8 @@ class ProcessMessageUseCase {
             chatId: telegramConversation.chatId,
             chatwootConversationId: conversation.chatwootId,
             conversationId: conversation.id,
-            messagePreview: message.content?.substring(0, 50)
+            messagePreview: message.content?.substring(0, 50),
+            usedBotId: telegramMapping?.telegramBotId
           })
         } else {
           this.logger.warn('No linked Telegram conversation found to forward Chatwoot message', {
