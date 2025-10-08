@@ -32,6 +32,7 @@ class ProcessMessageUseCase {
     this.responseCooldown = new Map() // conversationId -> lastResponseTime
     this.processingMessages = new Set() // Set of message IDs currently being processed
     this.processedMessages = new Set() // Set of message IDs already processed
+    this.difyMessageIds = new Map() // chatwootMessageId -> { timestamp, conversationId } - Track Dify messages để prevent duplicate forward
   }
 
   /**
@@ -45,29 +46,19 @@ class ProcessMessageUseCase {
       return true
     }
 
-    // 2. CHATWOOT: Check outgoing message (most reliable for Chatwoot)
-    if (messageData.metadata?.isOutgoing === true ||
-        messageData.metadata?.messageType === 'outgoing') {
+    // 2. CHATWOOT: Check sender.type = 'agent_bot' (ONLY for AI bots, NOT real agents)
+    // Real agents have sender.type = 'user' and should NOT be treated as bots
+    if (messageData.metadata?.sender?.type === 'agent_bot') {
       return true
     }
 
-    // 3. CHATWOOT: Check sender type indicators
-    if (messageData.sender?.type === 'agent_bot' ||
-        messageData.sender?.is_bot === true) {
+    // 3. CHATWOOT: Check sender.is_bot flag (fallback)
+    if (messageData.metadata?.sender?.is_bot === true) {
       return true
     }
 
-    // 4. CHATWOOT: Check message_type field (additional check)
-    if (messageData.metadata?.messageType === 1 || messageData.metadata?.messageType === 'outgoing') {
-      return true
-    }
-
-    // 5. CHATWOOT: Only check sender ID = 1 if it's an outgoing message
-    // For incoming messages, sender ID = 1 could be a real user
-    if ((messageData.metadata?.senderId === 1 || messageData.metadata?.senderId === '1') &&
-        (messageData.metadata?.isOutgoing === true || messageData.metadata?.messageType === 'outgoing')) {
-      return true
-    }
+    // ❌ DO NOT check isOutgoing or messageType === 'outgoing'
+    // Because real agents also send outgoing messages!
 
     return false
   }
@@ -951,15 +942,30 @@ class ProcessMessageUseCase {
 
     // Send response to Chatwoot as outgoing message (from bot/agent)
     const singleResponse = response.trim()
-    await this.chatwootService.sendMessage(
+    const result = await this.chatwootService.sendMessage(
       chatwootConversationId,
       singleResponse,
-      { message_type: 'outgoing' }
+      { 
+        message_type: 'outgoing'
+      }
     )
+
+    // GHI NHẬN messageId để tránh forward duplicate về Telegram
+    if (result?.id) {
+      this.difyMessageIds.set(result.id, {
+        timestamp: Date.now(),
+        conversationId: chatwootConversationId
+      })
+      this.logger.info('✅ Tracked Dify message to prevent duplicate forward to Telegram', {
+        difyMessageId: result.id,
+        chatwootConversationId
+      })
+    }
 
     this.logger.info('Dify response sent to Chatwoot', {
       chatwootConversationId,
-      responseLength: singleResponse.length
+      responseLength: singleResponse.length,
+      messageId: result?.id
     })
   }
 
@@ -1245,17 +1251,34 @@ class ProcessMessageUseCase {
         conversation_id: conversation.id
       })
 
+      // Initialize ChatwootService (it will auto-load bot token from database)
       await this.chatwootService.initializeWithAccountId(conversation.metadata?.accountId || 1)
 
       // Gửi chỉ 1 tin nhắn duy nhất
-      await this.chatwootService.sendMessage(
+      const result = await this.chatwootService.sendMessage(
         conversation.chatwootId,
-        singleResponse
+        singleResponse,
+        { 
+          message_type: 'outgoing'
+        }
       )
+
+      // GHI NHẬN messageId để tránh forward duplicate về Telegram
+      if (result?.id) {
+        this.difyMessageIds.set(result.id, {
+          timestamp: Date.now(),
+          conversationId: conversation.chatwootId
+        })
+        this.logger.info('✅ Tracked Dify message to prevent duplicate forward to Telegram', {
+          difyMessageId: result.id,
+          chatwootConversationId: conversation.chatwootId
+        })
+      }
 
       this.logger.info('Single response sent successfully', {
         conversationId: conversation.chatwootId,
         messageId: message.id,
+        difyMessageId: result?.id,
         conversation_id: conversation.id
       })
     } else {
@@ -1268,11 +1291,15 @@ class ProcessMessageUseCase {
         conversation_id: conversation.id
       })
 
-      // If we have a Dify conversation but no response, send a fallback message
-      if (difyResponse?.conversationId && !difyResponse?.response) {
+      // ✅ CHỈ gửi fallback cho message GỐC từ Telegram/user qua Chatwoot
+      // Logic: Nếu message này từ Chatwoot webhook (platform = 'chatwoot'), SKIP fallback
+      const isFromChatwootWebhook = message.platform === 'chatwoot'
+      
+      if (difyResponse?.conversationId && !difyResponse?.response && !isFromChatwootWebhook) {
         this.logger.info('Sending fallback response due to empty Dify response', {
           conversationId: conversation.chatwootId,
-          conversation_id: conversation.id
+          conversation_id: conversation.id,
+          messageOrigin: message.platform
         })
 
         try {
@@ -1291,15 +1318,32 @@ class ProcessMessageUseCase {
             conversation_id: conversation.id
           })
 
+          // Initialize ChatwootService (it will auto-load bot token from database)
           await this.chatwootService.initializeWithAccountId(conversation.metadata?.accountId || 1)
 
-          await this.chatwootService.sendMessage(
+          const fallbackResult = await this.chatwootService.sendMessage(
             conversation.chatwootId,
-            fallbackMessage
+            fallbackMessage,
+            { 
+              message_type: 'outgoing'
+            }
           )
+
+          // GHI NHẬN fallback messageId
+          if (fallbackResult?.id) {
+            this.difyMessageIds.set(fallbackResult.id, {
+              timestamp: Date.now(),
+              conversationId: conversation.chatwootId
+            })
+            this.logger.info('✅ Tracked Dify fallback message to prevent duplicate forward to Telegram', {
+              fallbackMessageId: fallbackResult.id,
+              chatwootConversationId: conversation.chatwootId
+            })
+          }
 
           this.logger.info('Fallback response sent to Chatwoot', {
             conversationId: conversation.chatwootId,
+            fallbackMessageId: fallbackResult?.id,
             conversation_id: conversation.id
           })
         } catch (fallbackError) {
@@ -1309,6 +1353,12 @@ class ProcessMessageUseCase {
             conversation_id: conversation.id
           })
         }
+      } else if (isFromChatwootWebhook) {
+        this.logger.info('Skipping fallback response for Chatwoot agent message (prevent spam loop)', {
+          conversationId: conversation.chatwootId,
+          messageId: message.id,
+          conversation_id: conversation.id
+        })
       }
     }
 
@@ -1344,35 +1394,103 @@ class ProcessMessageUseCase {
       }
     }
 
-    // 3c. Forward Chatwoot outgoing messages to Telegram if configured (Chatwoot -> Telegram)
-    const allowChatwootToTelegram = routingConfig.hasMapping && routingConfig.mappings.some(m => m.routing?.chatwootToTelegram)
-    if (allowChatwootToTelegram && message.metadata?.isOutgoing) {
+    // 3c. Forward Chatwoot outgoing messages to Telegram if Chatwoot is configured
+    // LOGIC: Nếu có chatwoot_account_id → TỰ ĐỘNG đồng bộ 2 chiều (không cần routing flag)
+    // IMPORTANT: Only forward messages from REAL AGENTS, not from Dify (to prevent duplicates)
+    const hasChatwootMapping = routingConfig.hasMapping && routingConfig.mappings.some(m => m.chatwootAccountId)
+    
+    // CRITICAL: Check nếu message này là từ Dify (đã track khi gửi vào Chatwoot)
+    const messageId = message.metadata?.messageId
+    const isDifyMessage = messageId && this.difyMessageIds.has(messageId)
+    const isRealAgentMessage = message.metadata?.isOutgoing && !this.isBotMessage(message) && !isDifyMessage
+    
+    this.logger.info('Checking if should forward Chatwoot message to Telegram', {
+      hasChatwootMapping,
+      isOutgoing: message.metadata?.isOutgoing,
+      isBotMessage: this.isBotMessage(message),
+      isDifyMessage,
+      isRealAgentMessage,
+      messageId,
+      trackedDifyMessages: Array.from(this.difyMessageIds.keys()),
+      senderType: message.metadata?.sender?.type,
+      messageType: message.metadata?.messageType,
+      conversationId: conversation.id,
+      hasMapping: routingConfig.hasMapping,
+      mappings: routingConfig.mappings?.map(m => ({ id: m.id, chatwootAccountId: m.chatwootAccountId }))
+    })
+    
+    if (hasChatwootMapping && isRealAgentMessage) {
       try {
         // Find the original Telegram conversation linked by chatwootId
         const telegramConversation = await this.conversationRepository.findByChatwootId(conversation.chatwootId)
+        
+        this.logger.info('Looking for Telegram conversation to forward message', {
+          chatwootId: conversation.chatwootId,
+          foundTelegramConversation: !!telegramConversation,
+          telegramChatId: telegramConversation?.chatId
+        })
+        
         if (telegramConversation && telegramConversation.chatId) {
           // Initialize Telegram service with bot ID from routing config
           const telegramMapping = routingConfig.mappings.find(m => m.telegramBotId)
           if (telegramMapping && telegramMapping.telegramBotId) {
+            this.logger.info('Initializing Telegram service with bot ID', {
+              telegramBotId: telegramMapping.telegramBotId
+            })
             await this.telegramService.initializeWithBotId(telegramMapping.telegramBotId)
+          } else {
+            this.logger.warn('No Telegram bot ID found in routing config')
           }
 
           await this.telegramService.sendMessage(
             telegramConversation.chatId,
             message.content
           )
-          this.logger.info('Forwarded Chatwoot outgoing message to Telegram', {
+          this.logger.info('✅ Forwarded Chatwoot AGENT message to Telegram', {
             chatId: telegramConversation.chatId,
             chatwootConversationId: conversation.chatwootId,
-            conversationId: conversation.id
+            conversationId: conversation.id,
+            messagePreview: message.content?.substring(0, 50)
           })
         } else {
           this.logger.warn('No linked Telegram conversation found to forward Chatwoot message', {
-            chatwootConversationId: conversation.chatwootId
+            chatwootConversationId: conversation.chatwootId,
+            searchedChatwootId: conversation.chatwootId,
+            allConversationFields: {
+              id: conversation.id,
+              chatwootId: conversation.chatwootId,
+              platform: conversation.platform
+            }
           })
         }
       } catch (err) {
-        this.logger.error('Failed to forward Chatwoot message to Telegram', { error: err.message })
+        this.logger.error('Failed to forward Chatwoot message to Telegram', { 
+          error: err.message,
+          stack: err.stack,
+          conversationId: conversation.id,
+          chatwootId: conversation.chatwootId
+        })
+      }
+    } else {
+      this.logger.info('Skipping Chatwoot to Telegram forward', {
+        hasChatwootMapping,
+        isRealAgentMessage,
+        isDifyMessage,
+        messageId,
+        reason: !hasChatwootMapping 
+          ? 'No Chatwoot mapping (chatwoot_account_id not set)' 
+          : isDifyMessage
+            ? '❌ Message from Dify (prevent duplicate - already sent to Telegram)'
+            : 'Not a real agent message (bot or incoming)'
+      })
+    }
+    
+    // Cleanup old tracked Dify messages (older than 10 minutes)
+    const tenMinutesAgo = Date.now() - 10 * 60 * 1000
+    for (const [msgId, data] of this.difyMessageIds.entries()) {
+      if (data.timestamp < tenMinutesAgo) {
+        this.difyMessageIds.delete(msgId)
+        this.logger.debug('Cleaned up old Dify message tracking', { messageId: msgId })
       }
     }
 

@@ -124,16 +124,25 @@ class PlatformMappingRepository extends BaseRepository {
    */
   async findByChatwootAccountId (chatwootAccountId) {
     try {
+      // FINAL SCHEMA:
+      // - Source: source_platform + source_id (telegram, zalo, instagram,...)
+      // - Target: chatwoot_account_id + dify_app_id (DIRECT columns, no target_platform)
       const query = `
-        SELECT pm.*, 
-               tb.name as telegram_bot_name,
-               ca.name as chatwoot_account_name,
-               da.name as dify_app_name
+        SELECT pm.*,
+               -- Get source bot/account name
+               CASE 
+                 WHEN pm.source_platform = 'telegram' THEN (SELECT name FROM telegram_bots WHERE id = pm.source_id)
+                 ELSE NULL
+               END as telegram_bot_name,
+               -- Get target names
+               (SELECT name FROM chatwoot_accounts WHERE id = pm.chatwoot_account_id) as chatwoot_account_name,
+               (SELECT name FROM dify_apps WHERE id = pm.dify_app_id) as dify_app_name,
+               -- Backward compat: map source to telegram_bot_id
+               CASE WHEN pm.source_platform = 'telegram' THEN pm.source_id ELSE NULL END as telegram_bot_id
         FROM platform_mappings pm
-        LEFT JOIN telegram_bots tb ON pm.telegram_bot_id = tb.id
-        LEFT JOIN chatwoot_accounts ca ON pm.chatwoot_account_id = ca.id
-        LEFT JOIN dify_apps da ON pm.dify_app_id = da.id
-        WHERE pm.chatwoot_account_id = $1 AND pm.is_active = true AND pm.deleted_at IS NULL
+        WHERE pm.chatwoot_account_id = $1
+          AND pm.is_active = true 
+          AND pm.deleted_at IS NULL
         ORDER BY pm.created_at DESC
       `
 

@@ -40,7 +40,9 @@ class ConfigurationController {
    */
   async updateSystemConfiguration (req, res) {
     try {
-      const configs = req.body
+      // Support both array and single object
+      const data = req.body
+      const configs = Array.isArray(data) ? data : [data]
 
       // Update each configuration
       const results = []
@@ -56,14 +58,14 @@ class ConfigurationController {
 
       res.json({
         success: true,
-        data: results,
+        data: results.length === 1 ? results[0] : results,
         message: 'System configurations updated successfully'
       })
     } catch (error) {
-      this.logger.error('Update system configuration failed', { error: error.message })
+      this.logger.error('Update system configuration failed', { error: error.message, stack: error.stack })
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: error.message || 'Internal server error'
       })
     }
   }
@@ -106,7 +108,7 @@ class ConfigurationController {
   async deleteSystemConfiguration (req, res) {
     try {
       const { key } = req.params
-      const deleted = await this.configurationRepository.deleteByKey(key)
+      const deleted = await this.configurationRepository.delete(key)
 
       if (!deleted) {
         return res.status(404).json({

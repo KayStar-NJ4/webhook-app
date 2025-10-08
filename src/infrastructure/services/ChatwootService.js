@@ -19,6 +19,10 @@ class ChatwootService {
     this.logger.info('Chatwoot service initialized (per-request configuration)')
   }
 
+  /**
+   * Initialize with specific account ID
+   * @param {number} accountId - Chatwoot account ID
+   */
   async initializeWithAccountId (accountId) {
     try {
       this.logger.info('Starting ChatwootService initialization', {
@@ -54,13 +58,13 @@ class ChatwootService {
         accessTokenPreview: this.accessToken ? this.accessToken.substring(0, 10) + '...' : 'null'
       })
 
-      this.inboxId = await this.getOrCreateApiInbox()
+      // Validate configuration
+      this.validateConfiguration()
 
       this.logger.info('Chatwoot service initialized with account', {
         accountId: this.accountId,
         baseUrl: this.baseUrl,
-        accessToken: this.accessToken ? '***' : 'null',
-        inboxId: this.inboxId
+        accessToken: this.accessToken ? '***' : 'null'
       })
     } catch (error) {
       this.logger.error('Failed to initialize Chatwoot service with account', {
@@ -82,6 +86,7 @@ class ChatwootService {
       throw error
     }
   }
+
 
   validateConfiguration () {
     const missing = []
@@ -111,6 +116,7 @@ class ChatwootService {
   getHeaders () {
     return { Authorization: `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' }
   }
+
 
   async getOrCreatePlatformInbox (platform) {
     try {

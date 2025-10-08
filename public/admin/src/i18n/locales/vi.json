@@ -112,7 +112,6 @@
       "name": "Tên tài khoản",
       "baseUrl": "URL cơ sở",
       "accessToken": "Token truy cập",
-      "aiBotAccessToken": "Token truy cập Bot AI",
       "accountId": "ID tài khoản",
       "inboxId": "ID hộp thư",
       "isActive": "Kích hoạt"
@@ -128,7 +127,6 @@
     "help": {
       "baseUrl": "Nhập URL instance Chatwoot của bạn",
       "accessToken": "Token để truy cập API Chatwoot với quyền nhân viên",
-      "aiBotAccessToken": "Token để Dify gửi tin nhắn thông qua Bot AI thay vì với vai trò nhân viên",
       "accountId": "ID số của tài khoản Chatwoot",
       "inboxId": "ID số của hộp thư để sử dụng"
     }
