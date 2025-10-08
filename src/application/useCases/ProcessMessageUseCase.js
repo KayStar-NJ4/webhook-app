@@ -654,20 +654,36 @@ class ProcessMessageUseCase {
       }
 
       // 2. Handle Dify routing or auto-connect
+      // Check if bot was mentioned in group chat (or if it's a private chat)
+      const shouldRespondWithDify = message.metadata?.shouldRespondWithDify ?? true // Use metadata value, default to true if not set
+      
+      this.logger.info('Debug shouldRespondWithDify in ProcessMessageUseCase', {
+        messageMetadataShouldRespondWithDify: message.metadata?.shouldRespondWithDify,
+        finalShouldRespondWithDify: shouldRespondWithDify,
+        messageMetadataKeys: Object.keys(message.metadata || {}),
+        isGroupChat: message.metadata?.isGroupChat,
+        isBotMentioned: message.metadata?.isBotMentioned
+      })
+      
       this.logger.info('Checking Dify routing configuration', {
         mappingId: mapping.id,
         hasTelegramToDify: !!mapping.routing?.telegramToDify,
         hasDifyAppId: !!mapping.difyAppId,
         difyAppId: mapping.difyAppId,
         routing: mapping.routing,
-        fullMapping: mapping
+        fullMapping: mapping,
+        isGroupChat: !!message.metadata?.isGroupChat,
+        isBotMentioned: !!message.metadata?.isBotMentioned,
+        shouldRespondWithDify
       })
 
-      const shouldConnectDify = (mapping.routing.telegramToDify || mapping.autoConnect?.telegramDify) && mapping.difyAppId
+      const shouldConnectDify = (mapping.routing.telegramToDify || mapping.autoConnect?.telegramDify) && mapping.difyAppId && shouldRespondWithDify
       if (shouldConnectDify) {
         this.logger.info('Processing message to Dify', {
           conversationId: conversation.id,
-          difyAppId: mapping.difyAppId
+          difyAppId: mapping.difyAppId,
+          isGroupChat: message.metadata?.isGroupChat,
+          isBotMentioned: message.metadata?.isBotMentioned
         })
 
         try {
@@ -709,10 +725,14 @@ class ProcessMessageUseCase {
           // Continue without Dify
         }
       } else {
-        this.logger.info('Dify routing not configured or disabled', {
+        this.logger.info('Dify routing not configured, disabled, or bot not mentioned in group', {
           mappingId: mapping.id,
           hasTelegramToDify: !!mapping.routing?.telegramToDify,
-          hasDifyAppId: !!mapping.difyAppId
+          hasDifyAppId: !!mapping.difyAppId,
+          shouldRespondWithDify,
+          reason: !shouldRespondWithDify ? 'Bot not mentioned in group chat' :
+                  !mapping.difyAppId ? 'No Dify app ID configured' :
+                  'Dify routing disabled'
         })
       }
 

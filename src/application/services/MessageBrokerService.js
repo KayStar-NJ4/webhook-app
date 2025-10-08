@@ -5,9 +5,11 @@
 class MessageBrokerService {
   constructor ({
     processMessageUseCase,
+    container,
     logger
   }) {
     this.processMessageUseCase = processMessageUseCase
+    this.container = container
     this.logger = logger
   }
 
@@ -78,13 +80,16 @@ class MessageBrokerService {
           // Get bot info from database service
           const databaseService = this.container.get('databaseService')
           const botToken = await databaseService.getBotToken(telegramData.__bot_id)
+          const realUsername = await databaseService.getBotUsername(telegramData.__bot_id)
+          
           if (botToken) {
-            // Extract bot username from token (format: botId:token)
+            // Extract bot username from token (format: botId:token) as fallback
             const tokenParts = botToken.split(':')
             if (tokenParts.length >= 2) {
               botInfo = {
                 id: parseInt(telegramData.__bot_id),
-                username: `bot${tokenParts[0]}` // Telegram bot username format
+                username: realUsername || `bot${tokenParts[0]}`, // Use real username from DB, fallback to fake
+                realUsername: realUsername // Store the real username separately
               }
             }
           }
@@ -98,12 +103,14 @@ class MessageBrokerService {
           const botId = await databaseService.getBotIdBySecretToken(telegramData.__secret_token)
           if (botId) {
             const botToken = await databaseService.getBotToken(botId)
+            const realUsername = await databaseService.getBotUsername(botId)
             if (botToken) {
               const tokenParts = botToken.split(':')
               if (tokenParts.length >= 2) {
                 botInfo = {
                   id: botId,
-                  username: `bot${tokenParts[0]}`
+                  username: realUsername || `bot${tokenParts[0]}`, // Use real username from DB, fallback to fake
+                  realUsername: realUsername
                 }
               }
             }
@@ -121,15 +128,18 @@ class MessageBrokerService {
           const botId = await databaseService.getFirstActiveBotId()
           if (botId) {
             const botToken = await databaseService.getBotToken(botId)
+            const realUsername = await databaseService.getBotUsername(botId)
             if (botToken) {
               const tokenParts = botToken.split(':')
               if (tokenParts.length >= 2) {
                 botInfo = {
                   id: botId,
-                  username: `bot${tokenParts[0]}`
+                  username: realUsername || `bot${tokenParts[0]}`, // Use real username from DB, fallback to fake
+                  realUsername: realUsername
                 }
                 this.logger.warn('Using fallback bot ID - webhook should include bot ID or secret token', { 
                   fallbackBotId: botId,
+                  realUsername,
                   webhookUrl: 'Consider using /webhook/telegram/:botId or secret token'
                 })
               }
@@ -159,8 +169,28 @@ class MessageBrokerService {
       const messageData = this.parseTelegramMessage(telegramData)
       return await this.handleMessage('telegram', messageData)
     } catch (error) {
+      // Check if this is a skippable error (special events, non-text messages, bot messages, etc.)
+      const isSkippableError = error.message && (
+        error.message.includes('skipped') ||
+        error.message.includes('Special event message') ||
+        error.message.includes('Non-text message') ||
+        error.message.includes('not mentioned in group')
+      )
+
+      if (isSkippableError) {
+        // Return success for skippable messages to prevent Telegram from retrying
+        this.logger.info('Telegram webhook processed but message skipped', {
+          reason: error.message,
+          messageId: telegramData.message?.message_id,
+          chatId: telegramData.message?.chat?.id
+        })
+        return { success: true, message: 'Message skipped', reason: error.message }
+      }
+
+      // For real errors, log and throw
       this.logger.error('Failed to handle Telegram webhook', {
         error: error.message,
+        stack: error.stack,
         telegramData
       })
       throw error
@@ -241,32 +271,123 @@ class MessageBrokerService {
       throw new Error('Message from this bot skipped to prevent loops')
     }
 
+    // Skip special event messages (new_chat_member, migrate_from_chat_id, etc.)
+    const isSpecialEvent = !!(
+      message.new_chat_member ||
+      message.new_chat_members ||
+      message.new_chat_participant ||
+      message.left_chat_member ||
+      message.migrate_from_chat_id ||
+      message.migrate_to_chat_id ||
+      message.group_chat_created ||
+      message.supergroup_chat_created ||
+      message.channel_chat_created
+    )
+
+    if (isSpecialEvent) {
+      this.logger.info('Skipping special event message', {
+        messageId: message.message_id,
+        chatId: chat.id,
+        chatType: chat.type,
+        eventType: message.new_chat_member ? 'new_chat_member' :
+                   message.new_chat_members ? 'new_chat_members' :
+                   message.left_chat_member ? 'left_chat_member' :
+                   message.migrate_from_chat_id ? 'migrate_from_chat_id' :
+                   message.migrate_to_chat_id ? 'migrate_to_chat_id' :
+                   message.group_chat_created ? 'group_chat_created' :
+                   message.supergroup_chat_created ? 'supergroup_chat_created' :
+                   message.channel_chat_created ? 'channel_chat_created' : 'unknown',
+        newMember: message.new_chat_member || message.new_chat_members?.[0],
+        leftMember: message.left_chat_member,
+        migrateFromChatId: message.migrate_from_chat_id,
+        migrateToChatId: message.migrate_to_chat_id
+      })
+      throw new Error('Special event message skipped - no processing needed')
+    }
+
     // Skip messages without text content
     if (!message.text || !message.text.trim()) {
       this.logger.info('Skipping non-text message', {
         messageId: message.message_id,
+        chatId: chat.id,
         hasText: !!message.text,
-        messageType: message.content_type || 'unknown'
+        messageType: message.content_type || 'unknown',
+        hasPhoto: !!message.photo,
+        hasDocument: !!message.document,
+        hasVideo: !!message.video,
+        hasAudio: !!message.audio,
+        hasVoice: !!message.voice,
+        hasSticker: !!message.sticker
       })
       throw new Error('Non-text message skipped')
     }
 
     const isGroupChat = chat.type === 'group' || chat.type === 'supergroup'
+    
+    this.logger.info('Debug chat type and group detection', {
+      chatType: chat.type,
+      isGroupChat: isGroupChat,
+      chatId: chat.id,
+      chatTitle: chat.title
+    })
     // Include bot ID in conversation ID to separate conversations between different bots
     const botId = telegramData.bot?.id || telegramData.__bot_id
     const baseConversationId = isGroupChat ? chat.id.toString() : from.id.toString()
     const conversationId = botId ? `${baseConversationId}_bot_${botId}` : baseConversationId
 
     // For group chats, only respond when bot is mentioned
-    const isBotMentioned = isGroupChat && message.text && (
-      message.text.includes(`@${telegramData.bot?.username}`) ||
-      message.text.includes(`@${telegramData.bot?.first_name}`) ||
-      message.entities?.some(entity => entity.type === 'mention' &&
-        message.text.substring(entity.offset, entity.offset + entity.length).includes(telegramData.bot?.username))
-    )
+    // Use real username from database if available, fallback to fake username
+    const botUsername = telegramData.bot?.realUsername || telegramData.bot?.username
+    
+    // Clean bot username (remove @ if present)
+    const cleanBotUsername = botUsername ? botUsername.replace(/^@/, '') : null
+    
+    // For group chats, check if bot is mentioned
+    let isBotMentioned = false
+    if (isGroupChat && message.text) {
+      // Check for @username mention (botUsername might already have @ from database)
+      if (cleanBotUsername && (
+        message.text.includes(`@${cleanBotUsername}`) || 
+        message.text.includes(botUsername) // In case botUsername already has @
+      )) {
+        isBotMentioned = true
+      }
+      // Check for @first_name mention (fallback)
+      else if (telegramData.bot?.first_name && message.text.includes(`@${telegramData.bot.first_name}`)) {
+        isBotMentioned = true
+      }
+      // Check entities for proper mention detection
+      else if (message.entities?.some(entity => 
+        (entity.type === 'mention' || entity.type === 'text_mention') &&
+        (
+          // Check if mention text matches bot username (clean version)
+          (cleanBotUsername && message.text.substring(entity.offset, entity.offset + entity.length).includes(cleanBotUsername)) ||
+          // Check if mention text matches full bot username (with @)
+          (botUsername && message.text.substring(entity.offset, entity.offset + entity.length).includes(botUsername)) ||
+          // Check if entity user ID matches bot ID
+          entity.user?.id === telegramData.bot?.id
+        )
+      )) {
+        isBotMentioned = true
+      }
+    }
 
-    // Respond to all messages (private and group)
-    const shouldRespond = true
+    // In private chats, always respond with Dify. In group chats, only respond with Dify when bot is mentioned
+    const shouldRespondWithDify = !isGroupChat || isBotMentioned
+    
+    this.logger.info('Debug mention detection and routing logic', {
+      isGroupChat: isGroupChat,
+      isBotMentioned: isBotMentioned,
+      shouldRespondWithDify: shouldRespondWithDify,
+      logicExplanation: isGroupChat ? 
+        (isBotMentioned ? 'Group chat + bot mentioned = respond' : 'Group chat + bot NOT mentioned = NO respond') :
+        'Private chat = always respond',
+      botUsername: botUsername,
+      cleanBotUsername: cleanBotUsername,
+      messageText: message.text,
+      hasEntities: !!message.entities,
+      entities: message.entities
+    })
 
     this.logger.info('Parsing Telegram message', {
       messageId: message.message_id,
@@ -281,23 +402,20 @@ class MessageBrokerService {
       userName: from.first_name,
       userUsername: from.username,
       isBotMentioned,
-      botUsername: telegramData.bot?.username,
-      shouldRespond
+      botUsername: botUsername,
+      cleanBotUsername: cleanBotUsername,
+      realBotUsername: telegramData.bot?.realUsername,
+      fakeBotUsername: telegramData.bot?.username,
+      shouldRespondWithDify,
+      messageText: message.text?.substring(0, 100) // Show first 100 chars for debugging
     })
 
-    // Skip if we shouldn't respond
-    if (!shouldRespond) {
-      this.logger.info('Skipping message - not mentioned in group or not private chat', {
-        messageId: message.message_id,
-        isGroupChat,
-        isBotMentioned,
-        botUsername: telegramData.bot?.username,
-        messageText: message.text?.substring(0, 100)
-      })
-      throw new Error('Message skipped - not mentioned in group or not private chat')
-    }
+    // NOTE: We DON'T skip messages here anymore
+    // All messages are forwarded to Chatwoot for context (even in groups without mention)
+    // But only messages with bot mention (or private chats) will be processed by Dify
+    // The ProcessMessageUseCase will check metadata.shouldRespondWithDify flag
 
-    return {
+    const parsedMessage = {
       id: `${message.message_id}_${conversationId}`,
       content: message.text,
       senderId: from.id.toString(),
@@ -305,6 +423,8 @@ class MessageBrokerService {
       conversationId,
       metadata: {
         isGroupChat,
+        isBotMentioned, // Flag to indicate if this bot was mentioned
+        shouldRespondWithDify, // Flag to control Dify response (true for private or when mentioned in group)
         groupTitle: isGroupChat ? chat.title : null,
         messageId: message.message_id,
         chatId: chat.id.toString(),
@@ -332,6 +452,20 @@ class MessageBrokerService {
         }
       }
     }
+
+    this.logger.info('MessageBrokerService returning parsed message with metadata', {
+      messageId: parsedMessage.id,
+      conversationId: parsedMessage.conversationId,
+      metadataKeys: Object.keys(parsedMessage.metadata),
+      'metadata.shouldRespondWithDify': parsedMessage.metadata.shouldRespondWithDify,
+      'metadata.isGroupChat': parsedMessage.metadata.isGroupChat,
+      'metadata.isBotMentioned': parsedMessage.metadata.isBotMentioned,
+      shouldRespondWithDifyValue: shouldRespondWithDify,
+      isGroupChatValue: isGroupChat,
+      isBotMentionedValue: isBotMentioned
+    })
+
+    return parsedMessage
   }
 
   /**

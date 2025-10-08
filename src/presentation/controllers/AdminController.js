@@ -166,7 +166,7 @@ class AdminController {
    */
   async createTelegramBot (req, res) {
     try {
-      const { name, botToken, secretToken, webhookUrl, apiUrl, isActive = true } = req.body
+      const { name, botToken, secretToken, webhookUrl, apiUrl, isActive = true, botUsername } = req.body
 
       if (!name || !botToken) {
         return res.status(400).json({
@@ -179,6 +179,7 @@ class AdminController {
         name,
         botToken,
         secretToken,
+        botUsername,
         webhookUrl,
         apiUrl: apiUrl || 'https://api.telegram.org',
         isActive,
@@ -243,7 +244,7 @@ class AdminController {
   async updateTelegramBot (req, res) {
     try {
       const { id } = req.params
-      const { name, botToken, webhookUrl, apiUrl, isActive, secretToken } = req.body
+      const { name, botToken, webhookUrl, apiUrl, isActive, secretToken, botUsername } = req.body
 
       const bot = await this.telegramBotRepository.update(id, {
         name,
@@ -251,7 +252,8 @@ class AdminController {
         webhookUrl,
         apiUrl,
         isActive,
-        secretToken
+        secretToken,
+        botUsername
       })
 
       res.json({

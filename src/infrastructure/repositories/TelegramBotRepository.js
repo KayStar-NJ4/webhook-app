@@ -15,15 +15,15 @@ class TelegramBotRepository {
    */
   async create (botData) {
     try {
-      const { name, botToken, webhookUrl, isActive, createdBy, secretToken } = botData
+      const { name, botToken, webhookUrl, isActive, createdBy, secretToken, botUsername } = botData
 
       const query = `
-        INSERT INTO telegram_bots (name, bot_token, is_active, created_by, secret_token)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, name, bot_token, is_active, created_at, secret_token
+        INSERT INTO telegram_bots (name, bot_token, is_active, created_by, secret_token, bot_username)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id, name, bot_token, is_active, created_at, secret_token, bot_username
       `
 
-      const result = await this.db.query(query, [name, botToken, isActive, createdBy, secretToken])
+      const result = await this.db.query(query, [name, botToken, isActive, createdBy, secretToken, botUsername])
 
       this.logger.info('Telegram bot created', { botId: result.rows[0].id, name })
       return result.rows[0]
@@ -110,7 +110,7 @@ class TelegramBotRepository {
       const total = parseInt(countResult.rows[0].total)
 
       const query = `
-        SELECT id, name, bot_token, is_active, created_at, updated_at, secret_token
+        SELECT id, name, bot_token, is_active, created_at, updated_at, secret_token, bot_username
         FROM telegram_bots 
         ${whereClause}
         ${orderBy}
@@ -142,7 +142,7 @@ class TelegramBotRepository {
    */
   async update (id, updateData) {
     try {
-      const { name, botToken, isActive, secretToken } = updateData
+      const { name, botToken, isActive, secretToken, botUsername } = updateData
 
       const query = `
         UPDATE telegram_bots 
@@ -150,12 +150,13 @@ class TelegramBotRepository {
             bot_token = COALESCE($2, bot_token),
             is_active = COALESCE($3, is_active),
             secret_token = COALESCE($4, secret_token),
+            bot_username = COALESCE($5, bot_username),
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = $5
-        RETURNING id, name, bot_token, is_active, created_at, updated_at, secret_token
+        WHERE id = $6
+        RETURNING id, name, bot_token, is_active, created_at, updated_at, secret_token, bot_username
       `
 
-      const result = await this.db.query(query, [name, botToken, isActive, secretToken, id])
+      const result = await this.db.query(query, [name, botToken, isActive, secretToken, botUsername, id])
 
       if (result.rows.length === 0) {
         throw new Error('Telegram bot not found')
