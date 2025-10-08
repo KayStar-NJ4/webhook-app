@@ -401,9 +401,10 @@ class MessageBrokerService {
         sender: {
           id: sender.id,
           name: sender.name,
+          type: sender.type, // IMPORTANT: 'user' = real agent, 'agent_bot' = AI bot, 'contact' = customer
           username: sender.additional_attributes?.username,
           language_code: sender.additional_attributes?.language_code,
-          is_bot: message.message_type === 'outgoing' || sender.type === 'agent_bot' // Bot messages are outgoing or from agent_bot
+          is_bot: sender.type === 'agent_bot' // Only AI bot (agent_bot), NOT real agents (user)
         }
       }
     }
@@ -449,9 +450,10 @@ class MessageBrokerService {
         sender: {
           id: sender.id,
           name: sender.name,
+          type: sender.type, // IMPORTANT: 'user' = real agent, 'agent_bot' = AI bot, 'contact' = customer
           username: sender.additional_attributes?.username,
           language_code: sender.additional_attributes?.language_code,
-          is_bot: latestMessage.message_type === 'outgoing' // Bot messages are outgoing
+          is_bot: sender.type === 'agent_bot' // Only AI bot (agent_bot), NOT real agents (user)
         }
       }
     }

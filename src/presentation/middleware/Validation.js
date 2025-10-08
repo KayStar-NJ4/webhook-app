@@ -137,7 +137,7 @@ class Validation {
       sender: Joi.object().optional(),
       content: Joi.string().optional(),
       private: Joi.boolean().optional(),
-      source_id: Joi.string().optional(),
+      source_id: Joi.string().allow(null).optional(), // Allow null for outgoing messages from agents
       created_at: Joi.string().optional(),
       content_type: Joi.string().optional(),
       message_type: Joi.string().optional(),

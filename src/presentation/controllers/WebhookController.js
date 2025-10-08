@@ -159,6 +159,49 @@ class WebhookController {
   }
 
   /**
+   * Handle Chatwoot Bot webhook (for Dify messages via Bot)
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async handleChatwootBotWebhook (req, res) {
+    try {
+      this.logger.info('Received Chatwoot Bot webhook', {
+        event: req.body.event,
+        body: req.body,
+        headers: req.headers,
+        method: req.method,
+        url: req.url
+      })
+
+      // For bot webhook, we don't process messages back to Telegram
+      // This is only for Dify to send messages via Chatwoot Bot
+      this.logger.info('Chatwoot Bot webhook received - no processing needed', {
+        event: req.body.event,
+        messageId: req.body.id,
+        conversationId: req.body.conversation?.id
+      })
+
+      res.status(200).json({
+        success: true,
+        message: 'Bot webhook received - no processing needed',
+        timestamp: new Date().toISOString()
+      })
+    } catch (error) {
+      this.logger.error('Chatwoot Bot webhook error', {
+        error: error.message,
+        stack: error.stack,
+        body: req.body
+      })
+
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      })
+    }
+  }
+
+  /**
    * Health check endpoint
    * @param {Object} req - Express request
    * @param {Object} res - Express response

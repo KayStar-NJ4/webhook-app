@@ -52,6 +52,14 @@ class WebhookRoutes {
         (req, res) => this.webhookController.handleChatwootWebhook(req, res)
       )
     )
+
+    // Chatwoot Bot webhook - for Dify messages via Bot
+    this.router.post('/chatwoot/bot',
+      this.validation.validate(Validation.schemas.chatwootWebhook, 'body'),
+      this.errorHandler.asyncHandler(
+        (req, res) => this.webhookController.handleChatwootBotWebhook(req, res)
+      )
+    )
   }
 
   /**
