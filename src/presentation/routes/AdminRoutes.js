@@ -17,6 +17,9 @@ class AdminRoutes {
     telegramBotRepository,
     chatwootAccountRepository,
     difyAppRepository,
+    webAppRepository,
+    webConversationRepository,
+    webMessageRepository,
     roleRepository,
     permissionRepository,
     configurationRepository,
@@ -43,6 +46,7 @@ class AdminRoutes {
       telegramBotRepository,
       chatwootAccountRepository,
       difyAppRepository,
+      webAppRepository,
       logger
     })
 
@@ -58,6 +62,9 @@ class AdminRoutes {
       telegramBotRepository,
       chatwootAccountRepository,
       difyAppRepository,
+      webAppRepository,
+      webConversationRepository,
+      webMessageRepository,
       roleRepository,
       permissionRepository,
       configurationRepository,

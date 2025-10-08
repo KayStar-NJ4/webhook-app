@@ -10,6 +10,7 @@ const ConversationController = require('./presentation/controllers/ConversationC
 const TelegramController = require('./presentation/controllers/TelegramController')
 const MetricsController = require('./presentation/controllers/MetricsController')
 const LogController = require('./presentation/controllers/LogController')
+const WebController = require('./presentation/controllers/WebController')
 
 // Middleware
 const ErrorHandler = require('./presentation/middleware/ErrorHandler')
@@ -22,6 +23,7 @@ const MetricsMiddleware = require('./presentation/middleware/MetricsMiddleware')
 const WebhookRoutes = require('./presentation/routes/WebhookRoutes')
 const ApiRoutes = require('./presentation/routes/ApiRoutes')
 const MetricsRoutes = require('./presentation/routes/MetricsRoutes')
+const WebRoutes = require('./presentation/routes/WebRoutes')
 // LogRoutes is now part of AdminRoutes
 
 // Infrastructure
@@ -80,7 +82,9 @@ class Application {
       })
 
       const telegramController = new TelegramController({
+        telegramBotRepository: this.serviceRegistry.get('telegramBotRepository'),
         telegramService: this.serviceRegistry.get('telegramService'),
+        configurationService: this.serviceRegistry.get('configurationService'),
         logger: logger.child({ component: 'TelegramController' })
       })
 
@@ -92,6 +96,15 @@ class Application {
       const logController = new LogController(
         this.serviceRegistry.get('logRepository')
       )
+
+      const webController = new WebController({
+        messageBrokerService: this.serviceRegistry.get('messageBrokerService'),
+        webAppRepository: this.serviceRegistry.get('webAppRepository'),
+        webConversationRepository: this.serviceRegistry.get('webConversationRepository'),
+        webMessageRepository: this.serviceRegistry.get('webMessageRepository'),
+        webService: this.serviceRegistry.get('webService'),
+        logger: logger.child({ component: 'WebController' })
+      })
 
       // Initialize middleware
       const errorHandler = new ErrorHandler({
@@ -136,6 +149,12 @@ class Application {
         errorHandler
       })
 
+      const webRoutes = new WebRoutes({
+        webController,
+        validation,
+        errorHandler
+      })
+
       // logRoutes is now part of AdminRoutes
 
       // Initialize admin routes
@@ -145,6 +164,9 @@ class Application {
         telegramBotRepository: this.serviceRegistry.get('telegramBotRepository'),
         chatwootAccountRepository: this.serviceRegistry.get('chatwootAccountRepository'),
         difyAppRepository: this.serviceRegistry.get('difyAppRepository'),
+        webAppRepository: this.serviceRegistry.get('webAppRepository'),
+        webConversationRepository: this.serviceRegistry.get('webConversationRepository'),
+        webMessageRepository: this.serviceRegistry.get('webMessageRepository'),
         roleRepository: this.serviceRegistry.get('roleRepository'),
         permissionRepository: this.serviceRegistry.get('permissionRepository'),
         configurationRepository: this.serviceRegistry.get('configurationRepository'),
@@ -169,6 +191,7 @@ class Application {
         webhookRoutes,
         apiRoutes,
         metricsRoutes,
+        webRoutes,
         // logRoutes is now part of AdminRoutes
         adminRoutes,
         errorHandler,

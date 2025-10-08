@@ -152,6 +152,7 @@
     <script src="/admin/src/services/TelegramService.js"></script>
     <script src="/admin/src/services/ChatwootService.js"></script>
     <script src="/admin/src/services/DifyService.js"></script>
+    <script src="/admin/src/services/WebService.js"></script>
     <script src="/admin/src/services/PlatformMappingService.js"></script>
     <script src="/admin/src/services/UserService.js"></script>
     <script src="/admin/src/services/RoleService.js"></script>
@@ -343,6 +344,16 @@
             TelegramBotsPageComponent = await loadVueComponent('/admin/src/modules/telegram/TelegramBotsPageComponent.vue');
             window.TelegramBotsPageComponent = TelegramBotsPageComponent;
             
+            // Load Web Apps components
+            WebAppsListComponent = await loadVueComponent('/admin/src/modules/web/WebAppsListComponent.vue');
+            window.WebAppsListComponent = WebAppsListComponent;
+            
+            WebAppFormComponent = await loadVueComponent('/admin/src/modules/web/WebAppFormComponent.vue');
+            window.WebAppFormComponent = WebAppFormComponent;
+            
+            WebAppsPageComponent = await loadVueComponent('/admin/src/modules/web/WebAppsPageComponent.vue');
+            window.WebAppsPageComponent = WebAppsPageComponent;
+            
             // Load Platform Mapping components
             PlatformMappingListComponent = await loadVueComponent('/admin/src/modules/platform-mappings/PlatformMappingListComponent.vue');
             window.PlatformMappingListComponent = PlatformMappingListComponent;
@@ -432,6 +443,13 @@
                 component: window.AdminLayoutComponent,
                 children: [
                     { path: '', component: window.TelegramBotsPageComponent }
+                ]
+            },
+            {
+                path: '/admin/web-apps',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.WebAppsPageComponent }
                 ]
             },
             {
@@ -710,6 +728,9 @@
             if (window.TelegramBotsListComponent) app.component('TelegramBotsListComponent', window.TelegramBotsListComponent);
             if (window.TelegramBotFormComponent) app.component('TelegramBotFormComponent', window.TelegramBotFormComponent);
             if (window.TelegramBotsPageComponent) app.component('TelegramBotsPageComponent', window.TelegramBotsPageComponent);
+            if (window.WebAppsListComponent) app.component('WebAppsListComponent', window.WebAppsListComponent);
+            if (window.WebAppFormComponent) app.component('WebAppFormComponent', window.WebAppFormComponent);
+            if (window.WebAppsPageComponent) app.component('WebAppsPageComponent', window.WebAppsPageComponent);
             if (window.PlatformMappingListComponent) app.component('PlatformMappingListComponent', window.PlatformMappingListComponent);
             if (window.PlatformMappingFormComponent) app.component('PlatformMappingFormComponent', window.PlatformMappingFormComponent);
             if (window.PlatformMappingsPageComponent) app.component('PlatformMappingsPageComponent', window.PlatformMappingsPageComponent);

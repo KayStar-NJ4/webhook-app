@@ -198,6 +198,70 @@ class MessageBrokerService {
   }
 
   /**
+   * Handle Web webhook
+   * @param {Object} webData - Web webhook data
+   * @returns {Promise<Object>} - Processing result
+   */
+  async handleWebWebhook (webData) {
+    try {
+      this.logger.info('Received Web webhook', {
+        sessionId: webData.sessionId,
+        webAppId: webData.webAppId,
+        hasContent: !!webData.content,
+        contentLength: webData.content?.length,
+        userInfo: webData.userInfo
+      })
+
+      const messageData = this.parseWebMessage(webData)
+      const result = await this.handleMessage('web', messageData)
+      
+      // Return the response to send back to web client
+      return {
+        success: true,
+        response: result.response || result.difyResponse || 'Xin chào! Tôi có thể giúp gì cho bạn?',
+        conversationId: result.conversationId,
+        metadata: result.metadata
+      }
+    } catch (error) {
+      this.logger.error('Failed to handle Web webhook', {
+        error: error.message,
+        stack: error.stack,
+        webData
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Parse Web message to standard format
+   * @param {Object} webData - Web webhook data
+   * @returns {Object} - Parsed message data
+   */
+  parseWebMessage (webData) {
+    return {
+      id: `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      conversationId: webData.sessionId, // Use sessionId as conversationId
+      content: webData.content,
+      sender: {
+        id: webData.userInfo?.identifier || `anonymous_${webData.sessionId}`,
+        name: webData.userInfo?.name || 'Web User',
+        email: webData.userInfo?.email,
+        platform: 'web'
+      },
+      chatType: 'private', // Web always private chat
+      metadata: {
+        webAppId: webData.webAppId,
+        webConversationId: webData.webConversationId, // Database ID
+        sessionId: webData.sessionId,
+        browser: webData.userInfo?.platform,
+        language: webData.userInfo?.language,
+        referrer: webData.userInfo?.referrer,
+        userAgent: webData.userInfo?.userAgent
+      }
+    }
+  }
+
+  /**
    * Handle Chatwoot webhook
    * @param {Object} chatwootData - Chatwoot webhook data
    * @returns {Promise<Object>} - Processing result

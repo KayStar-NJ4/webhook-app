@@ -30,6 +30,7 @@
                     <select id="sourcePlatform" class="form-control" v-model="formData.source_platform" required @change="onSourcePlatformChange">
                       <option value="">Chọn platform</option>
                       <option value="telegram">📱 Telegram Bot</option>
+                      <option value="web">🌐 Web (Landing Page)</option>
                       <option value="zalo">💭 Zalo Bot</option>
                       <option value="facebook">📘 Facebook Messenger</option>
                       <option value="whatsapp">📱 WhatsApp Business</option>
@@ -192,6 +193,7 @@ export default {
       },
       available: {
         telegramBots: [],
+        webApps: [],
         chatwootAccounts: [],
         difyApps: []
       },
@@ -205,6 +207,7 @@ export default {
     },
     sourceOptions() {
       if (this.formData.source_platform === 'telegram') return this.available.telegramBots
+      if (this.formData.source_platform === 'web') return this.available.webApps
       if (this.formData.source_platform === 'zalo') return this.available.zaloBots || []
       if (this.formData.source_platform === 'facebook') return this.available.facebookPages || []
       if (this.formData.source_platform === 'whatsapp') return this.available.whatsappAccounts || []
@@ -321,6 +324,7 @@ export default {
     getSourcePlatformName() {
       const names = {
         telegram: 'Telegram Bot',
+        web: 'Web App',
         zalo: 'Zalo Bot',
         facebook: 'Facebook Page',
         whatsapp: 'WhatsApp Business'
@@ -330,6 +334,7 @@ export default {
     getSourceDescription() {
       const descriptions = {
         telegram: 'Chọn Telegram bot sẽ nhận tin nhắn từ người dùng',
+        web: 'Chọn Web App (landing page) sẽ nhận tin nhắn từ trình duyệt',
         zalo: 'Chọn Zalo bot sẽ nhận tin nhắn từ người dùng',
         facebook: 'Chọn Facebook Page để nhận tin nhắn',
         whatsapp: 'Chọn WhatsApp Business để nhận tin nhắn'

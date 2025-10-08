@@ -1,5 +1,5 @@
 const express = require('express')
-const AdminController = require('../../controllers/AdminController')
+const ChatwootController = require('../../controllers/ChatwootController')
 
 /**
  * Chatwoot Routes - Admin API
@@ -7,26 +7,16 @@ const AdminController = require('../../controllers/AdminController')
  */
 class ChatwootRoutes {
   constructor ({
-    userRepository,
-    telegramBotRepository,
     chatwootAccountRepository,
-    difyAppRepository,
-    telegramService,
     chatwootService,
-    difyService,
     authMiddleware,
     permissionMiddleware,
     logger
   }) {
     this.router = express.Router()
-    this.adminController = new AdminController({
-      userRepository,
-      telegramBotRepository,
+    this.controller = new ChatwootController({
       chatwootAccountRepository,
-      difyAppRepository,
-      telegramService,
       chatwootService,
-      difyService,
       logger
     })
     this.authMiddleware = authMiddleware
@@ -41,31 +31,31 @@ class ChatwootRoutes {
     this.router.get('/',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('chatwoot', 'read'),
-      (req, res) => this.adminController.getChatwootAccounts(req, res)
+      (req, res) => this.controller.getAll(req, res)
     )
     
     this.router.post('/',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('chatwoot', 'create'),
-      (req, res) => this.adminController.createChatwootAccount(req, res)
+      (req, res) => this.controller.create(req, res)
     )
     
     this.router.put('/:id',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('chatwoot', 'update'),
-      (req, res) => this.adminController.updateChatwootAccount(req, res)
+      (req, res) => this.controller.update(req, res)
     )
     
     this.router.delete('/:id',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('chatwoot', 'delete'),
-      (req, res) => this.adminController.deleteChatwootAccount(req, res)
+      (req, res) => this.controller.delete(req, res)
     )
     
     this.router.post('/:id/test-connection',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('chatwoot', 'read'),
-      (req, res) => this.adminController.testChatwootAccountConnection(req, res)
+      (req, res) => this.controller.testConnection(req, res)
     )
   }
 
