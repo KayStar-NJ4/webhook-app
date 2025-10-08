@@ -194,6 +194,7 @@ class ServiceRegistry {
     // Application Services
     this.container.register('messageBrokerService', (container) => new MessageBrokerService({
       processMessageUseCase: container.get('processMessageUseCase'),
+      container: container,
       logger: container.get('logger')
     }), true)
 

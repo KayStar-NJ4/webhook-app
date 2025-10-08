@@ -81,16 +81,60 @@ class Validation {
         from: Joi.object({
           id: Joi.number().required(),
           first_name: Joi.string().required(),
-          last_name: Joi.string().allow(''),
-          username: Joi.string().allow('')
+          last_name: Joi.string().allow('').optional(),
+          username: Joi.string().allow('').optional(),
+          is_bot: Joi.boolean().optional(),
+          language_code: Joi.string().optional()
         }).required(),
         chat: Joi.object({
           id: Joi.number().required(),
           type: Joi.string().valid('private', 'group', 'supergroup', 'channel').required(),
-          title: Joi.string().allow('')
+          title: Joi.string().allow('').optional(),
+          all_members_are_administrators: Joi.boolean().optional(),
+          accepted_gift_types: Joi.object().optional()
         }).required(),
-        text: Joi.string().required(),
-        date: Joi.number().required()
+        // text is optional - not present for special events like new_chat_member, migrate_from_chat_id
+        text: Joi.string().optional(),
+        date: Joi.number().required(),
+        // Special event fields
+        new_chat_member: Joi.object({
+          id: Joi.number().required(),
+          is_bot: Joi.boolean().optional(),
+          first_name: Joi.string().optional(),
+          username: Joi.string().optional()
+        }).optional(),
+        new_chat_members: Joi.array().items(Joi.object({
+          id: Joi.number().required(),
+          is_bot: Joi.boolean().optional(),
+          first_name: Joi.string().optional(),
+          username: Joi.string().optional()
+        })).optional(),
+        new_chat_participant: Joi.object({
+          id: Joi.number().required(),
+          is_bot: Joi.boolean().optional(),
+          first_name: Joi.string().optional(),
+          username: Joi.string().optional()
+        }).optional(),
+        left_chat_member: Joi.object({
+          id: Joi.number().required(),
+          is_bot: Joi.boolean().optional(),
+          first_name: Joi.string().optional(),
+          username: Joi.string().optional()
+        }).optional(),
+        migrate_from_chat_id: Joi.number().optional(),
+        migrate_to_chat_id: Joi.number().optional(),
+        sender_chat: Joi.object({
+          id: Joi.number().required(),
+          type: Joi.string().optional(),
+          title: Joi.string().optional()
+        }).optional(),
+        // Support for entities (mentions, hashtags, etc.)
+        entities: Joi.array().items(Joi.object({
+          type: Joi.string().required(),
+          offset: Joi.number().required(),
+          length: Joi.number().required(),
+          user: Joi.object().optional()
+        })).optional()
       }).required()
     }),
 

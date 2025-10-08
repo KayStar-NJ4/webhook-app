@@ -654,20 +654,36 @@ class ProcessMessageUseCase {
       }
 
       // 2. Handle Dify routing or auto-connect
+      // Check if bot was mentioned in group chat (or if it's a private chat)
+      const shouldRespondWithDify = message.metadata?.shouldRespondWithDify ?? true // Use metadata value, default to true if not set
+      
+      this.logger.info('Debug shouldRespondWithDify in ProcessMessageUseCase', {
+        messageMetadataShouldRespondWithDify: message.metadata?.shouldRespondWithDify,
+        finalShouldRespondWithDify: shouldRespondWithDify,
+        messageMetadataKeys: Object.keys(message.metadata || {}),
+        isGroupChat: message.metadata?.isGroupChat,
+        isBotMentioned: message.metadata?.isBotMentioned
+      })
+      
       this.logger.info('Checking Dify routing configuration', {
         mappingId: mapping.id,
         hasTelegramToDify: !!mapping.routing?.telegramToDify,
         hasDifyAppId: !!mapping.difyAppId,
         difyAppId: mapping.difyAppId,
         routing: mapping.routing,
-        fullMapping: mapping
+        fullMapping: mapping,
+        isGroupChat: !!message.metadata?.isGroupChat,
+        isBotMentioned: !!message.metadata?.isBotMentioned,
+        shouldRespondWithDify
       })
 
-      const shouldConnectDify = (mapping.routing.telegramToDify || mapping.autoConnect?.telegramDify) && mapping.difyAppId
+      const shouldConnectDify = (mapping.routing.telegramToDify || mapping.autoConnect?.telegramDify) && mapping.difyAppId && shouldRespondWithDify
       if (shouldConnectDify) {
         this.logger.info('Processing message to Dify', {
           conversationId: conversation.id,
-          difyAppId: mapping.difyAppId
+          difyAppId: mapping.difyAppId,
+          isGroupChat: message.metadata?.isGroupChat,
+          isBotMentioned: message.metadata?.isBotMentioned
         })
 
         try {
@@ -709,10 +725,14 @@ class ProcessMessageUseCase {
           // Continue without Dify
         }
       } else {
-        this.logger.info('Dify routing not configured or disabled', {
+        this.logger.info('Dify routing not configured, disabled, or bot not mentioned in group', {
           mappingId: mapping.id,
           hasTelegramToDify: !!mapping.routing?.telegramToDify,
-          hasDifyAppId: !!mapping.difyAppId
+          hasDifyAppId: !!mapping.difyAppId,
+          shouldRespondWithDify,
+          reason: !shouldRespondWithDify ? 'Bot not mentioned in group chat' :
+                  !mapping.difyAppId ? 'No Dify app ID configured' :
+                  'Dify routing disabled'
         })
       }
 
@@ -1369,8 +1389,20 @@ class ProcessMessageUseCase {
         // Map Chatwoot conversation to original Telegram chat
         const telegramConversation = await this.conversationRepository.findByChatwootId(conversation.chatwootId)
         if (telegramConversation && telegramConversation.chatId) {
-          // Initialize Telegram service with bot ID from routing config
-          const telegramMapping = routingConfig.mappings.find(m => m.telegramBotId)
+          // Extract bot ID from chatId (format: {userId}_bot_{botId})
+          const botIdMatch = telegramConversation.chatId.match(/_bot_(\d+)$/)
+          const botId = botIdMatch ? botIdMatch[1] : null
+          
+          this.logger.info('Extracted bot ID from Telegram chatId for Dify response', {
+            chatId: telegramConversation.chatId,
+            extractedBotId: botId
+          })
+          
+          // Initialize Telegram service with bot ID from chatId
+          const telegramMapping = botId 
+            ? routingConfig.mappings.find(m => m.telegramBotId && String(m.telegramBotId) === String(botId))
+            : routingConfig.mappings.find(m => m.telegramBotId)
+          
           if (telegramMapping && telegramMapping.telegramBotId) {
             await this.telegramService.initializeWithBotId(telegramMapping.telegramBotId)
           }
@@ -1382,7 +1414,8 @@ class ProcessMessageUseCase {
           this.logger.info('Dify response forwarded to Telegram', {
             chatId: telegramConversation.chatId,
             chatwootConversationId: conversation.chatwootId,
-            conversationId: conversation.id
+            conversationId: conversation.id,
+            usedBotId: telegramMapping?.telegramBotId
           })
         } else {
           this.logger.warn('No linked Telegram conversation found to forward Dify response', {
@@ -1431,15 +1464,31 @@ class ProcessMessageUseCase {
         })
         
         if (telegramConversation && telegramConversation.chatId) {
-          // Initialize Telegram service with bot ID from routing config
-          const telegramMapping = routingConfig.mappings.find(m => m.telegramBotId)
+          // Extract bot ID from chatId (format: {userId}_bot_{botId})
+          const botIdMatch = telegramConversation.chatId.match(/_bot_(\d+)$/)
+          const botId = botIdMatch ? botIdMatch[1] : null
+          
+          this.logger.info('Extracted bot ID from Telegram chatId', {
+            chatId: telegramConversation.chatId,
+            extractedBotId: botId
+          })
+          
+          // Initialize Telegram service with bot ID from chatId
+          const telegramMapping = botId 
+            ? routingConfig.mappings.find(m => m.telegramBotId && String(m.telegramBotId) === String(botId))
+            : routingConfig.mappings.find(m => m.telegramBotId)
+          
           if (telegramMapping && telegramMapping.telegramBotId) {
             this.logger.info('Initializing Telegram service with bot ID', {
-              telegramBotId: telegramMapping.telegramBotId
+              telegramBotId: telegramMapping.telegramBotId,
+              matchedByBotId: !!botId
             })
             await this.telegramService.initializeWithBotId(telegramMapping.telegramBotId)
           } else {
-            this.logger.warn('No Telegram bot ID found in routing config')
+            this.logger.warn('No Telegram bot ID found in routing config', {
+              extractedBotId: botId,
+              availableMappings: routingConfig.mappings?.map(m => ({ id: m.id, botId: m.telegramBotId }))
+            })
           }
 
           await this.telegramService.sendMessage(
@@ -1450,7 +1499,8 @@ class ProcessMessageUseCase {
             chatId: telegramConversation.chatId,
             chatwootConversationId: conversation.chatwootId,
             conversationId: conversation.id,
-            messagePreview: message.content?.substring(0, 50)
+            messagePreview: message.content?.substring(0, 50),
+            usedBotId: telegramMapping?.telegramBotId
           })
         } else {
           this.logger.warn('No linked Telegram conversation found to forward Chatwoot message', {

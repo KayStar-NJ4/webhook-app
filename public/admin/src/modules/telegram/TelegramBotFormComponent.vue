@@ -52,6 +52,14 @@
                                     :is-token="true"
                                 />
                             </div>
+                            <div class="col-md-6">
+                                <form-input-text-component
+                                    v-model="form.botUsername"
+                                    label="Bot Username"
+                                    placeholder="Nhập Bot Username (không có @)"
+                                    help-text="Username của bot để phát hiện mention trong group chat"
+                                />
+                            </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
@@ -106,6 +114,7 @@ export default {
                 name: '',
                 botToken: '',
                 secretToken: '',
+                botUsername: '',
                 isActive: true
             }
         }
@@ -135,6 +144,7 @@ export default {
                     name: this.object_info.name || '',
                     botToken: this.object_info.bot_token || '',
                     secretToken: this.object_info.secret_token || '',
+                    botUsername: this.object_info.bot_username || '',
                     isActive: this.object_info.is_active !== undefined ? this.object_info.is_active : true
                 };
             } else {
@@ -188,6 +198,7 @@ export default {
                 name: '',
                 botToken: '',
                 secretToken: '',
+                botUsername: '',
                 isActive: true
             };
         },

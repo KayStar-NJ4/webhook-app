@@ -10,6 +10,8 @@ class DatabaseService {
     this.pool = null
     this.botTokenCache = new Map() // Cache for bot tokens
     this.botTokenCacheExpiry = new Map() // Cache expiry times
+    this.botUsernameCache = new Map() // Cache for bot usernames
+    this.botUsernameCacheExpiry = new Map() // Cache expiry times for usernames
     this.cacheTimeout = 5 * 60 * 1000 // 5 minutes cache timeout
   }
 
@@ -167,6 +169,50 @@ class DatabaseService {
   }
 
   /**
+   * Get bot username from database
+   * @param {number} botId - Bot ID
+   * @returns {Promise<string|null>} - Bot username or null
+   */
+  async getBotUsername (botId) {
+    if (!botId) return null
+
+    // Check cache first
+    const cacheKey = `bot_username_${botId}`
+    const cached = this.botUsernameCache.get(cacheKey)
+    const expiry = this.botUsernameCacheExpiry.get(cacheKey)
+
+    if (cached && expiry && Date.now() < expiry) {
+      this.logger.info('Bot username retrieved from cache', { botId, username: cached, component: 'Application' })
+      return cached
+    }
+
+    try {
+      const pool = this.getPool()
+      const result = await pool.query(
+        'SELECT bot_username FROM telegram_bots WHERE id = $1 AND is_active = true',
+        [botId]
+      )
+
+      if (result.rows.length === 0) {
+        this.logger.warn('Bot not found or inactive', { botId, component: 'Application' })
+        return null
+      }
+
+      const username = result.rows[0].bot_username
+
+      // Cache the username
+      this.botUsernameCache.set(cacheKey, username)
+      this.botUsernameCacheExpiry.set(cacheKey, Date.now() + this.cacheTimeout)
+
+      this.logger.info('Bot username retrieved from database and cached', { botId, username, component: 'Application' })
+      return username
+    } catch (error) {
+      this.logger.error('Failed to get bot username', { error: error.message, botId, component: 'Application' })
+      return null
+    }
+  }
+
+  /**
    * Get Chatwoot account by external account ID
    * @param {number} externalAccountId - External account ID
    * @returns {Promise<Object|null>} - Chatwoot account or null
@@ -197,6 +243,8 @@ class DatabaseService {
   clearCache () {
     this.botTokenCache.clear()
     this.botTokenCacheExpiry.clear()
+    this.botUsernameCache.clear()
+    this.botUsernameCacheExpiry.clear()
     this.logger.info('Database cache cleared')
   }
 
