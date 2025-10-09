@@ -145,7 +145,9 @@ class TelegramController {
           if (!appUrl) {
             try {
               appUrl = await this.configurationService.get('app_url')
-            } catch (configError) {}
+            } catch (configError) {
+              // Ignore error - will use default APP_URL below
+            }
           }
           
           appUrl = appUrl || 'https://webhook-bot.turbo.vn'
