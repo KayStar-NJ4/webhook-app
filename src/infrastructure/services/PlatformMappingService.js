@@ -459,6 +459,9 @@ class PlatformMappingService {
     if (platform(sourcePlatform) === 'telegram') {
       const bot = await this.telegramBotRepository.findById(sourceId)
       if (!bot || !bot.is_active) throw new Error('Source Telegram bot not found or inactive')
+    } else if (platform(sourcePlatform) === 'web') {
+      const webApp = await this.webAppRepository.findById(sourceId)
+      if (!webApp || !webApp.is_active) throw new Error('Source Web app not found or inactive')
     } else {
       throw new Error(`Unsupported source platform: ${sourcePlatform}`)
     }
@@ -489,6 +492,9 @@ class PlatformMappingService {
     if (platform(sourcePlatform) === 'telegram') {
       const bot = await this.telegramBotRepository.findById(sourceId)
       if (!bot || !bot.is_active) throw new Error('Source Telegram bot not found or inactive')
+    } else if (platform(sourcePlatform) === 'web') {
+      const webApp = await this.webAppRepository.findById(sourceId)
+      if (!webApp || !webApp.is_active) throw new Error('Source Web app not found or inactive')
     } else if (platform(sourcePlatform) === 'chatwoot') {
       const acc = await this.chatwootAccountRepository.findById(sourceId)
       if (!acc || !acc.is_active) throw new Error('Source Chatwoot account not found or inactive')

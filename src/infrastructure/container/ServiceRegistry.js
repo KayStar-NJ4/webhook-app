@@ -215,6 +215,8 @@ class ServiceRegistry {
     this.container.register('processMessageUseCase', (container) => new ProcessMessageUseCase({
       conversationRepository: container.get('conversationRepository'),
       messageRepository: container.get('messageRepository'),
+      webConversationRepository: container.get('webConversationRepository'),
+      webMessageRepository: container.get('webMessageRepository'),
       telegramService: container.get('telegramService'),
       chatwootService: container.get('chatwootService'),
       difyService: container.get('difyService'),

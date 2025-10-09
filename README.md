@@ -1,173 +1,577 @@
-# 🚀 Turbo Webhook App
+# Turbo Webhook App - Deployment Guide
 
-Webhook trung gian kết nối các platform với Chatwoot và Dify AI.
+Hệ thống tích hợp Telegram, Chatwoot, Dify AI và Web Chat Widget.
 
-## ✨ Tính năng
+## 📋 Yêu cầu
 
-- **Multi-platform**: Telegram, Chatwoot, Dify AI
-- **Admin Panel**: Giao diện quản lý hiện đại
-- **Real-time**: Xử lý webhook real-time
-- **Scalable**: Kiến trúc microservice
+- Docker & Docker Compose
+- PostgreSQL 14+
+- Nginx (optional, for reverse proxy)
+- Domain với SSL certificate (optional)
 
-## 🚀 Cài đặt
+## 🚀 Quick Start - Deployment trên Server
 
-### Development (Local)
+### Bước 1: Chuẩn bị Server
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/KayStar-NJ4/webhook-app.git
-cd webhook-app
+# Update system
+sudo apt update && sudo apt upgrade -y
 
-# 2. Cài đặt dependencies
-yarn install
+# Cài Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
 
-# 3. Tạo file .env và cấu hình (xem mục "Environment Variables" bên dưới)
-#   - Windows PowerShell: New-Item -ItemType File .env
-#   - macOS/Linux: touch .env
-#   - Điền các biến: DB_*, REDIS_*, JWT_SECRET, CHATWOOT_ACCESS_TOKEN, TELEGRAM_BOT_TOKEN, DIFY_API_KEY
+# Cài Docker Compose
+sudo apt install docker-compose -y
 
-# 4. Khởi tạo database lần đầu (migrate + seed)
-yarn setup
-#$2b$10$VjzqcB9/wd/4kBfH4/7nwexn10d8sTThzmRbNdkKmMkirKCKQSQfW
+# Add user vào docker group
+sudo usermod -aG docker $USER
+newgrp docker
 
-# 5. Chạy development
-yarn dev
-
-# 6. Truy cập:
-#   API Health: http://localhost:3000/webhook/health
-#   Admin:      http://localhost:3000/admin
+# Kiểm tra
+docker --version
+docker-compose --version
 ```
 
-### Production (Docker)
+### Bước 2: Tải Code về Server
 
-Yêu cầu: cài sẵn Docker và Docker Compose trên server.
+**Option A: Clone từ GitHub**
+```bash
+# SSH vào server
+ssh user@your-server-ip
 
-#### Cách A (khuyến nghị) — Dùng prebuilt image, không cần clone toàn bộ source
+# Clone repository
+git clone https://github.com/your-username/webhook-app.git
+cd webhook-app
+```
 
-Chỉ cần tải các file mẫu và cấu hình sau:
+**Option B: Upload file từ local**
+```bash
+# Từ máy local
+# Nén code
+tar -czf webhook-app.tar.gz webhook-app/
+
+# Upload lên server
+scp webhook-app.tar.gz user@your-server-ip:/home/user/
+
+# SSH vào server và giải nén
+ssh user@your-server-ip
+tar -xzf webhook-app.tar.gz
+cd webhook-app
+```
+
+### Bước 3: Cấu hình Environment Variables
 
 ```bash
-# 1) Tạo thư mục deploy và chuyển vào đó
-mkdir -p /opt/webhook-app && cd /opt/webhook-app
+# Copy file mẫu
+cp .env.example .env
 
-# 2) Tải file ví dụ docker-compose và nginx
-curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/KayStar-NJ4/webhook-app/master/deploy/docker-compose.example.yml
-mkdir -p nginx
-curl -fsSL -o nginx/nginx.conf https://raw.githubusercontent.com/KayStar-NJ4/webhook-app/master/deploy/nginx/nginx.example.conf
+# Sửa file .env
+nano .env
+```
 
-# 3) Tạo file .env (production) theo biến ở mục "Environment Variables"
-touch .env
-#   - Điền DB_* (PostgreSQL production), REDIS_* (để trống nếu dùng redis trong compose),
-#     JWT_SECRET đủ mạnh, và các token/key: CHATWOOT_ACCESS_TOKEN, TELEGRAM_BOT_TOKEN, DIFY_API_KEY
+**File `.env` cần thiết:**
 
-# 4) Khởi chạy
-docker-compose pull
+```env
+# Application
+NODE_ENV=production
+PORT=3000
+HOSTNAME=0.0.0.0
+
+# Database
+DB_HOST=postgres
+DB_PORT=5432
+DB_USER=webhook_user
+DB_PASSWORD=your_strong_password_here
+DB_NAME=webhook_db
+DB_POOL_MIN=2
+DB_POOL_MAX=10
+
+# Security
+JWT_SECRET=your_jwt_secret_key_minimum_32_characters
+JWT_EXPIRATION=24h
+
+# Admin Account
+ADMIN_EMAIL=admin@yourdomain.com
+ADMIN_PASSWORD=your_admin_password
+ADMIN_USERNAME=admin
+
+# Logging
+LOG_LEVEL=info
+LOG_FILE_PATH=./logs
+LOG_MAX_FILES=10
+LOG_MAX_SIZE=10m
+
+# CORS (nếu có frontend riêng)
+ALLOWED_ORIGINS=https://yourdomain.com,https://landing-bot.turbo.vn
+
+# Optional: Monitoring
+# SENTRY_DSN=your_sentry_dsn
+```
+
+### Bước 4: Cấu hình Docker Compose
+
+**File `docker-compose.yml`:**
+
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: webhook-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - turbo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  webhook-app:
+    image: ghcr.io/your-username/webhook-app:latest
+    # hoặc build local:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    container_name: webhook-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - turbo-network
+    volumes:
+      - ./logs:/app/logs
+      - ./public:/app/public
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/webhook/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  turbo-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+```
+
+### Bước 5: Chạy Migration và Seed Data
+
+```bash
+# Tạo network (nếu chưa có)
+docker network create turbo-network
+
+# Start database trước
+docker-compose up -d postgres
+
+# Đợi database ready (10-15 giây)
+sleep 15
+
+# Chạy migrations
+docker-compose run --rm webhook-app node scripts/migrate.js
+
+# Seed initial data
+docker-compose run --rm webhook-app node scripts/seed.js
+
+# Kiểm tra logs
+docker-compose logs -f postgres
+```
+
+### Bước 6: Start Application
+
+```bash
+# Start tất cả services
 docker-compose up -d
 
-# 5) (Tuỳ chọn) migrate/seed lần đầu
-docker-compose exec app yarn migrate
-docker-compose exec app yarn seed
+# Kiểm tra trạng thái
+docker-compose ps
 
-# 6) Kiểm tra
-curl -sS http://<SERVER_IP>/webhook/health
+# Xem logs
+docker-compose logs -f webhook-app
 
-# 7) Nâng cấp phiên bản về sau
-docker-compose pull && docker-compose up -d
+# Test health check
+curl http://localhost:3000/webhook/health
 ```
 
-#### Cách B — Build từ source (cần clone repo)
+### Bước 7: Cấu hình Nginx Reverse Proxy
 
-```bash
-# 1) Clone repo và vào thư mục dự án
-git clone https://github.com/KayStar-NJ4/webhook-app.git
-cd webhook-app
+**File `/etc/nginx/sites-available/webhook-bot.conf`:**
 
-# 2) Tạo file .env (production)
-#    Cấu hình DB_*, REDIS_*, JWT_SECRET và các token/key cần thiết
+```nginx
+server {
+    listen 80;
+    server_name webhook-bot.turbo.vn;
 
-# 3) Khởi chạy (build image từ source)
-docker-compose up -d --build
+    # Redirect HTTP to HTTPS
+    return 301 https://$server_name$request_uri;
+}
 
-# 4) (Tuỳ chọn) migrate/seed lần đầu
-docker-compose exec app yarn migrate
-docker-compose exec app yarn seed
+server {
+    listen 443 ssl http2;
+    server_name webhook-bot.turbo.vn;
 
-# 5) Kiểm tra
-curl -sS http://<SERVER_IP>/webhook/health
+    # SSL Configuration
+    ssl_certificate /etc/letsencrypt/live/webhook-bot.turbo.vn/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/webhook-bot.turbo.vn/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    # Security Headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # Main proxy
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_redirect off;
+        client_max_body_size 10M;
+        proxy_buffering off;
+        proxy_read_timeout 36000s;
+    }
+
+    # Admin panel static files
+    location /admin {
+        proxy_pass http://localhost:3000/admin;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Logs
+    access_log /var/log/nginx/webhook-access.log;
+    error_log  /var/log/nginx/webhook-error.log;
+}
 ```
 
-## 🔄 CI/CD
-
-**Automated Build:** GitHub Actions tự động build và push Docker images khi push vào `master` branch.
-
-**Manual Deployment:** Bạn tự deploy bằng cách pull image và chạy docker-compose.
+**Enable site:**
 
 ```bash
-# Pull latest image
-docker pull ghcr.io/kaystar-nj4/webhook-app:latest
+# Link config
+sudo ln -s /etc/nginx/sites-available/webhook-bot.conf /etc/nginx/sites-enabled/
 
-# Deploy
+# Test config
+sudo nginx -t
+
+# Reload nginx
+sudo systemctl reload nginx
+```
+
+### Bước 8: Setup SSL với Let's Encrypt
+
+```bash
+# Cài Certbot
+sudo apt install certbot python3-certbot-nginx -y
+
+# Get certificate
+sudo certbot --nginx -d webhook-bot.turbo.vn
+
+# Certbot sẽ tự động config SSL trong nginx
+# Test auto-renewal
+sudo certbot renew --dry-run
+```
+
+## 🔧 Quản lý Application
+
+### Commands thường dùng
+
+```bash
+# Start services
+docker-compose up -d
+
+# Stop services
+docker-compose down
+
+# Restart services
+docker-compose restart
+
+# View logs
+docker-compose logs -f
+docker-compose logs -f webhook-app
+docker-compose logs -f postgres
+
+# View container status
+docker-compose ps
+
+# Execute command trong container
+docker-compose exec webhook-app sh
+docker-compose exec postgres psql -U webhook_user -d webhook_db
+
+# Backup database
+docker-compose exec postgres pg_dump -U webhook_user webhook_db > backup.sql
+
+# Restore database
+docker-compose exec -T postgres psql -U webhook_user webhook_db < backup.sql
+```
+
+### Update Application
+
+```bash
+# Pull latest code
+git pull origin master
+
+# Pull latest image (nếu dùng pre-built)
+docker-compose pull webhook-app
+
+# Rebuild (nếu build local)
+docker-compose build webhook-app
+
+# Run migrations
+docker-compose run --rm webhook-app node scripts/migrate.js
+
+# Restart
+docker-compose up -d
+
+# Verify
+docker-compose ps
+docker-compose logs -f webhook-app
+```
+
+### Rollback
+
+```bash
+# Stop hiện tại
+docker-compose down
+
+# Checkout version cũ
+git checkout previous-tag-or-commit
+
+# Rebuild & start
+docker-compose up -d
+
+# Check logs
+docker-compose logs -f
+```
+
+## 📊 Monitoring & Logs
+
+### Check Application Health
+
+```bash
+# Health endpoint
+curl http://localhost:3000/webhook/health
+
+# Admin login
+curl -X POST http://localhost:3000/admin/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"your_password"}'
+```
+
+### View Logs
+
+```bash
+# Application logs
+docker-compose logs -f webhook-app
+
+# Nginx logs
+sudo tail -f /var/log/nginx/webhook-access.log
+sudo tail -f /var/log/nginx/webhook-error.log
+
+# Database logs
+docker-compose logs -f postgres
+
+# Container logs location
+ls -lh ./logs/
+```
+
+### Disk Usage
+
+```bash
+# Check disk space
+df -h
+
+# Docker disk usage
+docker system df
+
+# Clean old images
+docker image prune -a
+
+# Clean volumes (CAREFUL!)
+docker volume prune
+```
+
+## 🔐 Security Checklist
+
+- [ ] Đổi password mặc định của admin
+- [ ] Set JWT_SECRET mạnh (>32 ký tự)
+- [ ] Set DB_PASSWORD mạnh
+- [ ] Enable firewall (ufw)
+- [ ] Chỉ mở port cần thiết (80, 443, 22)
+- [ ] Setup SSL/TLS certificate
+- [ ] Regular backup database
+- [ ] Update system thường xuyên
+- [ ] Monitor logs
+- [ ] Set rate limiting trong nginx
+
+### Firewall Setup
+
+```bash
+# Enable UFW
+sudo ufw enable
+
+# Allow SSH
+sudo ufw allow 22/tcp
+
+# Allow HTTP/HTTPS
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# Check status
+sudo ufw status
+```
+
+## 🗄️ Database Backup & Restore
+
+### Automatic Backup Script
+
+**File `backup.sh`:**
+
+```bash
+#!/bin/bash
+BACKUP_DIR="/home/user/backups"
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="$BACKUP_DIR/webhook_db_$DATE.sql"
+
+# Create backup directory
+mkdir -p $BACKUP_DIR
+
+# Backup database
+docker-compose exec -T postgres pg_dump -U webhook_user webhook_db > $BACKUP_FILE
+
+# Compress
+gzip $BACKUP_FILE
+
+# Delete backups older than 7 days
+find $BACKUP_DIR -name "*.sql.gz" -mtime +7 -delete
+
+echo "Backup completed: $BACKUP_FILE.gz"
+```
+
+**Setup Cron:**
+
+```bash
+# Make executable
+chmod +x backup.sh
+
+# Add to crontab (backup daily at 2 AM)
+crontab -e
+
+# Add line:
+0 2 * * * /home/user/webhook-app/backup.sh
+```
+
+### Restore Backup
+
+```bash
+# Decompress
+gunzip backup.sql.gz
+
+# Restore
+docker-compose exec -T postgres psql -U webhook_user webhook_db < backup.sql
+```
+
+## 🐛 Troubleshooting
+
+### Application không start
+
+```bash
+# Check logs
+docker-compose logs webhook-app
+
+# Check database connection
+docker-compose exec webhook-app node -e "require('./src/infrastructure/config/Config').default.validate()"
+
+# Restart
+docker-compose restart webhook-app
+```
+
+### Database connection error
+
+```bash
+# Check postgres running
+docker-compose ps postgres
+
+# Check network
+docker network inspect turbo-network
+
+# Restart database
+docker-compose restart postgres
+```
+
+### Permission denied errors
+
+```bash
+# Fix logs directory
+sudo chown -R 1001:1001 logs/
+
+# Fix volumes
+docker-compose down
+docker volume rm webhook-app_postgres_data
 docker-compose up -d
 ```
 
-## 📋 Scripts
+### Out of disk space
 
 ```bash
-yarn start          # Production start
-yarn dev            # Development với nodemon
-yarn lint           # Lint code
-yarn lint:fix       # Fix lint errors
-yarn migrate        # Chạy database migrations
-yarn seed           # Seed dữ liệu mặc định
-yarn setup          # Setup database (migrate + seed)
-yarn docker:build   # Build và chạy Docker
-yarn docker:down    # Stop Docker containers
-yarn docker:logs    # Xem Docker logs
+# Clean Docker
+docker system prune -a
+docker volume prune
+
+# Clean logs
+find ./logs -name "*.log" -mtime +30 -delete
 ```
 
-## 🏗️ Kiến trúc
+## 📚 Admin Panel Usage
 
-```
-src/
-├── app.js                 # Entry point
-├── domain/               # Domain entities
-├── application/          # Use cases
-├── infrastructure/       # External services
-└── presentation/         # Controllers, routes, middleware
+1. Truy cập: `https://webhook-bot.turbo.vn/admin`
+2. Login với credentials trong `.env`
+3. Setup các tích hợp:
+   - **Telegram Bots**: Thêm bot token và setup webhook
+   - **Chatwoot Accounts**: Kết nối Chatwoot instance
+   - **Dify Apps**: Thêm Dify AI bot
+   - **Web Apps**: Tạo API key cho landing page
+   - **Platform Mappings**: Kết nối các platform với nhau
 
-public/
-└── admin/               # Frontend admin panel
-    ├── index.html
-    ├── src/
-    └── js/
-```
+## 🔗 Related Services
 
-## 📡 API Endpoints
+- **Landing Page**: Deploy riêng với `turbo-landing-page`
+- **Chatwoot**: Setup riêng hoặc dùng cloud
+- **Dify**: Setup riêng hoặc dùng cloud
 
-- `GET /` - API information
-- `GET /webhook/health` - Health check
-- `POST /webhook/telegram` - Telegram webhook
-- `POST /webhook/chatwoot` - Chatwoot webhook
-- `GET /api/status` - Server status
-- `GET /admin` - Admin panel
+## 📞 Support
 
-## 🐳 Docker
+- GitHub Issues: [Link to repo]
+- Documentation: [Link to wiki]
+- Email: admin@yourdomain.com
 
-```bash
-# Build image
-docker build -t webhook-app .
+## 📄 License
 
-# Run container
-docker run -p 3000:3000 --env-file .env webhook-app
-
-# Docker Compose
-docker-compose up -d --build
-```
-
-## 📝 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## 👨‍💻 Author
-
-**ThuanPT** - [GitHub](https://github.com/KayStar-NJ4)
+[Your License]

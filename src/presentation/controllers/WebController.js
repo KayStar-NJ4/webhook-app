@@ -254,7 +254,13 @@ class WebController {
 
       const result = await this.messageBrokerService.handleWebWebhook(webData)
 
-      res.json(result)
+      // Return success response with AI response
+      res.json({
+        success: true,
+        response: result.response,
+        conversationId: result.conversationId,
+        metadata: result.metadata
+      })
     } catch (error) {
       this.logger.error('Failed to handle web webhook', {
         error: error.message,
@@ -262,9 +268,12 @@ class WebController {
         sessionId: req.body?.sessionId
       })
 
-      res.status(500).json({
+      // Return proper error response
+      const statusCode = error.message?.includes('No platform mapping') ? 400 : 500
+      res.status(statusCode).json({
         success: false,
-        error: error.message || 'Internal server error'
+        error: error.message || 'Internal server error',
+        response: null
       })
     }
   }

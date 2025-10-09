@@ -10,6 +10,8 @@ class ProcessMessageUseCase {
   constructor ({
     conversationRepository,
     messageRepository,
+    webConversationRepository,
+    webMessageRepository,
     telegramService,
     chatwootService,
     difyService,
@@ -20,6 +22,8 @@ class ProcessMessageUseCase {
   }) {
     this.conversationRepository = conversationRepository
     this.messageRepository = messageRepository
+    this.webConversationRepository = webConversationRepository
+    this.webMessageRepository = webMessageRepository
     this.telegramService = telegramService
     this.chatwootService = chatwootService
     this.difyService = difyService
@@ -794,6 +798,7 @@ class ProcessMessageUseCase {
 
   /**
    * Process Web message (from landing page chat widget)
+   * Similar to processTelegramMessage - uses platform routing
    * @param {Message} message - Message entity
    * @param {Conversation} conversation - Conversation entity
    * @returns {Promise<Object>}
@@ -812,33 +817,63 @@ class ProcessMessageUseCase {
         throw new Error('Web app ID not found in message metadata')
       }
 
-      // For now, use a simple approach - get mapping by web app ID
-      // We'll use the same pattern as Telegram but adapted for Web
+      // Find platform mappings for this web app (similar to Telegram routing)
       const mappings = await this.platformMappingService.findBySourcePlatform('web', webAppId)
 
       if (!mappings || mappings.length === 0) {
-        this.logger.warn('No platform mapping found for Web app', {
+        this.logger.error('No platform mapping configured for Web app', {
           webAppId,
           conversationId: conversation.id
         })
         
-        // Return default response if no mapping
-        return {
-          success: true,
-          response: 'Xin chào! Tôi là chatbot hỗ trợ. Bạn cần giúp đỡ gì?',
-          note: 'No platform mapping configured, using default response'
-        }
+        // Throw error instead of returning default message
+        // Web app must be properly configured with platform mappings
+        throw new Error(`No platform mapping configured for web app ID ${webAppId}. Please configure routing in admin panel.`)
       }
 
-      // 2. Process with the first available mapping
+      // 2. Process with the first available mapping (similar to Telegram)
       const mapping = mappings[0]
+      
+      this.logger.info('Found platform mapping for web app', {
+        mappingId: mapping.id,
+        hasChatwoot: !!mapping.chatwoot_account_id,
+        hasDify: !!mapping.dify_app_id,
+        webAppId
+      })
+
       const results = {
         chatwootConversationId: null,
         difyConversationId: null,
         response: null
       }
 
-      // 3. Send to Chatwoot if configured
+      // 3. Save user message to web_messages table
+      const webConversationId = message.metadata?.webConversationId
+      if (webConversationId && this.webMessageRepository) {
+        try {
+          await this.webMessageRepository.create({
+            webConversationId,
+            content: message.content,
+            messageType: 'user',
+            metadata: {
+              userInfo: message.sender
+            }
+          })
+          this.logger.info('User message saved to web_messages', {
+            webConversationId,
+            conversationId: conversation.id
+          })
+        } catch (error) {
+          this.logger.error('Failed to save user message to web_messages', {
+            error: error.message,
+            webConversationId,
+            conversationId: conversation.id
+          })
+          // Continue even if save fails
+        }
+      }
+
+      // 4. Send to Chatwoot if configured
       if (mapping.chatwoot_account_id) {
         try {
           const chatwootResult = await this.processWebToChatwoot(
@@ -847,16 +882,21 @@ class ProcessMessageUseCase {
             mapping.chatwoot_account_id
           )
           results.chatwootConversationId = chatwootResult.conversationId
+          
+          this.logger.info('Web message sent to Chatwoot successfully', {
+            chatwootConversationId: results.chatwootConversationId,
+            conversationId: conversation.id
+          })
         } catch (error) {
           this.logger.error('Failed to send web message to Chatwoot', {
             error: error.message,
             conversationId: conversation.id
           })
-          // Continue even if Chatwoot fails
+          // Continue even if Chatwoot fails - still try Dify
         }
       }
 
-      // 4. Send to Dify if configured
+      // 5. Send to Dify if configured
       if (mapping.dify_app_id) {
         try {
           const difyResult = await this.processWebToDify(
@@ -867,41 +907,97 @@ class ProcessMessageUseCase {
           results.difyConversationId = difyResult.conversationId
           results.response = difyResult.response
 
-          // 5. Forward Dify response to Chatwoot if configured
+          this.logger.info('Web message sent to Dify successfully', {
+            difyConversationId: results.difyConversationId,
+            hasResponse: !!results.response,
+            responseLength: results.response?.length,
+            conversationId: conversation.id
+          })
+
+          // 5a. Save AI response to web_messages table
+          if (results.response && webConversationId && this.webMessageRepository) {
+            try {
+              await this.webMessageRepository.create({
+                webConversationId,
+                content: results.response,
+                messageType: 'ai',
+                difyMessageId: results.difyConversationId,
+                metadata: {
+                  source: 'dify',
+                  difyConversationId: results.difyConversationId
+                }
+              })
+              this.logger.info('AI response saved to web_messages', {
+                webConversationId,
+                conversationId: conversation.id,
+                responseLength: results.response.length
+              })
+            } catch (error) {
+              this.logger.error('Failed to save AI response to web_messages', {
+                error: error.message,
+                webConversationId
+              })
+              // Continue even if save fails
+            }
+          }
+
+          // 5b. Forward Dify response to Chatwoot if both are configured
           if (results.chatwootConversationId && results.response) {
-            await this.processDifyResponseToChatwoot(
-              results.response,
-              results.chatwootConversationId,
-              conversation.id
-            )
+            try {
+              await this.processDifyResponseToChatwoot(
+                results.response,
+                results.chatwootConversationId,
+                conversation.id
+              )
+              this.logger.info('Dify response forwarded to Chatwoot', {
+                chatwootConversationId: results.chatwootConversationId,
+                conversationId: conversation.id
+              })
+            } catch (fwdError) {
+              this.logger.error('Failed to forward Dify response to Chatwoot', {
+                error: fwdError.message,
+                conversationId: conversation.id
+              })
+              // Don't fail the whole request if forwarding fails
+            }
           }
         } catch (error) {
           this.logger.error('Failed to send web message to Dify', {
             error: error.message,
+            stack: error.stack,
             conversationId: conversation.id
           })
-          results.response = 'Xin lỗi, hiện tại tôi đang gặp sự cố. Vui lòng thử lại sau.'
+          
+          // If Dify fails, throw error (no default fallback message)
+          throw new Error(`Failed to process message with AI: ${error.message}`)
         }
+      }
+
+      // 6. Require at least one valid response
+      if (!results.response) {
+        this.logger.error('No response generated from any platform', {
+          hasChatwoot: !!mapping.chatwoot_account_id,
+          hasDify: !!mapping.dify_app_id,
+          conversationId: conversation.id
+        })
+        throw new Error('No response generated. Please check platform mapping configuration.')
       }
 
       return {
         success: true,
         ...results,
-        note: 'Web message processed with platform routing'
+        note: 'Web message processed with platform routing (similar to Telegram)'
       }
     } catch (error) {
       this.logger.error('Failed to process Web message', {
         error: error.message,
+        stack: error.stack,
         conversationId: conversation.id,
         messageId: message.id
       })
       
-      // Return error response to web client
-      return {
-        success: false,
-        response: 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại.',
-        error: error.message
-      }
+      // Re-throw error to be handled by caller
+      throw error
     }
   }
 
@@ -935,6 +1031,27 @@ class ProcessMessageUseCase {
           conversationId: conversation.id
         })
         throw error
+      }
+
+      // Update conversation with Chatwoot ID
+      conversation.chatwootId = chatwootConversation.id
+      conversation.chatwootInboxId = chatwootConversation.inbox_id || 'auto-created'
+      
+      try {
+        await this.conversationRepository.updateFields(conversation.id, {
+          chatwoot_id: chatwootConversation.id,
+          chatwoot_inbox_id: chatwootConversation.inbox_id || 'auto-created'
+        })
+        this.logger.info('Web conversation updated with Chatwoot IDs', {
+          conversationId: conversation.id,
+          chatwootId: chatwootConversation.id
+        })
+      } catch (updateError) {
+        this.logger.error('Failed to update conversation with Chatwoot IDs', {
+          error: updateError.message,
+          conversationId: conversation.id
+        })
+        // Continue even if update fails
       }
 
       // Send user message to Chatwoot

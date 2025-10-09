@@ -216,11 +216,13 @@ class MessageBrokerService {
       const result = await this.handleMessage('web', messageData)
       
       // Return the response to send back to web client
+      // No default message - require proper platform mapping configuration
       return {
-        success: true,
-        response: result.response || result.difyResponse || 'Xin chào! Tôi có thể giúp gì cho bạn?',
+        success: result.success !== false,
+        response: result.response || null,
         conversationId: result.conversationId,
-        metadata: result.metadata
+        metadata: result.metadata,
+        error: result.error || null
       }
     } catch (error) {
       this.logger.error('Failed to handle Web webhook', {
