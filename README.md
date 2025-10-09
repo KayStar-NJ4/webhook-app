@@ -2,7 +2,7 @@
 
 Hệ thống tích hợp Telegram, Chatwoot, Dify AI và Web Chat Widget.
 
-## 📋 Yêu cầu
+## 📋 Yêu cầu 1
 
 - Docker & Docker Compose
 - PostgreSQL 14+
