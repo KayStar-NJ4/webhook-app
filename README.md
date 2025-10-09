@@ -9,7 +9,7 @@ Hệ thống tích hợp Telegram, Chatwoot, Dify AI và Web Chat Widget.
 - Nginx (optional, for reverse proxy)
 - Domain với SSL certificate (optional)
 
-## 🚀 Quick Start - Deployment trên Server
+## 🚀 Quick Start - Deployment trên Server 
 
 ### Bước 1: Chuẩn bị Server
 
