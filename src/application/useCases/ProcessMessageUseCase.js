@@ -10,6 +10,8 @@ class ProcessMessageUseCase {
   constructor ({
     conversationRepository,
     messageRepository,
+    webConversationRepository,
+    webMessageRepository,
     telegramService,
     chatwootService,
     difyService,
@@ -20,6 +22,8 @@ class ProcessMessageUseCase {
   }) {
     this.conversationRepository = conversationRepository
     this.messageRepository = messageRepository
+    this.webConversationRepository = webConversationRepository
+    this.webMessageRepository = webMessageRepository
     this.telegramService = telegramService
     this.chatwootService = chatwootService
     this.difyService = difyService
@@ -240,14 +244,35 @@ class ProcessMessageUseCase {
 
     // If not found by chatwootId, try the standard platform lookup
     if (!conversation) {
+      // For Web platform, conversation already created in WebController, skip creation
+      if (message.platform === 'web' && message.metadata?.webConversationId) {
+        // Web conversation already exists in database
+        // Create a simple in-memory Conversation entity for processing
+        const webConversationId = `web_${message.conversationId}` // web_sessionId
+        conversation = new Conversation({
+          id: webConversationId,
+          platform: 'web',
+          chatId: message.conversationId,
+          senderId: message.senderId,
+          senderName: message.senderName,
+          participants: [{
+            id: message.senderId,
+            name: message.senderName,
+            role: 'user'
+          }],
+          platformMetadata: message.metadata
+        })
+        // Save to repository
+        await this.conversationRepository.save(conversation)
+      }
       // For Telegram messages, try to find by conversation ID (which already includes bot ID)
-      if (message.platform === 'telegram') {
+      else if (message.platform === 'telegram') {
         const fullConversationId = `${message.platform}_${message.conversationId}`
         conversation = await this.conversationRepository.findById(fullConversationId)
       }
       
       // Fallback to standard lookup
-      if (!conversation) {
+      if (!conversation && message.platform !== 'web') {
         conversation = await this.conversationRepository.findByPlatformChatId(
           message.platform,
           message.conversationId,
@@ -257,6 +282,11 @@ class ProcessMessageUseCase {
     }
 
     if (!conversation) {
+      // Web conversations should already exist - this shouldn't happen
+      if (message.platform === 'web') {
+        throw new Error(`Web conversation not found for sessionId: ${message.conversationId}`)
+      }
+      
       this.logger.info('No existing conversation found, creating new one', {
         platform: message.platform,
         conversationId: message.conversationId
@@ -317,6 +347,9 @@ class ProcessMessageUseCase {
       await this.enrichTelegramConversationData(conversationData, message)
     } else if (message.platform === 'chatwoot') {
       await this.enrichChatwootConversationData(conversationData, message)
+    } else if (message.platform === 'web') {
+      // Web conversations should be created in WebController already
+      throw new Error('Web conversations should not be created here')
     }
 
     const conversation = new Conversation(conversationData)
@@ -467,6 +500,8 @@ class ProcessMessageUseCase {
       return await this.processTelegramMessage(message, conversation)
     } else if (platform.isChatwoot()) {
       return await this.processChatwootMessage(message, conversation)
+    } else if (platform.isWeb()) {
+      return await this.processWebMessage(message, conversation)
     } else {
       throw new Error(`Unsupported platform: ${message.platform}`)
     }
@@ -755,6 +790,321 @@ class ProcessMessageUseCase {
       this.logger.error('Failed to process Telegram message with mapping', {
         error: error.message,
         mappingId: mapping.id,
+        conversationId: conversation.id
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Process Web message (from landing page chat widget)
+   * Similar to processTelegramMessage - uses platform routing
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @returns {Promise<Object>}
+   */
+  async processWebMessage (message, conversation) {
+    try {
+      this.logger.info('Processing web message', {
+        messageId: message.id,
+        conversationId: conversation.id,
+        webAppId: message.metadata?.webAppId
+      })
+
+      // 1. Get platform mapping configuration for this Web App
+      const webAppId = message.metadata?.webAppId
+      if (!webAppId) {
+        throw new Error('Web app ID not found in message metadata')
+      }
+
+      // Find platform mappings for this web app (similar to Telegram routing)
+      const mappings = await this.platformMappingService.findBySourcePlatform('web', webAppId)
+
+      if (!mappings || mappings.length === 0) {
+        this.logger.error('No platform mapping configured for Web app', {
+          webAppId,
+          conversationId: conversation.id
+        })
+        
+        // Throw error instead of returning default message
+        // Web app must be properly configured with platform mappings
+        throw new Error(`No platform mapping configured for web app ID ${webAppId}. Please configure routing in admin panel.`)
+      }
+
+      // 2. Process with the first available mapping (similar to Telegram)
+      const mapping = mappings[0]
+      
+      this.logger.info('Found platform mapping for web app', {
+        mappingId: mapping.id,
+        hasChatwoot: !!mapping.chatwoot_account_id,
+        hasDify: !!mapping.dify_app_id,
+        webAppId
+      })
+
+      const results = {
+        chatwootConversationId: null,
+        difyConversationId: null,
+        response: null
+      }
+
+      // 3. Save user message to web_messages table
+      const webConversationId = message.metadata?.webConversationId
+      if (webConversationId && this.webMessageRepository) {
+        try {
+          await this.webMessageRepository.create({
+            webConversationId,
+            content: message.content,
+            messageType: 'user',
+            metadata: {
+              userInfo: message.sender
+            }
+          })
+          this.logger.info('User message saved to web_messages', {
+            webConversationId,
+            conversationId: conversation.id
+          })
+        } catch (error) {
+          this.logger.error('Failed to save user message to web_messages', {
+            error: error.message,
+            webConversationId,
+            conversationId: conversation.id
+          })
+          // Continue even if save fails
+        }
+      }
+
+      // 4. Send to Chatwoot if configured
+      if (mapping.chatwoot_account_id) {
+        try {
+          const chatwootResult = await this.processWebToChatwoot(
+            message,
+            conversation,
+            mapping.chatwoot_account_id
+          )
+          results.chatwootConversationId = chatwootResult.conversationId
+          
+          this.logger.info('Web message sent to Chatwoot successfully', {
+            chatwootConversationId: results.chatwootConversationId,
+            conversationId: conversation.id
+          })
+        } catch (error) {
+          this.logger.error('Failed to send web message to Chatwoot', {
+            error: error.message,
+            conversationId: conversation.id
+          })
+          // Continue even if Chatwoot fails - still try Dify
+        }
+      }
+
+      // 5. Send to Dify if configured
+      if (mapping.dify_app_id) {
+        try {
+          const difyResult = await this.processWebToDify(
+            message,
+            conversation,
+            mapping.dify_app_id
+          )
+          results.difyConversationId = difyResult.conversationId
+          results.response = difyResult.response
+
+          this.logger.info('Web message sent to Dify successfully', {
+            difyConversationId: results.difyConversationId,
+            hasResponse: !!results.response,
+            responseLength: results.response?.length,
+            conversationId: conversation.id
+          })
+
+          // 5a. Save AI response to web_messages table
+          if (results.response && webConversationId && this.webMessageRepository) {
+            try {
+              await this.webMessageRepository.create({
+                webConversationId,
+                content: results.response,
+                messageType: 'ai',
+                difyMessageId: results.difyConversationId,
+                metadata: {
+                  source: 'dify',
+                  difyConversationId: results.difyConversationId
+                }
+              })
+              this.logger.info('AI response saved to web_messages', {
+                webConversationId,
+                conversationId: conversation.id,
+                responseLength: results.response.length
+              })
+            } catch (error) {
+              this.logger.error('Failed to save AI response to web_messages', {
+                error: error.message,
+                webConversationId
+              })
+              // Continue even if save fails
+            }
+          }
+
+          // 5b. Forward Dify response to Chatwoot if both are configured
+          if (results.chatwootConversationId && results.response) {
+            try {
+              await this.processDifyResponseToChatwoot(
+                results.response,
+                results.chatwootConversationId,
+                conversation.id
+              )
+              this.logger.info('Dify response forwarded to Chatwoot', {
+                chatwootConversationId: results.chatwootConversationId,
+                conversationId: conversation.id
+              })
+            } catch (fwdError) {
+              this.logger.error('Failed to forward Dify response to Chatwoot', {
+                error: fwdError.message,
+                conversationId: conversation.id
+              })
+              // Don't fail the whole request if forwarding fails
+            }
+          }
+        } catch (error) {
+          this.logger.error('Failed to send web message to Dify', {
+            error: error.message,
+            stack: error.stack,
+            conversationId: conversation.id
+          })
+          
+          // If Dify fails, throw error (no default fallback message)
+          throw new Error(`Failed to process message with AI: ${error.message}`)
+        }
+      }
+
+      // 6. Require at least one valid response
+      if (!results.response) {
+        this.logger.error('No response generated from any platform', {
+          hasChatwoot: !!mapping.chatwoot_account_id,
+          hasDify: !!mapping.dify_app_id,
+          conversationId: conversation.id
+        })
+        throw new Error('No response generated. Please check platform mapping configuration.')
+      }
+
+      return {
+        success: true,
+        ...results,
+        note: 'Web message processed with platform routing (similar to Telegram)'
+      }
+    } catch (error) {
+      this.logger.error('Failed to process Web message', {
+        error: error.message,
+        stack: error.stack,
+        conversationId: conversation.id,
+        messageId: message.id
+      })
+      
+      // Re-throw error to be handled by caller
+      throw error
+    }
+  }
+
+  /**
+   * Process Web message to Chatwoot
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @param {number} chatwootAccountId - Chatwoot account ID
+   * @returns {Promise<Object>}
+   */
+  async processWebToChatwoot (message, conversation, chatwootAccountId) {
+    try {
+      // Similar to Telegram -> Chatwoot flow
+      await this.chatwootService.initializeWithAccountId(chatwootAccountId)
+
+      let chatwootConversation
+      try {
+        chatwootConversation = await this.chatwootService.createOrUpdateConversation(
+          conversation,
+          message,
+          chatwootAccountId
+        )
+
+        this.logger.info('Chatwoot conversation created/updated for web', {
+          conversationId: conversation.id,
+          chatwootConversationId: chatwootConversation.id
+        })
+      } catch (error) {
+        this.logger.error('Failed to create/update Chatwoot conversation for web', {
+          error: error.message,
+          conversationId: conversation.id
+        })
+        throw error
+      }
+
+      // Update conversation with Chatwoot ID
+      conversation.chatwootId = chatwootConversation.id
+      conversation.chatwootInboxId = chatwootConversation.inbox_id || 'auto-created'
+      
+      try {
+        await this.conversationRepository.updateFields(conversation.id, {
+          chatwoot_id: chatwootConversation.id,
+          chatwoot_inbox_id: chatwootConversation.inbox_id || 'auto-created'
+        })
+        this.logger.info('Web conversation updated with Chatwoot IDs', {
+          conversationId: conversation.id,
+          chatwootId: chatwootConversation.id
+        })
+      } catch (updateError) {
+        this.logger.error('Failed to update conversation with Chatwoot IDs', {
+          error: updateError.message,
+          conversationId: conversation.id
+        })
+        // Continue even if update fails
+      }
+
+      // Send user message to Chatwoot
+      await this.chatwootService.sendMessage(
+        chatwootConversation.id,
+        message.content,
+        'incoming'
+      )
+
+      this.logger.info('Web message sent to Chatwoot', {
+        conversationId: conversation.id,
+        chatwootConversationId: chatwootConversation.id
+      })
+
+      return { conversationId: chatwootConversation.id }
+    } catch (error) {
+      this.logger.error('Failed to process web to Chatwoot', {
+        error: error.message,
+        conversationId: conversation.id
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Process Web message to Dify
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @param {number} difyAppId - Dify app ID
+   * @returns {Promise<Object>}
+   */
+  async processWebToDify (message, conversation, difyAppId) {
+    try {
+      await this.difyService.initializeWithAppId(difyAppId)
+
+      const difyResult = await this.difyService.sendMessage(
+        conversation,
+        message.content,
+        { difyAppId }
+      )
+
+      this.logger.info('Web message sent to Dify', {
+        conversationId: conversation.id,
+        difyConversationId: difyResult.conversationId
+      })
+
+      return {
+        conversationId: difyResult.conversationId,
+        response: difyResult.response
+      }
+    } catch (error) {
+      this.logger.error('Failed to process web to Dify', {
+        error: error.message,
         conversationId: conversation.id
       })
       throw error
@@ -1454,56 +1804,64 @@ class ProcessMessageUseCase {
     
     if (hasChatwootMapping && isRealAgentMessage) {
       try {
-        // Find the original Telegram conversation linked by chatwootId
-        const telegramConversation = await this.conversationRepository.findByChatwootId(conversation.chatwootId)
+        // Find the original platform conversation (Telegram or Web) linked by chatwootId
+        const platformConversation = await this.conversationRepository.findByChatwootId(conversation.chatwootId)
         
-        this.logger.info('Looking for Telegram conversation to forward message', {
+        this.logger.info('Looking for platform conversation to forward agent message', {
           chatwootId: conversation.chatwootId,
-          foundTelegramConversation: !!telegramConversation,
-          telegramChatId: telegramConversation?.chatId
+          foundConversation: !!platformConversation,
+          platform: platformConversation?.platform,
+          chatId: platformConversation?.chatId
         })
         
-        if (telegramConversation && telegramConversation.chatId) {
-          // Extract bot ID from chatId (format: {userId}_bot_{botId})
-          const botIdMatch = telegramConversation.chatId.match(/_bot_(\d+)$/)
-          const botId = botIdMatch ? botIdMatch[1] : null
-          
-          this.logger.info('Extracted bot ID from Telegram chatId', {
-            chatId: telegramConversation.chatId,
-            extractedBotId: botId
-          })
-          
-          // Initialize Telegram service with bot ID from chatId
-          const telegramMapping = botId 
-            ? routingConfig.mappings.find(m => m.telegramBotId && String(m.telegramBotId) === String(botId))
-            : routingConfig.mappings.find(m => m.telegramBotId)
-          
-          if (telegramMapping && telegramMapping.telegramBotId) {
-            this.logger.info('Initializing Telegram service with bot ID', {
-              telegramBotId: telegramMapping.telegramBotId,
-              matchedByBotId: !!botId
+        if (platformConversation && platformConversation.chatId) {
+          // Forward to Telegram
+          if (platformConversation.platform === 'telegram') {
+            // Extract bot ID from chatId (format: {userId}_bot_{botId})
+            const botIdMatch = platformConversation.chatId.match(/_bot_(\d+)$/)
+            const botId = botIdMatch ? botIdMatch[1] : null
+            
+            this.logger.info('Extracted bot ID from Telegram chatId', {
+              chatId: platformConversation.chatId,
+              extractedBotId: botId
             })
-            await this.telegramService.initializeWithBotId(telegramMapping.telegramBotId)
-          } else {
-            this.logger.warn('No Telegram bot ID found in routing config', {
-              extractedBotId: botId,
-              availableMappings: routingConfig.mappings?.map(m => ({ id: m.id, botId: m.telegramBotId }))
+            
+            // Initialize Telegram service with bot ID from chatId
+            const telegramMapping = botId 
+              ? routingConfig.mappings.find(m => m.telegramBotId && String(m.telegramBotId) === String(botId))
+              : routingConfig.mappings.find(m => m.telegramBotId)
+            
+            if (telegramMapping && telegramMapping.telegramBotId) {
+              this.logger.info('Initializing Telegram service with bot ID', {
+                telegramBotId: telegramMapping.telegramBotId,
+                matchedByBotId: !!botId
+              })
+              await this.telegramService.initializeWithBotId(telegramMapping.telegramBotId)
+            } else {
+              this.logger.warn('No Telegram bot ID found in routing config', {
+                extractedBotId: botId,
+                availableMappings: routingConfig.mappings?.map(m => ({ id: m.id, botId: m.telegramBotId }))
+              })
+            }
+
+            await this.telegramService.sendMessage(
+              platformConversation.chatId,
+              message.content
+            )
+            this.logger.info('✅ Forwarded Chatwoot AGENT message to Telegram', {
+              chatId: platformConversation.chatId,
+              chatwootConversationId: conversation.chatwootId,
+              conversationId: conversation.id,
+              messagePreview: message.content?.substring(0, 50),
+              usedBotId: telegramMapping?.telegramBotId
             })
           }
-
-          await this.telegramService.sendMessage(
-            telegramConversation.chatId,
-            message.content
-          )
-          this.logger.info('✅ Forwarded Chatwoot AGENT message to Telegram', {
-            chatId: telegramConversation.chatId,
-            chatwootConversationId: conversation.chatwootId,
-            conversationId: conversation.id,
-            messagePreview: message.content?.substring(0, 50),
-            usedBotId: telegramMapping?.telegramBotId
-          })
+          // Forward to Web
+          else if (platformConversation.platform === 'web') {
+            await this.forwardChatwootAgentMessageToWeb(platformConversation, message, conversation)
+          }
         } else {
-          this.logger.warn('No linked Telegram conversation found to forward Chatwoot message', {
+          this.logger.warn('No linked platform conversation found to forward Chatwoot message', {
             chatwootConversationId: conversation.chatwootId,
             searchedChatwootId: conversation.chatwootId,
             allConversationFields: {
@@ -1562,6 +1920,84 @@ class ProcessMessageUseCase {
     } catch (e) {
       this.logger.warn('Failed to resolve Telegram bot token', { error: e.message, telegramBotId })
       return null
+    }
+  }
+
+  /**
+   * Forward Chatwoot agent message to Web
+   * @param {Conversation} webConversation - Web conversation
+   * @param {Message} message - Agent message from Chatwoot
+   * @param {Conversation} chatwootConversation - Chatwoot conversation
+   */
+  async forwardChatwootAgentMessageToWeb (webConversation, message, chatwootConversation) {
+    try {
+      // Get web_conversation_id from platformMetadata
+      const webConversationId = webConversation.platformMetadata?.webConversationId
+      const sessionId = webConversation.chatId // chatId is the sessionId for web
+      
+      this.logger.info('Forwarding Chatwoot agent message to Web', {
+        webConversationId,
+        sessionId,
+        chatwootConversationId: chatwootConversation.chatwootId,
+        messagePreview: message.content?.substring(0, 50)
+      })
+
+      if (!webConversationId) {
+        this.logger.error('No web_conversation_id found in platformMetadata', {
+          webConversationPlatformMetadata: webConversation.platformMetadata
+        })
+        return
+      }
+
+      // Get repositories from service registry (they're already injected)
+      const { Pool } = require('pg')
+      const dbConfig = this.databaseService?.config || require('../infrastructure/config/Config')
+      const pool = new Pool(dbConfig.getDatabase ? dbConfig.getDatabase() : {
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        database: process.env.DB_NAME,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD
+      })
+
+      // Save agent message to web_messages table
+      const query = `
+        INSERT INTO web_messages (web_conversation_id, content, message_type, chatwoot_message_id, metadata)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
+      `
+
+      const result = await pool.query(query, [
+        webConversationId,
+        message.content,
+        'agent', // message_type: agent (from Chatwoot)
+        message.metadata?.messageId || message.id,
+        JSON.stringify({
+          sender: message.senderName || 'Agent',
+          chatwootConversationId: chatwootConversation.chatwootId
+        })
+      ])
+
+      // Update last_message_at in web_conversations
+      await pool.query(
+        'UPDATE web_conversations SET last_message_at = CURRENT_TIMESTAMP WHERE id = $1',
+        [webConversationId]
+      )
+
+      await pool.end()
+
+      this.logger.info('✅ Saved Chatwoot agent message to web_messages', {
+        messageId: result.rows[0].id,
+        webConversationId,
+        sessionId,
+        chatwootConversationId: chatwootConversation.chatwootId
+      })
+    } catch (error) {
+      this.logger.error('Failed to forward Chatwoot agent message to Web', {
+        error: error.message,
+        stack: error.stack,
+        webConversationId: webConversation.platformMetadata?.webConversationId
+      })
     }
   }
 

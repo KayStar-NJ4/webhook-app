@@ -5,8 +5,9 @@ class Platform {
   static TELEGRAM = 'telegram'
   static CHATWOOT = 'chatwoot'
   static DIFY = 'dify'
+  static WEB = 'web'
 
-  static ALL = [Platform.TELEGRAM, Platform.CHATWOOT, Platform.DIFY]
+  static ALL = [Platform.TELEGRAM, Platform.CHATWOOT, Platform.DIFY, Platform.WEB]
 
   constructor (value) {
     if (!Platform.ALL.includes(value)) {
@@ -33,6 +34,10 @@ class Platform {
 
   isDify () {
     return this.value === Platform.DIFY
+  }
+
+  isWeb () {
+    return this.value === Platform.WEB
   }
 }
 

@@ -1,5 +1,5 @@
 const express = require('express')
-const AdminController = require('../../controllers/AdminController')
+const TelegramController = require('../../controllers/TelegramController')
 
 /**
  * Telegram Routes - Admin API
@@ -7,27 +7,17 @@ const AdminController = require('../../controllers/AdminController')
  */
 class TelegramRoutes {
   constructor ({
-    userRepository,
     telegramBotRepository,
-    chatwootAccountRepository,
-    difyAppRepository,
     telegramService,
-    chatwootService,
-    difyService,
     configurationService,
     authMiddleware,
     permissionMiddleware,
     logger
   }) {
     this.router = express.Router()
-    this.adminController = new AdminController({
-      userRepository,
+    this.controller = new TelegramController({
       telegramBotRepository,
-      chatwootAccountRepository,
-      difyAppRepository,
       telegramService,
-      chatwootService,
-      difyService,
       configurationService,
       logger
     })
@@ -43,43 +33,43 @@ class TelegramRoutes {
     this.router.get('/',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('telegram', 'read'),
-      (req, res) => this.adminController.getTelegramBots(req, res)
+      (req, res) => this.controller.getAll(req, res)
     )
     
     this.router.get('/active',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('telegram', 'read'),
-      (req, res) => this.adminController.getActiveTelegramBots(req, res)
+      (req, res) => this.controller.getActive(req, res)
     )
     
     this.router.get('/:id',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('telegram', 'read'),
-      (req, res) => this.adminController.getTelegramBotById(req, res)
+      (req, res) => this.controller.getById(req, res)
     )
     
     this.router.post('/',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('telegram', 'create'),
-      (req, res) => this.adminController.createTelegramBot(req, res)
+      (req, res) => this.controller.create(req, res)
     )
     
     this.router.put('/:id',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('telegram', 'update'),
-      (req, res) => this.adminController.updateTelegramBot(req, res)
+      (req, res) => this.controller.update(req, res)
     )
     
     this.router.delete('/:id',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('telegram', 'delete'),
-      (req, res) => this.adminController.deleteTelegramBot(req, res)
+      (req, res) => this.controller.delete(req, res)
     )
     
     this.router.post('/:id/test-connection',
       this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('telegram', 'read'),
-      (req, res) => this.adminController.testTelegramBotConnection(req, res)
+      (req, res) => this.controller.testConnection(req, res)
     )
   }
 

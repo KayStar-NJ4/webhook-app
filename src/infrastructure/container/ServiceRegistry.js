@@ -14,6 +14,9 @@ const DifyAppRepository = require('../repositories/DifyAppRepository')
 const RoleRepository = require('../repositories/RoleRepository')
 const PermissionRepository = require('../repositories/PermissionRepository')
 const PlatformMappingRepository = require('../repositories/PlatformMappingRepository')
+const WebAppRepository = require('../repositories/WebAppRepository')
+const WebConversationRepository = require('../repositories/WebConversationRepository')
+const WebMessageRepository = require('../repositories/WebMessageRepository')
 
 // Services
 const TelegramService = require('../services/TelegramService')
@@ -23,6 +26,7 @@ const DatabaseService = require('../services/DatabaseService')
 const LogsService = require('../../application/services/LogsService')
 const ConfigurationService = require('../services/ConfigurationService')
 const PlatformMappingService = require('../services/PlatformMappingService')
+const WebService = require('../services/WebService')
 
 // Use Cases
 const ProcessMessageUseCase = require('../../application/useCases/ProcessMessageUseCase')
@@ -131,6 +135,30 @@ class ServiceRegistry {
       return new PlatformMappingRepository({ db, logger })
     }, true)
 
+    this.container.register('webAppRepository', (container) => {
+      const config = container.get('config')
+      const logger = container.get('logger')
+      const { Pool } = require('pg')
+      const db = new Pool(config.getDatabase())
+      return new WebAppRepository({ db, logger })
+    }, true)
+
+    this.container.register('webConversationRepository', (container) => {
+      const config = container.get('config')
+      const logger = container.get('logger')
+      const { Pool } = require('pg')
+      const db = new Pool(config.getDatabase())
+      return new WebConversationRepository({ db, logger })
+    }, true)
+
+    this.container.register('webMessageRepository', (container) => {
+      const config = container.get('config')
+      const logger = container.get('logger')
+      const { Pool } = require('pg')
+      const db = new Pool(config.getDatabase())
+      return new WebMessageRepository({ db, logger })
+    }, true)
+
     // External services
     this.container.register('telegramService', (container) => new TelegramService({
       config: container.get('config'),
@@ -159,6 +187,7 @@ class ServiceRegistry {
     this.container.register('platformMappingService', (container) => new PlatformMappingService({
       platformMappingRepository: container.get('platformMappingRepository'),
       telegramBotRepository: container.get('telegramBotRepository'),
+      webAppRepository: container.get('webAppRepository'),
       chatwootAccountRepository: container.get('chatwootAccountRepository'),
       difyAppRepository: container.get('difyAppRepository'),
       telegramService: container.get('telegramService'),
@@ -168,6 +197,15 @@ class ServiceRegistry {
       logger: container.get('logger')
     }), true)
 
+    this.container.register('webService', (container) => new WebService({
+      webAppRepository: container.get('webAppRepository'),
+      webConversationRepository: container.get('webConversationRepository'),
+      webMessageRepository: container.get('webMessageRepository'),
+      platformMappingService: container.get('platformMappingService'),
+      chatwootService: container.get('chatwootService'),
+      difyService: container.get('difyService'),
+      logger: container.get('logger')
+    }), true)
 
     this.container.register('databaseService', (container) => new DatabaseService({
       logger: container.get('logger')
@@ -177,6 +215,8 @@ class ServiceRegistry {
     this.container.register('processMessageUseCase', (container) => new ProcessMessageUseCase({
       conversationRepository: container.get('conversationRepository'),
       messageRepository: container.get('messageRepository'),
+      webConversationRepository: container.get('webConversationRepository'),
+      webMessageRepository: container.get('webMessageRepository'),
       telegramService: container.get('telegramService'),
       chatwootService: container.get('chatwootService'),
       difyService: container.get('difyService'),

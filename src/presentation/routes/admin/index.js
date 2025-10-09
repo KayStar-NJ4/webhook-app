@@ -10,6 +10,9 @@ class AdminRoutesIndex {
     telegramBotRepository,
     chatwootAccountRepository,
     difyAppRepository,
+    webAppRepository,
+    webConversationRepository,
+    webMessageRepository,
     roleRepository,
     permissionRepository,
     configurationRepository,
@@ -40,6 +43,7 @@ class AdminRoutesIndex {
     const TelegramRoutes = require('./telegram.routes')
     const ChatwootRoutes = require('./chatwoot.routes')
     const DifyRoutes = require('./dify.routes')
+    const WebRoutes = require('./web.routes')
     const ConfigsRoutes = require('./configs.routes')
     const LogsRoutes = require('./logs.routes')
     const PlatformRoutes = require('./platform.routes')
@@ -76,13 +80,8 @@ class AdminRoutesIndex {
     })
 
     this.telegramRoutes = new TelegramRoutes({
-      userRepository,
       telegramBotRepository,
-      chatwootAccountRepository,
-      difyAppRepository,
       telegramService,
-      chatwootService,
-      difyService,
       configurationService,
       authMiddleware: this.authMiddleware,
       permissionMiddleware: this.permissionMiddleware,
@@ -90,25 +89,15 @@ class AdminRoutesIndex {
     })
 
     this.chatwootRoutes = new ChatwootRoutes({
-      userRepository,
-      telegramBotRepository,
       chatwootAccountRepository,
-      difyAppRepository,
-      telegramService,
       chatwootService,
-      difyService,
       authMiddleware: this.authMiddleware,
       permissionMiddleware: this.permissionMiddleware,
       logger
     })
 
     this.difyRoutes = new DifyRoutes({
-      userRepository,
-      telegramBotRepository,
-      chatwootAccountRepository,
       difyAppRepository,
-      telegramService,
-      chatwootService,
       difyService,
       authMiddleware: this.authMiddleware,
       permissionMiddleware: this.permissionMiddleware,
@@ -136,6 +125,15 @@ class AdminRoutesIndex {
       logger
     })
 
+    this.webRoutes = new WebRoutes({
+      webAppRepository,
+      webConversationRepository,
+      webMessageRepository,
+      authMiddleware: this.authMiddleware,
+      permissionMiddleware: this.permissionMiddleware,
+      logger
+    })
+
     this.setupRoutes()
   }
 
@@ -148,6 +146,7 @@ class AdminRoutesIndex {
     // Mount all admin route modules
     this.router.use('/auth', this.authRoutes.getRouter())
     this.router.use('/users', this.usersRoutes.getRouter())
+    this.router.use('/web-apps', this.webRoutes.getRouter())
     this.router.use('/roles', this.rolesRoutes.getRouter())
     this.router.use('/permissions', this.permissionsRoutes.getRouter())
     this.router.use('/telegram-bots', this.telegramRoutes.getRouter())

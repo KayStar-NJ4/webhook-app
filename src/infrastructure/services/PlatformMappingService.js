@@ -6,6 +6,7 @@ class PlatformMappingService {
   constructor ({
     platformMappingRepository,
     telegramBotRepository,
+    webAppRepository,
     chatwootAccountRepository,
     difyAppRepository,
     telegramService,
@@ -16,6 +17,7 @@ class PlatformMappingService {
   }) {
     this.platformMappingRepository = platformMappingRepository
     this.telegramBotRepository = telegramBotRepository
+    this.webAppRepository = webAppRepository
     this.chatwootAccountRepository = chatwootAccountRepository
     this.difyAppRepository = difyAppRepository
     this.telegramService = telegramService
@@ -457,6 +459,9 @@ class PlatformMappingService {
     if (platform(sourcePlatform) === 'telegram') {
       const bot = await this.telegramBotRepository.findById(sourceId)
       if (!bot || !bot.is_active) throw new Error('Source Telegram bot not found or inactive')
+    } else if (platform(sourcePlatform) === 'web') {
+      const webApp = await this.webAppRepository.findById(sourceId)
+      if (!webApp || !webApp.is_active) throw new Error('Source Web app not found or inactive')
     } else {
       throw new Error(`Unsupported source platform: ${sourcePlatform}`)
     }
@@ -487,6 +492,9 @@ class PlatformMappingService {
     if (platform(sourcePlatform) === 'telegram') {
       const bot = await this.telegramBotRepository.findById(sourceId)
       if (!bot || !bot.is_active) throw new Error('Source Telegram bot not found or inactive')
+    } else if (platform(sourcePlatform) === 'web') {
+      const webApp = await this.webAppRepository.findById(sourceId)
+      if (!webApp || !webApp.is_active) throw new Error('Source Web app not found or inactive')
     } else if (platform(sourcePlatform) === 'chatwoot') {
       const acc = await this.chatwootAccountRepository.findById(sourceId)
       if (!acc || !acc.is_active) throw new Error('Source Chatwoot account not found or inactive')
@@ -518,14 +526,16 @@ class PlatformMappingService {
    */
   async getAvailablePlatforms () {
     try {
-      const [telegramBotsResult, chatwootAccountsResult, difyAppsResult] = await Promise.all([
+      const [telegramBotsResult, webAppsResult, chatwootAccountsResult, difyAppsResult] = await Promise.all([
         this.telegramBotRepository.findAll({ isActive: true, limit: 1000 }),
+        this.webAppRepository.findAll({ isActive: true, limit: 1000 }),
         this.chatwootAccountRepository.findAll({ isActive: true, limit: 1000 }),
         this.difyAppRepository.findAll({ isActive: true, limit: 1000 })
       ])
 
       // Extract data arrays from pagination results
       const telegramBots = telegramBotsResult.data || telegramBotsResult.bots || []
+      const webApps = webAppsResult.data || webAppsResult.apps || []
       const chatwootAccounts = chatwootAccountsResult.data || chatwootAccountsResult.accounts || []
       const difyApps = difyAppsResult.data || difyAppsResult.apps || []
 
@@ -534,6 +544,12 @@ class PlatformMappingService {
           id: bot.id,
           name: bot.name,
           isActive: bot.is_active
+        })),
+        webApps: webApps.map(app => ({
+          id: app.id,
+          name: app.name,
+          domain: app.domain,
+          isActive: app.is_active
         })),
         chatwootAccounts: chatwootAccounts.map(account => ({
           id: account.id,
@@ -551,6 +567,7 @@ class PlatformMappingService {
 
       this.logger.info('Retrieved available platforms', {
         telegramBotCount: availablePlatforms.telegramBots.length,
+        webAppCount: availablePlatforms.webApps.length,
         chatwootAccountCount: availablePlatforms.chatwootAccounts.length,
         difyAppCount: availablePlatforms.difyApps.length
       })
@@ -1553,6 +1570,33 @@ class PlatformMappingService {
       this.logger.error('Failed to register Chatwoot webhook', {
         accountId: chatwootAccount.id,
         webhookUrl,
+        error: error.message
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Find platform mappings by source platform and ID
+   * @param {string} sourcePlatform - Source platform name ('web', 'telegram', etc.)
+   * @param {number} sourceId - Source platform ID
+   * @returns {Promise<Array>} - Array of mappings
+   */
+  async findBySourcePlatform (sourcePlatform, sourceId) {
+    try {
+      const mappings = await this.platformMappingRepository.findBySourcePlatformAndId(sourcePlatform, sourceId)
+      
+      this.logger.info('Found platform mappings', {
+        sourcePlatform,
+        sourceId,
+        count: mappings.length
+      })
+      
+      return mappings
+    } catch (error) {
+      this.logger.error('Failed to find platform mappings', {
+        sourcePlatform,
+        sourceId,
         error: error.message
       })
       throw error

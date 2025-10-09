@@ -17,6 +17,7 @@ class Server {
     webhookRoutes,
     apiRoutes,
     metricsRoutes,
+    webRoutes,
     adminRoutes,
     errorHandler,
     metrics,
@@ -30,6 +31,7 @@ class Server {
     this.webhookRoutes = webhookRoutes
     this.apiRoutes = apiRoutes
     this.metricsRoutes = metricsRoutes
+    this.webRoutes = webRoutes
     this.adminRoutes = adminRoutes
     this.errorHandler = errorHandler
     this.metrics = metrics
@@ -60,10 +62,14 @@ class Server {
     this.app.use(this.securityMiddleware.getRequestSizeLimiter())
     this.app.use(this.securityMiddleware.securityLogger.bind(this.securityMiddleware))
 
-    // CORS middleware
+    // CORS middleware - allow from landing page
     this.app.use(cors({
-      origin: !!this.config.isDevelopment(),
-      credentials: true
+      origin: this.config.isDevelopment() 
+        ? ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:3002']
+        : true,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
     }))
 
     // Request ID middleware
@@ -85,6 +91,12 @@ class Server {
    * Setup routes
    */
   setupRoutes () {
+    // Web platform routes (landing page chat widget)
+    this.app.use('/webhook/web',
+      this.securityMiddleware.getWebhookRateLimiter(),
+      this.webRoutes.getRouter()
+    )
+
     // Webhook routes with rate limiting
     this.app.use('/webhook',
       this.securityMiddleware.getWebhookRateLimiter(),

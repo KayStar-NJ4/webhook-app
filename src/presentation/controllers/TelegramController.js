@@ -1,12 +1,183 @@
 /**
  * Telegram Controller - Presentation layer
- * Handles Telegram-related HTTP requests
+ * Handles Telegram-related HTTP requests (API + Admin CRUD)
  */
 class TelegramController {
-  constructor ({ telegramService, logger }) {
+  constructor ({ telegramBotRepository, telegramService, configurationService, logger }) {
+    this.telegramBotRepository = telegramBotRepository
     this.telegramService = telegramService
+    this.configurationService = configurationService
     this.logger = logger
   }
+
+  // ==================== ADMIN CRUD METHODS ====================
+
+  async getAll (req, res) {
+    try {
+      const { page = 1, limit = 10, search = '', isActive, sort_by = 'created_at.desc' } = req.query
+      const result = await this.telegramBotRepository.findAll({
+        page: parseInt(page),
+        limit: parseInt(limit),
+        search,
+        isActive: isActive ? isActive === 'true' : null,
+        sortBy: sort_by
+      })
+
+      res.json({ success: true, data: result })
+    } catch (error) {
+      this.logger.error('Get telegram bots failed', { error: error.message })
+      res.status(500).json({ success: false, message: 'Internal server error' })
+    }
+  }
+
+  async create (req, res) {
+    try {
+      const { name, botToken, secretToken, webhookUrl, apiUrl, isActive = true, botUsername } = req.body
+
+      if (!name || !botToken) {
+        return res.status(400).json({ success: false, message: 'Name and bot token are required' })
+      }
+
+      const bot = await this.telegramBotRepository.create({
+        name, botToken, secretToken, botUsername, webhookUrl,
+        apiUrl: apiUrl || 'https://api.telegram.org',
+        isActive,
+        createdBy: req.user.userId
+      })
+
+      res.status(201).json({ success: true, message: 'Telegram bot created successfully', data: bot })
+    } catch (error) {
+      this.logger.error('Create telegram bot failed', { error: error.message })
+      res.status(500).json({ success: false, message: 'Internal server error' })
+    }
+  }
+
+  async getById (req, res) {
+    try {
+      const { id } = req.params
+      const bot = await this.telegramBotRepository.findById(id)
+
+      if (!bot) {
+        return res.status(404).json({ success: false, message: 'Telegram bot not found' })
+      }
+
+      const mappings = await this.telegramBotRepository.getMappings(id)
+
+      res.json({ success: true, data: { ...bot, mappings } })
+    } catch (error) {
+      this.logger.error('Get telegram bot by ID failed', { error: error.message })
+      res.status(500).json({ success: false, message: 'Internal server error' })
+    }
+  }
+
+  async update (req, res) {
+    try {
+      const { id } = req.params
+      const { name, botToken, webhookUrl, apiUrl, isActive, secretToken, botUsername } = req.body
+
+      const bot = await this.telegramBotRepository.update(id, {
+        name, botToken, webhookUrl, apiUrl, isActive, secretToken, botUsername
+      })
+
+      res.json({ success: true, message: 'Telegram bot updated successfully', data: bot })
+    } catch (error) {
+      this.logger.error('Update telegram bot failed', { error: error.message })
+      res.status(500).json({ success: false, message: 'Internal server error' })
+    }
+  }
+
+  async delete (req, res) {
+    try {
+      const { id } = req.params
+      const deleted = await this.telegramBotRepository.delete(id)
+
+      if (!deleted) {
+        return res.status(404).json({ success: false, message: 'Telegram bot not found' })
+      }
+
+      res.json({ success: true, message: 'Telegram bot deleted successfully' })
+    } catch (error) {
+      this.logger.error('Delete telegram bot failed', { error: error.message })
+      res.status(500).json({ success: false, message: 'Internal server error' })
+    }
+  }
+
+  async getActive (req, res) {
+    try {
+      const bots = await this.telegramBotRepository.findActive()
+      res.json({ success: true, data: bots })
+    } catch (error) {
+      this.logger.error('Get active telegram bots failed', { error: error.message })
+      res.status(500).json({ success: false, message: 'Internal server error' })
+    }
+  }
+
+  async testConnection (req, res) {
+    try {
+      const { id } = req.params
+
+      const bot = await this.telegramBotRepository.findById(id)
+      if (!bot) {
+        return res.status(404).json({ success: false, message: 'Telegram bot not found' })
+      }
+
+      const originalConfig = {
+        botToken: this.telegramService.botToken,
+        apiUrl: this.telegramService.apiUrl
+      }
+
+      this.telegramService.botToken = bot.bot_token
+      this.telegramService.apiUrl = `https://api.telegram.org/bot${bot.bot_token}`
+
+      try {
+        const result = await this.telegramService.getBotInfo()
+        
+        if (!result) {
+          return res.json({ success: false, data: { connected: false, message: 'Connection failed', botInfo: null } })
+        }
+
+        let webhookConfigured = false
+        let webhookUrl = null
+
+        try {
+          const axios = require('axios')
+          let appUrl = process.env.APP_URL
+          if (!appUrl) {
+            try {
+              appUrl = await this.configurationService.get('app_url')
+            } catch (configError) {}
+          }
+          
+          appUrl = appUrl || 'https://webhook-bot.turbo.vn'
+          webhookUrl = `${appUrl}/webhook/telegram/${bot.id}`
+          
+          const webhookResponse = await axios.post(`https://api.telegram.org/bot${bot.bot_token}/setWebhook`, {
+            url: webhookUrl,
+            allowed_updates: ['message']
+          }, {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 10000
+          })
+
+          if (webhookResponse.data.ok) {
+            webhookConfigured = true
+          }
+        } catch (webhookErr) {
+          this.logger.error('Error setting Telegram webhook', { botId: bot.id, error: webhookErr.message })
+        }
+
+        res.json({ success: true, data: { connected: true, message: webhookConfigured ? 'Connection successful and webhook configured' : 'Connection successful but webhook setup failed', botInfo: result, webhookConfigured, webhookUrl } })
+      } finally {
+        this.telegramService.botToken = originalConfig.botToken
+        this.telegramService.apiUrl = originalConfig.apiUrl
+      }
+    } catch (error) {
+      this.logger.error('Test Telegram bot connection failed', { error: error.message })
+      res.status(500).json({ success: false, message: 'Connection test failed: ' + error.message })
+    }
+  }
+
+  // ==================== API METHODS ====================
 
   /**
    * Setup Telegram webhook

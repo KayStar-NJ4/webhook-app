@@ -56,7 +56,7 @@
 
           <!-- Mạng xã hội -->
           <li class="nav-item has-treeview" 
-              v-if="hasPermission('telegram', 'read')"
+              v-if="hasPermission('telegram', 'read') || hasPermission('web', 'read')"
               :class="{ 'menu-open': isMenuOpen('social-network') }">
             <a href="#" class="nav-link" :class="{ 'active': isMenuActive('social-network') }" @click="toggleMenu('social-network')">
               <i class="nav-icon fas fa-share-alt"></i>
@@ -73,6 +73,15 @@
                    @click="navigate('/admin/telegram-bots')">
                   <i class="nav-icon fab fa-telegram"></i>
                   <p>Telegram</p>
+                </a>
+              </li>
+              <li class="nav-item" v-if="hasPermission('web', 'read')">
+                <a href="#" 
+                   class="nav-link" 
+                   :class="{ active: activeRoute === '/admin/web-apps' }"
+                   @click="navigate('/admin/web-apps')">
+                  <i class="nav-icon fas fa-globe"></i>
+                  <p>Web Apps</p>
                 </a>
               </li>
             </ul>
@@ -179,7 +188,7 @@ export default {
       if (menuKey === 'data-source') {
         return this.activeRoute.includes('/admin/chatwoot-accounts') || this.activeRoute.includes('/admin/dify-apps');
       } else if (menuKey === 'social-network') {
-        return this.activeRoute.includes('/admin/telegram-bots');
+        return this.activeRoute.includes('/admin/telegram-bots') || this.activeRoute.includes('/admin/web-apps');
       } else if (menuKey === 'system-settings') {
         return this.activeRoute.includes('/admin/users') || this.activeRoute.includes('/admin/roles') || this.activeRoute.includes('/admin/configurations');
       }
@@ -207,7 +216,7 @@ export default {
     const currentRoute = this.activeRoute;
     if (currentRoute.includes('/admin/chatwoot-accounts') || currentRoute.includes('/admin/dify-apps')) {
       this.openMenus.add('data-source');
-    } else if (currentRoute.includes('/admin/telegram-bots')) {
+    } else if (currentRoute.includes('/admin/telegram-bots') || currentRoute.includes('/admin/web-apps')) {
       this.openMenus.add('social-network');
     } else if (currentRoute.includes('/admin/users') || currentRoute.includes('/admin/roles') || currentRoute.includes('/admin/configurations')) {
       this.openMenus.add('system-settings');
