@@ -107,6 +107,28 @@ class Server {
     // Handle preflight requests explicitly
     this.app.options('*', cors())
 
+    // Force JSON responses for API routes
+    this.app.use((req, res, next) => {
+      if (req.url.startsWith('/webhook/') || req.url.startsWith('/api/')) {
+        res.setHeader('Content-Type', 'application/json')
+        
+        // Override res.send to always send JSON
+        const originalSend = res.send
+        res.send = function(data) {
+          if (typeof data === 'string' && data.startsWith('<!DOCTYPE')) {
+            // Intercept HTML responses and convert to JSON
+            return originalSend.call(this, JSON.stringify({
+              success: false,
+              error: 'Internal server error',
+              timestamp: new Date().toISOString()
+            }))
+          }
+          return originalSend.call(this, data)
+        }
+      }
+      next()
+    })
+
     // Request ID middleware
     this.app.use((req, res, next) => {
       req.requestId = req.get('X-Request-ID') || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -215,6 +237,27 @@ class Server {
 
     // Error handler
     this.app.use(this.errorHandler.handle.bind(this.errorHandler))
+
+    // Final safety net - catch any uncaught errors
+    this.app.use((err, req, res, next) => {
+      if (res.headersSent) {
+        return next(err)
+      }
+      
+      this.logger.error('Final error catcher', {
+        error: err?.message || 'Unknown error',
+        stack: err?.stack,
+        url: req.url
+      })
+      
+      // Always return JSON for API routes
+      res.setHeader('Content-Type', 'application/json')
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        timestamp: new Date().toISOString()
+      })
+    })
   }
 
   /**

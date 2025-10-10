@@ -289,6 +289,12 @@ class WebController {
       const { sessionId } = req.params
       const { apiKey } = req.query
 
+      this.logger.info('Get history request', {
+        sessionId,
+        hasApiKey: !!apiKey,
+        url: req.url
+      })
+
       if (!apiKey) {
         return res.status(401).json({
           success: false,
@@ -306,6 +312,7 @@ class WebController {
       // Validate API key
       const webApp = await this.webAppRepository.findByApiKey(apiKey)
       if (!webApp) {
+        this.logger.warn('Invalid API key for history', { apiKey })
         return res.status(401).json({
           success: false,
           error: 'Invalid API key'
@@ -315,7 +322,8 @@ class WebController {
       // Get web conversation
       const conversation = await this.webConversationRepository.findBySessionId(sessionId, webApp.id)
       if (!conversation) {
-        return res.json({
+        this.logger.info('No conversation found for session', { sessionId, webAppId: webApp.id })
+        return res.status(200).json({
           success: true,
           data: {
             messages: [],
@@ -330,7 +338,13 @@ class WebController {
         { limit: 100, order: 'ASC' }
       )
 
-      res.json({
+      this.logger.info('History retrieved successfully', {
+        sessionId,
+        conversationId: conversation.id,
+        messageCount: messages.length
+      })
+
+      return res.status(200).json({
         success: true,
         data: {
           messages: messages.map(msg => ({
@@ -347,12 +361,16 @@ class WebController {
     } catch (error) {
       this.logger.error('Failed to get conversation history', {
         error: error.message,
-        sessionId: req.params?.sessionId
+        stack: error.stack,
+        sessionId: req.params?.sessionId,
+        url: req.url
       })
 
-      res.status(500).json({
+      // Always return JSON, never HTML
+      return res.status(500).json({
         success: false,
-        error: error.message || 'Internal server error'
+        error: error.message || 'Internal server error',
+        timestamp: new Date().toISOString()
       })
     }
   }
