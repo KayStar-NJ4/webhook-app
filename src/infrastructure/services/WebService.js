@@ -204,6 +204,14 @@ class WebService {
 
       // Create or get Chatwoot conversation
       if (!conversation.chatwoot_conversation_id) {
+        // Get or create Web-specific inbox (separate from Telegram)
+        const webInboxId = await this.chatwootService.getOrCreatePlatformInbox('web')
+        
+        this.logger.info('Using Web inbox for conversation', {
+          inboxId: webInboxId,
+          conversationId: conversation.id
+        })
+
         // Create contact first
         const contact = await this.chatwootService.createContact({
           name: conversation.user_name || conversation.user_identifier,
@@ -212,14 +220,15 @@ class WebService {
           custom_attributes: conversation.user_metadata
         })
 
-        // Create conversation
+        // Create conversation with Web inbox
         const chatwootConv = await this.chatwootService.createConversation({
           contact_id: contact.id,
-          inbox_id: mapping.chatwoot_inbox_id,
+          inbox_id: webInboxId,
           status: 'open',
           custom_attributes: {
             web_app_id: conversation.web_app_id,
-            session_id: conversation.session_id
+            session_id: conversation.session_id,
+            platform: 'web'
           }
         })
 
