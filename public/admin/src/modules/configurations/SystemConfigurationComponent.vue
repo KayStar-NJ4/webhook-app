@@ -147,6 +147,107 @@
           </div>
         </div>
 
+        <!-- API Timeout Configuration Section -->
+        <div class="card mt-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Cấu hình Thời gian chờ API (Timeout)</h5>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle"></i>
+              <strong>Lưu ý:</strong> Dify AI timeout được cấu hình riêng cho từng app trong phần "Quản lý Dify Apps"
+            </div>
+            <div class="row">
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="apiTimeoutDefault">Timeout mặc định (ms)</label>
+                  <input 
+                    type="number" 
+                    class="form-control" 
+                    id="apiTimeoutDefault"
+                    v-model.number="formData.api_timeout_default"
+                    :class="{ 'is-invalid': errors.api_timeout_default }"
+                    placeholder="30000"
+                    min="1000"
+                    step="1000"
+                  >
+                  <small class="form-text text-muted">
+                    Thời gian chờ mặc định cho các API call (khuyến nghị: 30000ms = 30 giây)
+                  </small>
+                  <div v-if="errors.api_timeout_default" class="invalid-feedback">
+                    {{ errors.api_timeout_default[0] }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="apiTimeoutChatwoot">Chatwoot API Timeout (ms)</label>
+                  <input 
+                    type="number" 
+                    class="form-control" 
+                    id="apiTimeoutChatwoot"
+                    v-model.number="formData.api_timeout_chatwoot"
+                    :class="{ 'is-invalid': errors.api_timeout_chatwoot }"
+                    placeholder="30000"
+                    min="1000"
+                    step="1000"
+                  >
+                  <small class="form-text text-muted">
+                    Thời gian chờ cho Chatwoot API (khuyến nghị: 20000-60000ms)
+                  </small>
+                  <div v-if="errors.api_timeout_chatwoot" class="invalid-feedback">
+                    {{ errors.api_timeout_chatwoot[0] }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="apiTimeoutTelegram">Telegram API Timeout (ms)</label>
+                  <input 
+                    type="number" 
+                    class="form-control" 
+                    id="apiTimeoutTelegram"
+                    v-model.number="formData.api_timeout_telegram"
+                    :class="{ 'is-invalid': errors.api_timeout_telegram }"
+                    placeholder="10000"
+                    min="1000"
+                    step="1000"
+                  >
+                  <small class="form-text text-muted">
+                    Thời gian chờ cho Telegram API (khuyến nghị: 5000-15000ms)
+                  </small>
+                  <div v-if="errors.api_timeout_telegram" class="invalid-feedback">
+                    {{ errors.api_timeout_telegram[0] }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="apiTimeoutWebhook">Webhook Timeout (ms)</label>
+                  <input 
+                    type="number" 
+                    class="form-control" 
+                    id="apiTimeoutWebhook"
+                    v-model.number="formData.api_timeout_webhook"
+                    :class="{ 'is-invalid': errors.api_timeout_webhook }"
+                    placeholder="15000"
+                    min="1000"
+                    step="1000"
+                  >
+                  <small class="form-text text-muted">
+                    Thời gian chờ cho webhook calls (khuyến nghị: 10000-30000ms)
+                  </small>
+                  <div v-if="errors.api_timeout_webhook" class="invalid-feedback">
+                    {{ errors.api_timeout_webhook[0] }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Webhook Configuration Section -->
         <div class="card mt-4">
           <div class="card-header">
@@ -223,7 +324,11 @@ export default {
         maintenance_mode: false,
         maintenance_message: '',
         webhook_url: '',
-        webhook_secret_token: ''
+        webhook_secret_token: '',
+        api_timeout_default: 30000,
+        api_timeout_chatwoot: 30000,
+        api_timeout_telegram: 10000,
+        api_timeout_webhook: 15000
       },
       errors: {},
       isLoading: false,

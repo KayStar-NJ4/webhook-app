@@ -15,6 +15,11 @@ class ErrorHandler {
    * @param {Function} next - Express next function
    */
   handle (error, req, res, next) {
+    // Prevent sending response twice
+    if (res.headersSent) {
+      return next(error)
+    }
+
     this.logger.error('Unhandled error', {
       error: error.message,
       stack: error.stack,
@@ -53,6 +58,8 @@ class ErrorHandler {
       statusCode = 404
     }
 
+    // Force JSON response
+    res.setHeader('Content-Type', 'application/json')
     res.status(statusCode).json(errorResponse)
   }
 
@@ -63,6 +70,23 @@ class ErrorHandler {
    * @param {Function} next - Express next function
    */
   notFound (req, res, next) {
+    // For API routes, return JSON directly
+    if (req.url.startsWith('/webhook/') || req.url.startsWith('/api/')) {
+      this.logger.warn('API route not found', {
+        method: req.method,
+        url: req.url,
+        query: req.query
+      })
+      
+      return res.status(404).json({
+        success: false,
+        error: `Route not found: ${req.method} ${req.url}`,
+        timestamp: new Date().toISOString(),
+        requestId: req.requestId
+      })
+    }
+    
+    // For other routes, pass to next middleware
     const error = new Error(`Route not found: ${req.method} ${req.url}`)
     error.statusCode = 404
     error.name = 'NotFoundError'

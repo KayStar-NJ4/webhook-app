@@ -40,7 +40,18 @@ class Config {
       jwt: Joi.object({
         secret: Joi.string().required(),
         expiry: Joi.string().default('24h')
-      }).required()
+      }).required(),
+
+      // API timeout configurations (in milliseconds)
+      api: Joi.object({
+        timeout: Joi.object({
+          default: Joi.number().integer().min(1000).default(30000), // 30 seconds default
+          chatwoot: Joi.number().integer().min(1000).default(30000), // 30 seconds for Chatwoot
+          dify: Joi.number().integer().min(1000).default(60000), // 60 seconds for Dify (AI responses can be slow)
+          telegram: Joi.number().integer().min(1000).default(10000), // 10 seconds for Telegram
+          webhook: Joi.number().integer().min(1000).default(15000) // 15 seconds for webhooks
+        }).default()
+      }).default()
     })
   }
 
@@ -70,6 +81,15 @@ class Config {
       jwt: {
         secret: process.env.JWT_SECRET,
         expiry: process.env.JWT_EXPIRY
+      },
+      api: {
+        timeout: {
+          default: process.env.API_TIMEOUT_DEFAULT,
+          chatwoot: process.env.API_TIMEOUT_CHATWOOT,
+          dify: process.env.API_TIMEOUT_DIFY,
+          telegram: process.env.API_TIMEOUT_TELEGRAM,
+          webhook: process.env.API_TIMEOUT_WEBHOOK
+        }
       }
     }
 
@@ -154,6 +174,23 @@ class Config {
    */
   getJWT () {
     return this.config.jwt
+  }
+
+  /**
+   * Get API timeout configuration
+   * @param {string} service - Service name (chatwoot, dify, telegram, webhook) or 'default'
+   * @returns {number} - Timeout in milliseconds
+   */
+  getApiTimeout (service = 'default') {
+    return this.config.api.timeout[service] || this.config.api.timeout.default
+  }
+
+  /**
+   * Get all API timeout configurations
+   * @returns {Object} - All timeout configurations
+   */
+  getApiTimeouts () {
+    return { ...this.config.api.timeout }
   }
 }
 

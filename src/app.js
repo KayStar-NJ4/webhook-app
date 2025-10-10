@@ -199,7 +199,8 @@ class Application {
         securityMiddleware,
         metricsMiddleware,
         webhookController,
-        validation
+        validation,
+        webAppRepository: this.serviceRegistry.get('webAppRepository')
       })
 
       // Application initialized successfully

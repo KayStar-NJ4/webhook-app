@@ -14,7 +14,7 @@ class DifyService {
     this.apiUrl = null
     this.apiKey = null
     this.appId = null
-    this.timeout = 30000
+    this.timeout = this.config.getApiTimeout ? this.config.getApiTimeout('dify') : 60000
 
     // Config mặc định (có thể override từ config)
     this.settings = {
@@ -27,6 +27,16 @@ class DifyService {
    * Initialize service - no global config, will be set per request
    */
   async initialize () {
+    // Try to get timeout from database configuration first
+    try {
+      const dbTimeout = await this.configurationService.getApiTimeout('dify')
+      if (dbTimeout) {
+        this.timeout = dbTimeout
+        this.logger.info('Dify timeout loaded from database', { timeout: this.timeout })
+      }
+    } catch (error) {
+      this.logger.warn('Failed to load Dify timeout from database, using default', { error: error.message })
+    }
     this.logger.info('Dify service initialized (per-request configuration)')
   }
 
@@ -42,12 +52,25 @@ class DifyService {
       this.apiUrl = difyApp.api_url
       this.apiKey = difyApp.api_key
       this.appId = difyApp.app_id
-      this.timeout = difyApp.timeout || 30000
+      
+      // Priority: 1. App-specific timeout, 2. Environment config, 3. Default (60s)
+      // Note: Dify timeout is configured per-app, not globally
+      if (difyApp.timeout && difyApp.timeout > 0) {
+        this.timeout = difyApp.timeout
+        this.logger.info('Using app-specific timeout', { timeout: difyApp.timeout })
+      } else if (this.config.getApiTimeout && this.config.getApiTimeout('dify')) {
+        this.timeout = this.config.getApiTimeout('dify')
+        this.logger.info('Using timeout from environment config', { timeout: this.timeout })
+      } else {
+        this.timeout = 60000 // Default 60 seconds for AI processing
+        this.logger.info('Using default timeout for Dify', { timeout: this.timeout })
+      }
 
       this.logger.info('Dify service initialized with specific app', {
         difyAppId,
         apiUrl: this.apiUrl,
-        appId: this.appId
+        appId: this.appId,
+        timeout: this.timeout
       })
     } catch (error) {
       this.logger.error('Failed to initialize Dify service with app ID', {
