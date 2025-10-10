@@ -13,9 +13,20 @@ class ChatwootService {
     this.accessToken = null
     this.accountId = null
     this.inboxId = null // Auto-detected
+    this.timeout = this.config.getApiTimeout ? this.config.getApiTimeout('chatwoot') : 30000
   }
 
   async initialize () {
+    // Try to get timeout from database configuration first
+    try {
+      const dbTimeout = await this.configurationService.getApiTimeout('chatwoot')
+      if (dbTimeout) {
+        this.timeout = dbTimeout
+        this.logger.info('Chatwoot timeout loaded from database', { timeout: this.timeout })
+      }
+    } catch (error) {
+      this.logger.warn('Failed to load Chatwoot timeout from database, using default', { error: error.message })
+    }
     this.logger.info('Chatwoot service initialized (per-request configuration)')
   }
 
@@ -125,7 +136,8 @@ class ChatwootService {
       
       this.logger.info(`Looking for existing ${platformName} inbox...`)
       const response = await axios.get(`${this.baseUrl}/api/v1/accounts/${this.accountId}/inboxes`, {
-        headers: this.getHeaders()
+        headers: this.getHeaders(),
+        timeout: this.timeout
       })
 
       const inboxes = response.data.payload || []
@@ -147,7 +159,7 @@ class ChatwootService {
       const createResponse = await axios.post(
         `${this.baseUrl}/api/v1/accounts/${this.accountId}/inboxes`,
         { name: platformName, channel: { type: 'api' } },
-        { headers: this.getHeaders() }
+        { headers: this.getHeaders(), timeout: this.timeout }
       )
       
       this.logger.info(`Created new ${platformName} inbox`, {
@@ -327,7 +339,7 @@ class ChatwootService {
   async findConversationBySourceId (sourceId, inboxId) {
     try {
       const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations`
-      const response = await axios.get(url, { headers: this.getHeaders(), params: { inbox_id: inboxId, source_id: sourceId } })
+      const response = await axios.get(url, { headers: this.getHeaders(), params: { inbox_id: inboxId, source_id: sourceId }, timeout: this.timeout })
       const conversations = Array.isArray(response.data.data) ? response.data.data : []
       return conversations.length > 0 ? conversations[0] : null
     } catch {
@@ -394,7 +406,7 @@ class ChatwootService {
     })
 
     const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations`
-    const response = await axios.post(url, payload, { headers: this.getHeaders() })
+    const response = await axios.post(url, payload, { headers: this.getHeaders(), timeout: this.timeout })
     
     this.logger.info('Chatwoot createConversation API response', {
       status: response.status,
@@ -423,7 +435,7 @@ class ChatwootService {
       const contactResponse = await axios.post(
         `${this.baseUrl}/api/v1/accounts/${this.accountId}/contacts`,
         { name: contactName, email: null },
-        { headers: this.getHeaders() }
+        { headers: this.getHeaders(), timeout: this.timeout }
       )
       contactId = contactResponse.data.payload?.contact?.id || contactResponse.data.payload?.id || contactResponse.data.id
     } catch (error) {
@@ -433,7 +445,7 @@ class ChatwootService {
 
     const payload = { source_id: contactIdentifier, contact_id: contactId, inbox_id: await this.getOrCreateApiInbox() }
     const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations`
-    const response = await axios.post(url, payload, { headers: this.getHeaders() })
+    const response = await axios.post(url, payload, { headers: this.getHeaders(), timeout: this.timeout })
     
     const result = response.data.payload || response.data.data || response.data
     if (!result) {
@@ -446,7 +458,7 @@ class ChatwootService {
   async getConversation (conversationId) {
     const response = await axios.get(
       `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations/${conversationId}`,
-      { headers: this.getHeaders() }
+      { headers: this.getHeaders(), timeout: this.timeout }
     )
     
     this.logger.info('Chatwoot getConversation API response', {
@@ -490,7 +502,7 @@ class ChatwootService {
         conversation_id: conversationId
       })
 
-      const response = await axios.post(url, payload, { headers: this.getHeaders() })
+      const response = await axios.post(url, payload, { headers: this.getHeaders(), timeout: this.timeout })
 
       this.logger.info('Message sent to Chatwoot successfully', {
         conversationId,
@@ -525,7 +537,7 @@ class ChatwootService {
     const inboxId = await this.getOrCreateApiInbox()
     const response = await axios.get(
       `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations?inbox_id=${inboxId}`,
-      { headers: this.getHeaders(), params: options }
+      { headers: this.getHeaders(), params: options, timeout: this.timeout }
     )
     return response.data
   }
@@ -541,7 +553,8 @@ class ChatwootService {
 
       // Test 1: Check if account exists and is accessible
       const accountResponse = await axios.get(`${this.baseUrl}/api/v1/accounts/${this.accountId}`, { 
-        headers: this.getHeaders() 
+        headers: this.getHeaders(),
+        timeout: this.timeout
       })
       
       this.logger.info('Account access successful', {
@@ -551,7 +564,8 @@ class ChatwootService {
 
       // Test 2: Check if we can list inboxes (without creating new ones)
       const inboxesResponse = await axios.get(`${this.baseUrl}/api/v1/accounts/${this.accountId}/inboxes`, {
-        headers: this.getHeaders()
+        headers: this.getHeaders(),
+        timeout: this.timeout
       })
       
       this.logger.info('Inboxes access successful', {

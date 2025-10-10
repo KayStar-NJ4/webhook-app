@@ -11,12 +11,23 @@ class TelegramService {
     this.logger = logger
     this.apiUrl = null
     this.botToken = null
+    this.timeout = this.config.getApiTimeout ? this.config.getApiTimeout('telegram') : 10000
   }
 
   /**
    * Initialize service - no global config, will be set per request
    */
   async initialize () {
+    // Try to get timeout from database configuration first
+    try {
+      const dbTimeout = await this.configurationService.getApiTimeout('telegram')
+      if (dbTimeout) {
+        this.timeout = dbTimeout
+        this.logger.info('Telegram timeout loaded from database', { timeout: this.timeout })
+      }
+    } catch (error) {
+      this.logger.warn('Failed to load Telegram timeout from database, using default', { error: error.message })
+    }
     // Telegram service will be initialized per request based on platform mapping
     this.logger.info('Telegram service initialized (per-request configuration)')
   }
@@ -115,7 +126,7 @@ class TelegramService {
       }
 
       const response = await axios.post(`${requestApiUrl}/sendMessage`, payload, {
-        timeout: 10000
+        timeout: this.timeout
       })
 
       this.logger.info('Message sent to Telegram successfully', {
@@ -213,7 +224,7 @@ class TelegramService {
       allowed_updates: ['message'],
       secret_token: secretToken || undefined
     }
-    const response = await axios.post(url, payload, { timeout: 10000 })
+    const response = await axios.post(url, payload, { timeout: this.timeout })
     return response.data
   }
 
@@ -297,7 +308,7 @@ class TelegramService {
       })
 
       const response = await axios.get(`${apiUrl}/getMe`, {
-        timeout: 10000
+        timeout: this.timeout
       })
 
       if (response.data.ok) {

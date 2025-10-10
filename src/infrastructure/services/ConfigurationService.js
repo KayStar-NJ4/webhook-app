@@ -177,6 +177,30 @@ class ConfigurationService {
   }
 
   /**
+   * Get API Timeout configuration
+   * @returns {Promise<Object>} - API timeout configuration (in milliseconds)
+   */
+  async getApiTimeoutConfig () {
+    return {
+      default: await this.get('api_timeout_default', 30000),
+      chatwoot: await this.get('api_timeout_chatwoot', 30000),
+      dify: await this.get('api_timeout_dify', 60000),
+      telegram: await this.get('api_timeout_telegram', 10000),
+      webhook: await this.get('api_timeout_webhook', 15000)
+    }
+  }
+
+  /**
+   * Get specific API timeout
+   * @param {string} service - Service name (default, chatwoot, dify, telegram, webhook)
+   * @returns {Promise<number>} - Timeout in milliseconds
+   */
+  async getApiTimeout (service = 'default') {
+    const timeouts = await this.getApiTimeoutConfig()
+    return timeouts[service] || timeouts.default || 30000
+  }
+
+  /**
    * Clear cache
    */
   clearCache () {
