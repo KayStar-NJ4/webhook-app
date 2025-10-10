@@ -2021,8 +2021,7 @@ class ProcessMessageUseCase {
 
       // Get repositories from service registry (they're already injected)
       const { Pool } = require('pg')
-      const dbConfig = this.databaseService?.config || require('../infrastructure/config/Config')
-      const pool = new Pool(dbConfig.getDatabase ? dbConfig.getDatabase() : {
+      const pool = new Pool({
         host: process.env.DB_HOST,
         port: process.env.DB_PORT,
         database: process.env.DB_NAME,
