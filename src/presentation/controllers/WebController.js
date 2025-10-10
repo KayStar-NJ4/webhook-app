@@ -336,10 +336,12 @@ class WebController {
           messages: messages.map(msg => ({
             id: msg.id,
             content: msg.content,
-            messageType: msg.message_type,
+            messageType: msg.message_type, // 'user', 'ai', 'agent'
+            sender: msg.message_type === 'user' ? 'user' : 'bot', // For frontend compatibility
             createdAt: msg.created_at
           })),
-          sessionId
+          sessionId,
+          conversationId: conversation.id
         }
       })
     } catch (error) {

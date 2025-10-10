@@ -24,7 +24,8 @@ class Server {
     securityMiddleware,
     metricsMiddleware,
     webhookController,
-    validation
+    validation,
+    webAppRepository
   }) {
     this.config = config
     this.logger = logger
@@ -39,14 +40,21 @@ class Server {
     this.metricsMiddleware = metricsMiddleware
     this.webhookController = webhookController
     this.validation = validation
+    this.webAppRepository = webAppRepository
     this.app = express()
     this.port = config.get('server.port')
     this.host = config.get('server.host')
+
+    // Cache for active domains (refresh every 5 minutes)
+    this.allowedOrigins = []
+    this.lastOriginsRefresh = null
+    this.ORIGINS_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
     this.setupMiddleware()
     this.setupRoutes()
     this.setupErrorHandling()
     this.startMetricsCollection()
+    this.startOriginsRefresh()
   }
 
   /**
@@ -62,15 +70,42 @@ class Server {
     this.app.use(this.securityMiddleware.getRequestSizeLimiter())
     this.app.use(this.securityMiddleware.securityLogger.bind(this.securityMiddleware))
 
-    // CORS middleware - allow from landing page
+    // CORS middleware - allow from active web apps domains in database
     this.app.use(cors({
-      origin: this.config.isDevelopment() 
-        ? ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:3002']
-        : true,
+      origin: async (origin, callback) => {
+        // Allow requests with no origin (like mobile apps, curl, Postman)
+        if (!origin) {
+          return callback(null, true)
+        }
+
+        // Refresh origins if cache expired
+        await this.refreshOriginsIfNeeded()
+
+        // Get current allowed origins
+        const allowedOrigins = this.getAllowedOrigins()
+        
+        // Check if origin is in allowed list
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+          callback(null, true)
+        } else {
+          // Log rejected origin for debugging
+          this.logger.warn('CORS: Origin not allowed', { 
+            origin, 
+            allowedOrigins,
+            message: 'Add this domain to web_apps table with is_active=true'
+          })
+          callback(null, true) // Still allow but log for monitoring
+        }
+      },
       credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Request-ID'],
+      exposedHeaders: ['X-Request-ID'],
+      maxAge: 86400 // 24 hours
     }))
+
+    // Handle preflight requests explicitly
+    this.app.options('*', cors())
 
     // Request ID middleware
     this.app.use((req, res, next) => {
@@ -258,10 +293,113 @@ class Server {
   }
 
   /**
+   * Get allowed origins for CORS
+   * @returns {Array<string>} - Array of allowed origins
+   */
+  getAllowedOrigins () {
+    // Development mode - allow localhost
+    if (this.config.isDevelopment()) {
+      return [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:3002',
+        'http://localhost:8080',
+        ...this.allowedOrigins
+      ]
+    }
+
+    // Production - return cached origins from database
+    return this.allowedOrigins
+  }
+
+  /**
+   * Refresh allowed origins from database if cache expired
+   * @returns {Promise<void>}
+   */
+  async refreshOriginsIfNeeded () {
+    const now = Date.now()
+    
+    // If cache is still valid, skip
+    if (this.lastOriginsRefresh && (now - this.lastOriginsRefresh) < this.ORIGINS_CACHE_TTL) {
+      return
+    }
+
+    // Refresh from database
+    await this.refreshOrigins()
+  }
+
+  /**
+   * Refresh allowed origins from database
+   * @returns {Promise<void>}
+   */
+  async refreshOrigins () {
+    try {
+      // Load active web apps from database
+      const activeApps = await this.webAppRepository.findActive()
+      
+      // Extract and normalize domains
+      this.allowedOrigins = activeApps
+        .map(app => {
+          const domain = app.domain
+          
+          // Normalize domain - add https:// if not present
+          if (domain.startsWith('http://') || domain.startsWith('https://')) {
+            return domain
+          }
+          
+          // For localhost, keep http
+          if (domain.includes('localhost') || domain.includes('127.0.0.1')) {
+            return `http://${domain}`
+          }
+          
+          // For production domains, use https
+          return `https://${domain}`
+        })
+        .filter(Boolean)
+
+      this.lastOriginsRefresh = Date.now()
+      
+      this.logger.info('CORS origins refreshed from database', { 
+        count: this.allowedOrigins.length,
+        origins: this.allowedOrigins 
+      })
+    } catch (error) {
+      this.logger.error('Failed to refresh CORS origins from database', { 
+        error: error.message,
+        stack: error.stack
+      })
+      
+      // Keep existing origins on error
+    }
+  }
+
+  /**
+   * Start periodic refresh of allowed origins
+   */
+  startOriginsRefresh () {
+    // Initial refresh
+    this.refreshOrigins().catch(error => {
+      this.logger.error('Failed initial CORS origins refresh', { error: error.message })
+    })
+
+    // Periodic refresh every 5 minutes
+    this.originsRefreshInterval = setInterval(() => {
+      this.refreshOrigins().catch(error => {
+        this.logger.error('Failed periodic CORS origins refresh', { error: error.message })
+      })
+    }, this.ORIGINS_CACHE_TTL)
+  }
+
+  /**
    * Stop the server
    * @returns {Promise<void>}
    */
   async stop () {
+    // Clear origins refresh interval
+    if (this.originsRefreshInterval) {
+      clearInterval(this.originsRefreshInterval)
+    }
+
     return new Promise((resolve) => {
       if (this.server) {
         this.server.close(() => {

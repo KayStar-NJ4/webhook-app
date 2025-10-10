@@ -240,13 +240,18 @@ class MessageBrokerService {
    * @returns {Object} - Parsed message data
    */
   parseWebMessage (webData) {
+    const senderId = webData.userInfo?.identifier || `anonymous_${webData.sessionId}`
+    const senderName = webData.userInfo?.name || 'Web User'
+    
     return {
       id: `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       conversationId: webData.sessionId, // Use sessionId as conversationId
       content: webData.content,
+      senderId: senderId, // Required by Message entity
+      senderName: senderName, // Required by Message entity
       sender: {
-        id: webData.userInfo?.identifier || `anonymous_${webData.sessionId}`,
-        name: webData.userInfo?.name || 'Web User',
+        id: senderId,
+        name: senderName,
         email: webData.userInfo?.email,
         platform: 'web'
       },

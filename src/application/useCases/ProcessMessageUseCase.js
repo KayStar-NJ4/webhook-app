@@ -246,15 +246,21 @@ class ProcessMessageUseCase {
     if (!conversation) {
       // For Web platform, conversation already created in WebController, skip creation
       if (message.platform === 'web' && message.metadata?.webConversationId) {
-        // Web conversation already exists in database
-        // Create a simple in-memory Conversation entity for processing
+        // Web conversation already exists in database - load it to get chatwoot_id and dify_id
+        const webDbConversation = await this.webConversationRepository.findById(message.metadata.webConversationId)
+        
         const webConversationId = `web_${message.conversationId}` // web_sessionId
         conversation = new Conversation({
           id: webConversationId,
           platform: 'web',
+          chatType: 'private', // Web conversations are always private
           chatId: message.conversationId,
           senderId: message.senderId,
           senderName: message.senderName,
+          // Load existing IDs from database
+          chatwootId: webDbConversation?.chatwoot_conversation_id || null,
+          chatwootInboxId: webDbConversation?.chatwoot_inbox_id || null,
+          difyId: webDbConversation?.dify_conversation_id || null,
           participants: [{
             id: message.senderId,
             name: message.senderName,
@@ -262,6 +268,14 @@ class ProcessMessageUseCase {
           }],
           platformMetadata: message.metadata
         })
+        
+        this.logger.info('Web conversation loaded from database', {
+          conversationId: webConversationId,
+          webDbId: message.metadata.webConversationId,
+          hasChatwootId: !!conversation.chatwootId,
+          hasDifyId: !!conversation.difyId
+        })
+        
         // Save to repository
         await this.conversationRepository.save(conversation)
       }
@@ -883,6 +897,25 @@ class ProcessMessageUseCase {
           )
           results.chatwootConversationId = chatwootResult.conversationId
           
+          // Update web_conversations table with Chatwoot IDs
+          if (webConversationId && this.webConversationRepository) {
+            try {
+              await this.webConversationRepository.update(webConversationId, {
+                chatwootConversationId: results.chatwootConversationId,
+                chatwootContactId: chatwootResult.contactId
+              })
+              this.logger.info('web_conversations updated with Chatwoot IDs', {
+                webConversationId,
+                chatwootConversationId: results.chatwootConversationId
+              })
+            } catch (updateError) {
+              this.logger.error('Failed to update web_conversations with Chatwoot IDs', {
+                error: updateError.message,
+                webConversationId
+              })
+            }
+          }
+          
           this.logger.info('Web message sent to Chatwoot successfully', {
             chatwootConversationId: results.chatwootConversationId,
             conversationId: conversation.id
@@ -907,6 +940,44 @@ class ProcessMessageUseCase {
           results.difyConversationId = difyResult.conversationId
           results.response = difyResult.response
 
+          // 5a. Update conversation with Dify conversation ID for future messages
+          if (difyResult.conversationId && conversation.difyId !== difyResult.conversationId) {
+            conversation.difyId = difyResult.conversationId
+            
+            try {
+              await this.conversationRepository.updateFields(conversation.id, {
+                dify_id: difyResult.conversationId
+              })
+              this.logger.info('Conversation updated with Dify ID', {
+                conversationId: conversation.id,
+                difyId: difyResult.conversationId
+              })
+            } catch (updateError) {
+              this.logger.error('Failed to update conversation with Dify ID', {
+                error: updateError.message,
+                conversationId: conversation.id
+              })
+            }
+
+            // Also update web_conversations table
+            if (webConversationId && this.webConversationRepository) {
+              try {
+                await this.webConversationRepository.update(webConversationId, {
+                  difyConversationId: difyResult.conversationId
+                })
+                this.logger.info('web_conversations updated with Dify ID', {
+                  webConversationId,
+                  difyConversationId: difyResult.conversationId
+                })
+              } catch (updateError) {
+                this.logger.error('Failed to update web_conversations with Dify ID', {
+                  error: updateError.message,
+                  webConversationId
+                })
+              }
+            }
+          }
+
           this.logger.info('Web message sent to Dify successfully', {
             difyConversationId: results.difyConversationId,
             hasResponse: !!results.response,
@@ -914,7 +985,7 @@ class ProcessMessageUseCase {
             conversationId: conversation.id
           })
 
-          // 5a. Save AI response to web_messages table
+          // 5b. Save AI response to web_messages table
           if (results.response && webConversationId && this.webMessageRepository) {
             try {
               await this.webMessageRepository.create({
@@ -941,7 +1012,7 @@ class ProcessMessageUseCase {
             }
           }
 
-          // 5b. Forward Dify response to Chatwoot if both are configured
+          // 5c. Forward Dify response to Chatwoot if both are configured
           if (results.chatwootConversationId && results.response) {
             try {
               await this.processDifyResponseToChatwoot(
@@ -1054,19 +1125,18 @@ class ProcessMessageUseCase {
         // Continue even if update fails
       }
 
-      // Send user message to Chatwoot
-      await this.chatwootService.sendMessage(
-        chatwootConversation.id,
-        message.content,
-        'incoming'
-      )
+      // NOTE: Message already sent in createOrUpdateConversation, no need to send again
+      // This prevents duplicate messages in Chatwoot
 
       this.logger.info('Web message sent to Chatwoot', {
         conversationId: conversation.id,
         chatwootConversationId: chatwootConversation.id
       })
 
-      return { conversationId: chatwootConversation.id }
+      return { 
+        conversationId: chatwootConversation.id,
+        contactId: chatwootConversation.meta?.sender?.id 
+      }
     } catch (error) {
       this.logger.error('Failed to process web to Chatwoot', {
         error: error.message,
