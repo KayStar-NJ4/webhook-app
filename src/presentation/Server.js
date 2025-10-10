@@ -18,6 +18,7 @@ class Server {
     apiRoutes,
     metricsRoutes,
     webRoutes,
+    contactRoutes,
     adminRoutes,
     errorHandler,
     metrics,
@@ -33,6 +34,7 @@ class Server {
     this.apiRoutes = apiRoutes
     this.metricsRoutes = metricsRoutes
     this.webRoutes = webRoutes
+    this.contactRoutes = contactRoutes
     this.adminRoutes = adminRoutes
     this.errorHandler = errorHandler
     this.metrics = metrics
@@ -148,6 +150,14 @@ class Server {
    * Setup routes
    */
   setupRoutes () {
+    // Contact form routes (public, no auth)
+    if (this.contactRoutes) {
+      this.app.use('/api/contact',
+        this.securityMiddleware.getApiRateLimiter(),
+        this.contactRoutes.getRouter()
+      )
+    }
+
     // Web platform routes (landing page chat widget)
     this.app.use('/webhook/web',
       this.securityMiddleware.getWebhookRateLimiter(),

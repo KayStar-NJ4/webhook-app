@@ -87,15 +87,37 @@
             </ul>
           </li>
 
-          <!-- Liên kết Platform -->
-          <li class="nav-item" v-if="hasPermission('platform_mappings', 'read')">
-            <a href="#" 
-               class="nav-link" 
-               :class="{ active: activeRoute === '/admin/platform-mappings' }"
-               @click="navigate('/admin/platform-mappings')">
-              <i class="nav-icon fas fa-link"></i>
-              <p>Liên kết Platform</p>
+          <!-- Marketing -->
+          <li class="nav-item has-treeview" 
+              v-if="hasPermission('customers', 'read') || hasPermission('platform_mappings', 'read')"
+              :class="{ 'menu-open': isMenuOpen('marketing') }">
+            <a href="#" class="nav-link" :class="{ 'active': isMenuActive('marketing') }" @click="toggleMenu('marketing')">
+              <i class="nav-icon fas fa-bullhorn"></i>
+              <p>
+                Marketing
+                <i class="right fas fa-angle-left"></i>
+              </p>
             </a>
+            <ul class="nav nav-treeview" :style="{ display: isMenuOpen('marketing') ? 'block' : 'none' }">
+              <li class="nav-item" v-if="hasPermission('customers', 'read')">
+                <a href="#" 
+                   class="nav-link" 
+                   :class="{ active: activeRoute === '/admin/customers' }"
+                   @click="navigate('/admin/customers')">
+                  <i class="nav-icon fas fa-address-book"></i>
+                  <p>Khách hàng</p>
+                </a>
+              </li>
+              <li class="nav-item" v-if="hasPermission('platform_mappings', 'read')">
+                <a href="#" 
+                   class="nav-link" 
+                   :class="{ active: activeRoute === '/admin/platform-mappings' }"
+                   @click="navigate('/admin/platform-mappings')">
+                  <i class="nav-icon fas fa-link"></i>
+                  <p>Liên kết Platform</p>
+                </a>
+              </li>
+            </ul>
           </li>
 
           <!-- Cài đặt hệ thống -->
@@ -189,6 +211,8 @@ export default {
         return this.activeRoute.includes('/admin/chatwoot-accounts') || this.activeRoute.includes('/admin/dify-apps');
       } else if (menuKey === 'social-network') {
         return this.activeRoute.includes('/admin/telegram-bots') || this.activeRoute.includes('/admin/web-apps');
+      } else if (menuKey === 'marketing') {
+        return this.activeRoute.includes('/admin/customers') || this.activeRoute.includes('/admin/platform-mappings');
       } else if (menuKey === 'system-settings') {
         return this.activeRoute.includes('/admin/users') || this.activeRoute.includes('/admin/roles') || this.activeRoute.includes('/admin/configurations');
       }
@@ -218,6 +242,8 @@ export default {
       this.openMenus.add('data-source');
     } else if (currentRoute.includes('/admin/telegram-bots') || currentRoute.includes('/admin/web-apps')) {
       this.openMenus.add('social-network');
+    } else if (currentRoute.includes('/admin/customers') || currentRoute.includes('/admin/platform-mappings')) {
+      this.openMenus.add('marketing');
     } else if (currentRoute.includes('/admin/users') || currentRoute.includes('/admin/roles') || currentRoute.includes('/admin/configurations')) {
       this.openMenus.add('system-settings');
     }

@@ -14,6 +14,7 @@ const AdminRoutesIndex = require('./admin')
 class AdminRoutes {
   constructor ({
     userRepository,
+    customerService,
     telegramBotRepository,
     chatwootAccountRepository,
     difyAppRepository,
@@ -59,6 +60,7 @@ class AdminRoutes {
     // Initialize admin routes
     this.adminRoutes = new AdminRoutesIndex({
       userRepository,
+      customerService,
       telegramBotRepository,
       chatwootAccountRepository,
       difyAppRepository,

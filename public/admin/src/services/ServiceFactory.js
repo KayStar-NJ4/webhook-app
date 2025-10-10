@@ -15,6 +15,7 @@ class ServiceFactory {
       admin: window.AdminService,
       user: window.UserService,
       role: window.RoleService,
+      customer: window.CustomerService,
       telegram: window.TelegramService,
       chatwoot: window.ChatwootService,
       dify: window.DifyService,
@@ -46,6 +47,10 @@ class ServiceFactory {
 
   get role() {
     return this.get('role')
+  }
+
+  get customer() {
+    return this.get('customer')
   }
 
   get telegram() {

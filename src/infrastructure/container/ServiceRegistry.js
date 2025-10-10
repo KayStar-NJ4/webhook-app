@@ -17,6 +17,7 @@ const PlatformMappingRepository = require('../repositories/PlatformMappingReposi
 const WebAppRepository = require('../repositories/WebAppRepository')
 const WebConversationRepository = require('../repositories/WebConversationRepository')
 const WebMessageRepository = require('../repositories/WebMessageRepository')
+const CustomerRepository = require('../repositories/CustomerRepository')
 
 // Services
 const TelegramService = require('../services/TelegramService')
@@ -35,6 +36,7 @@ const GetConversationsUseCase = require('../../application/useCases/GetConversat
 // Application Services
 const MessageBrokerService = require('../../application/services/MessageBrokerService')
 const PermissionService = require('../../application/services/PermissionService')
+const CustomerService = require('../../application/services/CustomerService')
 
 /**
  * Service Registry - Configures and registers all services
@@ -159,6 +161,14 @@ class ServiceRegistry {
       return new WebMessageRepository({ db, logger })
     }, true)
 
+    this.container.register('customerRepository', (container) => {
+      const config = container.get('config')
+      const logger = container.get('logger')
+      const { Pool } = require('pg')
+      const db = new Pool(config.getDatabase())
+      return new CustomerRepository({ db, logger })
+    }, true)
+
     // External services
     this.container.register('telegramService', (container) => new TelegramService({
       config: container.get('config'),
@@ -247,6 +257,11 @@ class ServiceRegistry {
 
     this.container.register('logsService', (container) => new LogsService({
       logRepository: container.get('logRepository'),
+      logger: container.get('logger')
+    }), true)
+
+    this.container.register('customerService', (container) => new CustomerService({
+      customerRepository: container.get('customerRepository'),
       logger: container.get('logger')
     }), true)
   }

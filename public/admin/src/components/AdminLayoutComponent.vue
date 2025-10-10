@@ -48,6 +48,7 @@ export default {
       pageConfigs: {
         'dashboard': 'Dashboard',
         'users': 'Quản lý người dùng',
+        'customers': 'Quản lý Khách hàng',
         'telegram-bots': 'Quản lý Telegram Bots',
         'chatwoot-accounts': 'Quản lý Chatwoot Accounts',
         'dify-apps': 'Quản lý Dify Apps',

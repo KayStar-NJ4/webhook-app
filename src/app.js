@@ -155,12 +155,20 @@ class Application {
         errorHandler
       })
 
+      // Initialize contact routes (public)
+      const ContactRoutes = require('./presentation/routes/ContactRoutes')
+      const contactRoutes = new ContactRoutes({
+        customerService: this.serviceRegistry.get('customerService'),
+        logger: logger.child({ component: 'ContactRoutes' })
+      })
+
       // logRoutes is now part of AdminRoutes
 
       // Initialize admin routes
       const AdminRoutes = require('./presentation/routes/AdminRoutes')
       const adminRoutes = new AdminRoutes({
         userRepository: this.serviceRegistry.get('userRepository'),
+        customerService: this.serviceRegistry.get('customerService'),
         telegramBotRepository: this.serviceRegistry.get('telegramBotRepository'),
         chatwootAccountRepository: this.serviceRegistry.get('chatwootAccountRepository'),
         difyAppRepository: this.serviceRegistry.get('difyAppRepository'),
@@ -192,6 +200,7 @@ class Application {
         apiRoutes,
         metricsRoutes,
         webRoutes,
+        contactRoutes,
         // logRoutes is now part of AdminRoutes
         adminRoutes,
         errorHandler,

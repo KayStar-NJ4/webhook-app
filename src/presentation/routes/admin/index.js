@@ -7,6 +7,7 @@ const express = require('express')
 class AdminRoutesIndex {
   constructor ({
     userRepository,
+    customerService,
     telegramBotRepository,
     chatwootAccountRepository,
     difyAppRepository,
@@ -38,6 +39,7 @@ class AdminRoutesIndex {
     // Initialize route modules
     const AuthRoutes = require('./auth.routes')
     const UsersRoutes = require('./users.routes')
+    const CustomersRoutes = require('./customers.routes')
     const RolesRoutes = require('./roles.routes')
     const PermissionsRoutes = require('./permissions.routes')
     const TelegramRoutes = require('./telegram.routes')
@@ -57,6 +59,13 @@ class AdminRoutesIndex {
 
     this.usersRoutes = new UsersRoutes({
       userRepository,
+      authMiddleware: this.authMiddleware,
+      permissionMiddleware: this.permissionMiddleware,
+      logger
+    })
+
+    this.customersRoutes = new CustomersRoutes({
+      customerService,
       authMiddleware: this.authMiddleware,
       permissionMiddleware: this.permissionMiddleware,
       logger
@@ -146,6 +155,7 @@ class AdminRoutesIndex {
     // Mount all admin route modules
     this.router.use('/auth', this.authRoutes.getRouter())
     this.router.use('/users', this.usersRoutes.getRouter())
+    this.router.use('/customers', this.customersRoutes.getRouter())
     this.router.use('/web-apps', this.webRoutes.getRouter())
     this.router.use('/roles', this.rolesRoutes.getRouter())
     this.router.use('/permissions', this.permissionsRoutes.getRouter())

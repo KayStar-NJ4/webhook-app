@@ -156,6 +156,7 @@
     <script src="/admin/src/services/PlatformMappingService.js"></script>
     <script src="/admin/src/services/UserService.js"></script>
     <script src="/admin/src/services/RoleService.js"></script>
+    <script src="/admin/src/services/CustomerService.js"></script>
     <script src="/admin/src/services/PermissionService.js"></script>
     <script src="/admin/src/services/ConfigurationService.js"></script>
     <script src="/admin/src/services/index.js"></script>
@@ -251,6 +252,7 @@
         let SidebarComponent, HeaderComponent, AdminLayoutComponent, ListComponent, PageComponent;
         let DashboardPageComponent, UsersPageComponent, UserListComponent, UserFormComponent, UserPasswordFormComponent, UserPermissionsComponent, UserRolesComponent, SystemConfigurationComponent;
         let RolePageComponent, RoleListComponent, RoleFormComponent;
+        let CustomersPageComponent, CustomerListComponent;
         let ChatwootAccountListComponent, ChatwootAccountFormComponent, ChatwootAccountsPageComponent, DifyAppsListComponent, DifyAppFormComponent, DifyAppsPageComponent, TelegramBotsListComponent;
         let PlatformMappingListComponent, PlatformMappingFormComponent, PlatformMappingsPageComponent;
         let FormListingSortComponent, FormTableFiltersComponent, FormCheckBoxComponent, PaginateComponent, ActionButtonsComponent;
@@ -310,6 +312,16 @@
             
             RolePageComponent = await loadVueComponent('/admin/src/modules/roles/RolePageComponent.vue');
             window.RolePageComponent = RolePageComponent;
+            
+            // Load customer components
+            CustomerListComponent = await loadVueComponent('/admin/src/modules/customers/CustomerListComponent.vue');
+            window.CustomerListComponent = CustomerListComponent;
+
+            CustomerFormComponent = await loadVueComponent('/admin/src/modules/customers/CustomerFormComponent.vue');
+            window.CustomerFormComponent = CustomerFormComponent;
+
+            CustomersPageComponent = await loadVueComponent('/admin/src/modules/customers/CustomersPageComponent.vue');
+            window.CustomersPageComponent = CustomersPageComponent;
             
             SystemConfigurationComponent = await loadVueComponent('/admin/src/modules/configurations/SystemConfigurationComponent.vue');
             window.SystemConfigurationComponent = SystemConfigurationComponent;
@@ -471,6 +483,13 @@
                 component: window.AdminLayoutComponent,
                 children: [
                     { path: '', component: window.PlatformMappingsPageComponent }
+                ]
+            },
+            {
+                path: '/admin/customers',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.CustomersPageComponent }
                 ]
             },
             {
@@ -731,6 +750,11 @@
             if (window.WebAppsListComponent) app.component('WebAppsListComponent', window.WebAppsListComponent);
             if (window.WebAppFormComponent) app.component('WebAppFormComponent', window.WebAppFormComponent);
             if (window.WebAppsPageComponent) app.component('WebAppsPageComponent', window.WebAppsPageComponent);
+            
+            // Customer components
+            if (window.CustomersPageComponent) app.component('CustomersPageComponent', window.CustomersPageComponent);
+            if (window.CustomerListComponent) app.component('CustomerListComponent', window.CustomerListComponent);
+            if (window.CustomerFormComponent) app.component('CustomerFormComponent', window.CustomerFormComponent);
             if (window.PlatformMappingListComponent) app.component('PlatformMappingListComponent', window.PlatformMappingListComponent);
             if (window.PlatformMappingFormComponent) app.component('PlatformMappingFormComponent', window.PlatformMappingFormComponent);
             if (window.PlatformMappingsPageComponent) app.component('PlatformMappingsPageComponent', window.PlatformMappingsPageComponent);

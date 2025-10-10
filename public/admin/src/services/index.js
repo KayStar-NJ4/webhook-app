@@ -10,6 +10,7 @@ window.Services = {
   PlatformMappingService: window.PlatformMappingService,
   UserService: window.UserService,
   RoleService: window.RoleService,
+  CustomerService: window.CustomerService,
   ConfigurationService: window.ConfigurationService,
   BaseService: window.BaseService,
   ServiceFactory: window.ServiceFactory
