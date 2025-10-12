@@ -576,11 +576,20 @@ class ChatwootService {
       return true
     } catch (error) {
       this.logger.error('Chatwoot connection test failed', {
-        error: error.message,
+        error: error.message || 'Unknown error',
+        errorName: error.name || 'Error',
+        errorCode: error.code,
+        syscall: error.syscall,
+        hostname: error.hostname,
         url: `${this.baseUrl}/api/v1/accounts/${this.accountId}`,
         accountId: this.accountId,
         response: error.response?.data,
-        status: error.response?.status
+        responseStatus: error.response?.status,
+        responseStatusText: error.response?.statusText,
+        requestTimeout: this.timeout,
+        isAxiosError: error.isAxiosError,
+        isTimeout: error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT',
+        stack: error.stack
       })
       return false
     }
