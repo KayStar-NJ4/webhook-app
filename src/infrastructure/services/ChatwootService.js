@@ -191,6 +191,42 @@ class ChatwootService {
     return platformNames[platform] || platform.charAt(0).toUpperCase() + platform.slice(1)
   }
 
+  async updateConversationInbox (conversationId, newInboxId) {
+    try {
+      this.logger.info('Updating conversation inbox', {
+        conversationId,
+        newInboxId
+      })
+
+      const response = await axios.patch(
+        `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations/${conversationId}`,
+        {
+          inbox_id: parseInt(newInboxId)
+        },
+        {
+          headers: this.getHeaders(),
+          timeout: this.timeout
+        }
+      )
+
+      this.logger.info('Conversation inbox updated successfully', {
+        conversationId,
+        newInboxId
+      })
+
+      return response.data
+    } catch (error) {
+      this.logger.error('Failed to update conversation inbox', {
+        error: error.message,
+        conversationId,
+        newInboxId,
+        status: error.response?.status,
+        responseData: error.response?.data
+      })
+      throw new Error(`Failed to update conversation inbox: ${error.message}`)
+    }
+  }
+
   async getOrCreateTelegramInbox () {
     return this.getOrCreatePlatformInbox('telegram')
   }
@@ -224,6 +260,44 @@ class ChatwootService {
       if (conversation.chatwootId) {
         try {
           chatwootConversation = await this.getConversation(conversation.chatwootId)
+          
+          // Check if conversation is in the wrong inbox
+          if (chatwootConversation && chatwootConversation.inbox_id && 
+              chatwootConversation.inbox_id.toString() !== inboxId.toString()) {
+            this.logger.warn('Conversation is in wrong inbox, will search for or create correct one', {
+              conversationId: conversation.id,
+              chatwootId: conversation.chatwootId,
+              currentInboxId: chatwootConversation.inbox_id,
+              expectedInboxId: inboxId,
+              platform
+            })
+            
+            // Chatwoot doesn't allow moving conversations between inboxes
+            // So we need to search for existing conversation in correct inbox or create new one
+            const correctInboxConversation = await this.findConversationBySourceId(conversation.id, inboxId)
+            
+            if (correctInboxConversation) {
+              this.logger.info('Found existing conversation in correct inbox', {
+                chatwootId: correctInboxConversation.id,
+                inboxId: inboxId
+              })
+              chatwootConversation = correctInboxConversation
+            } else {
+              this.logger.info('Creating new conversation in correct inbox', {
+                inboxId: inboxId,
+                platform
+              })
+              try {
+                chatwootConversation = await this.createConversation(conversation, message, inboxId)
+              } catch (createError) {
+                this.logger.error('Failed to create conversation in correct inbox, using existing', {
+                  error: createError.message
+                })
+                // Fall back to using existing conversation (even if in wrong inbox)
+                chatwootConversation = await this.getConversation(conversation.chatwootId)
+              }
+            }
+          }
         } catch {
           const existingConversation = await this.findConversationBySourceId(conversation.id, inboxId)
           if (existingConversation) {
@@ -347,35 +421,101 @@ class ChatwootService {
     }
   }
 
+  async findContactByIdentifier (identifier) {
+    try {
+      const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/contacts/search`
+      const response = await axios.get(url, { 
+        headers: this.getHeaders(), 
+        params: { q: identifier }, 
+        timeout: this.timeout 
+      })
+      const contacts = response.data.payload || []
+      // Find exact match
+      const contact = contacts.find(c => c.identifier === identifier || c.phone_number === identifier)
+      return contact || null
+    } catch (error) {
+      this.logger.warn('Failed to search contact', { error: error.message, identifier })
+      return null
+    }
+  }
+
+  async createContactInbox (contactId, inboxId, sourceId) {
+    try {
+      this.logger.info('Creating contact_inbox', { contactId, inboxId, sourceId })
+      
+      const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/contacts/${contactId}/contact_inboxes`
+      const response = await axios.post(url, {
+        inbox_id: parseInt(inboxId),
+        source_id: sourceId
+      }, { 
+        headers: this.getHeaders(), 
+        timeout: this.timeout 
+      })
+      
+      this.logger.info('Contact inbox created successfully', { 
+        contactId, 
+        inboxId,
+        contactInboxId: response.data?.id 
+      })
+      
+      return response.data
+    } catch (error) {
+      // Contact inbox might already exist, that's okay
+      if (error.response?.status === 422 || error.response?.status === 409) {
+        this.logger.info('Contact inbox already exists', { contactId, inboxId })
+        return null
+      }
+      
+      this.logger.warn('Failed to create contact_inbox', { 
+        error: error.message,
+        contactId,
+        inboxId,
+        status: error.response?.status,
+        data: error.response?.data
+      })
+      return null
+    }
+  }
+
   async createConversation (conversation, message, inboxId, customSourceId = null) {
     // Use Telegram user info for contact name
     const firstName = message.metadata?.firstName || conversation.senderFirstName || ''
     const lastName = message.metadata?.lastName || conversation.senderLastName || ''
     const username = message.metadata?.username || conversation.senderUsername || ''
     
-    // Create display name: "FirstName LastName" or "@username" or "Telegram User"
-    let contactName = 'Telegram User'
+    // Create display name based on platform
+    const platform = conversation.platform || 'telegram'
+    const senderId = conversation.senderId || message.senderId || message.metadata?.userId
+    
+    let contactName = platform === 'web' ? 'Web User' : 'Telegram User'
+    
     if (firstName || lastName) {
       contactName = `${firstName} ${lastName}`.trim()
     } else if (username) {
       contactName = `@${username}`
     }
     
+    // IMPORTANT: Add platform prefix to contact name to avoid matching with contacts from other platforms
+    // This ensures web contacts and telegram contacts are treated as separate entities
+    if (!firstName && !lastName && !username) {
+      // For anonymous users, add platform prefix to the sender ID
+      contactName = `${platform === 'web' ? 'Web' : 'Telegram'} ${senderId}`
+    }
+    
     // Add bot ID to contact name to distinguish between different bots
     if (conversation.platformMetadata?.botId) {
       contactName = `${contactName} (Bot ${conversation.platformMetadata.botId})`
     }
-    
-    const senderId = conversation.senderId || message.senderId || message.metadata?.userId
-    const chatId = conversation.chatId || message.metadata?.chatId
 
-    // Try to get email from conversation (if user provided it)
-    // Otherwise, leave as null since Telegram API doesn't provide real email addresses
-    const contactEmail = conversation.sender_email || null
+
+    // IMPORTANT: Use platform-specific identifier to avoid inbox conflicts
+    // Chatwoot will always use the first contact_inbox it finds for a contact
+    // So we need different identifiers for different platforms
+    const platformSpecificIdentifier = `${platform}_${senderId}`
 
     // Include bot ID in additional attributes for better tracking
     const additionalAttributes = { 
-      platform: conversation.platform || 'telegram', 
+      platform: platform, 
       conversation_id: conversation.id,
       telegram_username: username,
       telegram_user_id: senderId
@@ -386,23 +526,63 @@ class ChatwootService {
       additionalAttributes.telegram_bot_id = conversation.platformMetadata.botId
     }
 
+    // STEP 1: Create or find contact with platform-specific identifier
+    let contact
+    try {
+      contact = await this.findContactByIdentifier(platformSpecificIdentifier)
+      if (contact) {
+        this.logger.info('Found existing contact for platform', { 
+          contactId: contact.id, 
+          identifier: platformSpecificIdentifier,
+          platform 
+        })
+      } else {
+        // Create new contact
+        const contactPayload = {
+          name: contactName,
+          identifier: platformSpecificIdentifier
+        }
+        
+        const contactResponse = await axios.post(
+          `${this.baseUrl}/api/v1/accounts/${this.accountId}/contacts`,
+          contactPayload,
+          { headers: this.getHeaders(), timeout: this.timeout }
+        )
+        contact = contactResponse.data.payload?.contact || contactResponse.data.payload || contactResponse.data
+        this.logger.info('Created new contact for platform', { 
+          contactId: contact.id,
+          identifier: platformSpecificIdentifier,
+          platform 
+        })
+      }
+
+      // STEP 2: Create contact_inbox for this inbox
+      await this.createContactInbox(contact.id, inboxId, conversation.id)
+      
+    } catch (error) {
+      this.logger.error('Failed to create/find contact and contact_inbox', { 
+        error: error.message,
+        identifier: platformSpecificIdentifier 
+      })
+      throw error
+    }
+
+    // STEP 3: Create conversation with contact_id (not inline contact)
     const payload = {
       source_id: customSourceId || conversation.id,
-      inbox_id: inboxId,
-      contact: {
-        name: contactName,
-        identifier: senderId,
-        email: contactEmail,
-        phone_number: senderId
-      },
+      inbox_id: parseInt(inboxId),
+      contact_id: contact.id,
       additional_attributes: additionalAttributes
     }
 
-    this.logger.info('Creating Chatwoot conversation', {
+    this.logger.info('Creating Chatwoot conversation with contact_id', {
+      contactId: contact.id,
       contactName,
       senderId,
       username,
-      inboxId
+      inboxId,
+      platform,
+      identifier: platformSpecificIdentifier
     })
 
     const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations`
@@ -413,7 +593,8 @@ class ChatwootService {
       data: response.data,
       hasPayload: !!response.data.payload,
       hasData: !!response.data.data,
-      responseKeys: Object.keys(response.data || {})
+      responseKeys: Object.keys(response.data || {}),
+      inboxId: response.data?.inbox_id || response.data?.payload?.inbox_id || response.data?.data?.inbox_id
     })
     
     const result = response.data.payload || response.data.data || response.data
