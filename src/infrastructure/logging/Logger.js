@@ -8,10 +8,11 @@ const { Pool } = require('pg')
  * Centralized logging with structured format and database storage
  */
 class Logger {
-  constructor (component = 'Logger', logRepository = null, config = null) {
+  constructor (component = 'Logger', logRepository = null, config = null, databaseService = null) {
     this.component = component
     this.logRepository = logRepository
     this.config = config
+    this.databaseService = databaseService
     this.logger = this.createLogger()
     this.debugCache = { value: false, timestamp: 0, ttlMs: 0 }
     this.dbPool = null
@@ -70,7 +71,20 @@ class Logger {
 
     let debugEnabled = false
     try {
-      if (this.config) {
+      if (this.databaseService) {
+        const result = await this.databaseService.query('SELECT value, type FROM configurations WHERE key = $1', ['debug_mode'])
+        if (result.rows.length > 0) {
+          const row = result.rows[0]
+          const raw = String(row.value).toLowerCase()
+          if (row.type === 'boolean') {
+            debugEnabled = raw === 'true' || raw === 't' || raw === '1' || raw === 'yes' || raw === 'y'
+          } else if (row.type === 'number') {
+            debugEnabled = Number(row.value) !== 0
+          } else {
+            debugEnabled = raw === 'true' || raw === '1' || raw === 'yes'
+          }
+        }
+      } else if (this.config) {
         if (!this.dbPool) {
           const db = this.config.getDatabase()
           this.dbPool = new Pool(db)

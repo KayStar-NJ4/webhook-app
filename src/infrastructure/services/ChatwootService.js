@@ -5,10 +5,11 @@ const axios = require('axios')
  * Handles communication with Chatwoot API
  */
 class ChatwootService {
-  constructor ({ config, configurationService, logger }) {
+  constructor ({ config, configurationService, logger, databaseService = null }) {
     this.config = config
     this.configurationService = configurationService
     this.logger = logger
+    this.databaseService = databaseService
     this.baseUrl = null
     this.accessToken = null
     this.accountId = null
@@ -42,18 +43,22 @@ class ChatwootService {
         currentAccountId: this.accountId
       })
 
-      const { Pool } = require('pg')
-      const pool = new Pool({
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        database: process.env.DB_NAME,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        ssl: process.env.DB_SSL === 'true'
-      })
-
-      const result = await pool.query('SELECT * FROM chatwoot_accounts WHERE id = $1', [accountId])
-      await pool.end()
+      let result
+      if (this.databaseService) {
+        result = await this.databaseService.query('SELECT * FROM chatwoot_accounts WHERE id = $1', [accountId])
+      } else {
+        const { Pool } = require('pg')
+        const pool = new Pool({
+          host: process.env.DB_HOST,
+          port: process.env.DB_PORT,
+          database: process.env.DB_NAME,
+          user: process.env.DB_USER,
+          password: process.env.DB_PASSWORD,
+          ssl: process.env.DB_SSL === 'true'
+        })
+        result = await pool.query('SELECT * FROM chatwoot_accounts WHERE id = $1', [accountId])
+        await pool.end()
+      }
 
       if (result.rows.length === 0) throw new Error(`Chatwoot account with ID ${accountId} not found`)
 

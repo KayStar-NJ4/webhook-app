@@ -2019,16 +2019,6 @@ class ProcessMessageUseCase {
         return
       }
 
-      // Get repositories from service registry (they're already injected)
-      const { Pool } = require('pg')
-      const pool = new Pool({
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        database: process.env.DB_NAME,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD
-      })
-
       // Save agent message to web_messages table
       const query = `
         INSERT INTO web_messages (web_conversation_id, content, message_type, chatwoot_message_id, metadata)
@@ -2036,7 +2026,7 @@ class ProcessMessageUseCase {
         RETURNING id
       `
 
-      const result = await pool.query(query, [
+      const result = await this.databaseService.query(query, [
         webConversationId,
         message.content,
         'agent', // message_type: agent (from Chatwoot)
@@ -2048,12 +2038,10 @@ class ProcessMessageUseCase {
       ])
 
       // Update last_message_at in web_conversations
-      await pool.query(
+      await this.databaseService.query(
         'UPDATE web_conversations SET last_message_at = CURRENT_TIMESTAMP WHERE id = $1',
         [webConversationId]
       )
-
-      await pool.end()
 
       this.logger.info('✅ Saved Chatwoot agent message to web_messages', {
         messageId: result.rows[0].id,
