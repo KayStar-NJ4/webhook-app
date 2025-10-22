@@ -243,43 +243,39 @@ class TelegramService {
     }
 
     let result
-    try {
-      if (this.databaseService) {
-        try {
-          result = await this.databaseService.query('SELECT id, bot_token, secret_token FROM telegram_bots WHERE is_active = true')
-        } catch (e) {
-          if (e?.code === '42703' || /secret_token/.test(e?.message || '')) {
-            this.logger.warn('secret_token column missing; proceeding without secret tokens. Please run migrations.', { error: e.message })
-            result = await this.databaseService.query('SELECT id, bot_token FROM telegram_bots WHERE is_active = true')
-          } else {
-            throw e
-          }
+    if (this.databaseService) {
+      try {
+        result = await this.databaseService.query('SELECT id, bot_token, secret_token FROM telegram_bots WHERE is_active = true')
+      } catch (e) {
+        if (e?.code === '42703' || /secret_token/.test(e?.message || '')) {
+          this.logger.warn('secret_token column missing; proceeding without secret tokens. Please run migrations.', { error: e.message })
+          result = await this.databaseService.query('SELECT id, bot_token FROM telegram_bots WHERE is_active = true')
+        } else {
+          throw e
         }
-      } else {
-        const { Pool } = require('pg')
-        const pool = new Pool({
-          host: process.env.DB_HOST,
-          port: process.env.DB_PORT,
-          database: process.env.DB_NAME,
-          user: process.env.DB_USER,
-          password: process.env.DB_PASSWORD,
-          ssl: process.env.DB_SSL === 'true'
-        })
-        try {
-          result = await pool.query('SELECT id, bot_token, secret_token FROM telegram_bots WHERE is_active = true')
-        } catch (e) {
-          if (e?.code === '42703' || /secret_token/.test(e?.message || '')) {
-            this.logger.warn('secret_token column missing; proceeding without secret tokens. Please run migrations.', { error: e.message })
-            result = await pool.query('SELECT id, bot_token FROM telegram_bots WHERE is_active = true')
-          } else {
-            await pool.end()
-            throw e
-          }
-        }
-        await pool.end()
       }
-    } catch (e) {
-      throw e
+    } else {
+      const { Pool } = require('pg')
+      const pool = new Pool({
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        database: process.env.DB_NAME,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        ssl: process.env.DB_SSL === 'true'
+      })
+      try {
+        result = await pool.query('SELECT id, bot_token, secret_token FROM telegram_bots WHERE is_active = true')
+      } catch (e) {
+        if (e?.code === '42703' || /secret_token/.test(e?.message || '')) {
+          this.logger.warn('secret_token column missing; proceeding without secret tokens. Please run migrations.', { error: e.message })
+          result = await pool.query('SELECT id, bot_token FROM telegram_bots WHERE is_active = true')
+        } else {
+          await pool.end()
+          throw e
+        }
+      }
+      await pool.end()
     }
     const outcomes = []
     const baseEndpoint = `${baseUrl.replace(/\/$/, '')}/webhook/telegram`
