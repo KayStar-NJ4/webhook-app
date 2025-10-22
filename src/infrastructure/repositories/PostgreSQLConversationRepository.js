@@ -1,17 +1,18 @@
 const ConversationRepository = require('../../domain/repositories/ConversationRepository')
 const Conversation = require('../../domain/entities/Conversation')
-const { Pool } = require('pg')
 
 /**
  * PostgreSQL Conversation Repository Implementation
  * Stores conversations in PostgreSQL database with detailed information
  */
 class PostgreSQLConversationRepository extends ConversationRepository {
-  constructor ({ config, logger }) {
+  constructor ({ db, logger }) {
     super()
-    this.config = config
     this.logger = logger
-    this.pool = null
+    if (!db) {
+      throw new Error('Database pool instance is required')
+    }
+    this.db = db
   }
 
   /**
@@ -19,30 +20,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    */
   async initialize () {
     try {
-      this.pool = new Pool({
-        host: this.config.get('database.host'),
-        port: this.config.get('database.port'),
-        database: this.config.get('database.name'),
-        user: this.config.get('database.user'),
-        password: this.config.get('database.password'),
-        ssl: this.config.get('database.ssl') ? { rejectUnauthorized: false } : false,
-        max: 20,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000
-      })
-
-      this.pool.on('error', (err) => {
-        this.logger.error('PostgreSQL pool error', { error: err.message })
-      })
-
-      // Test connection
-      const client = await this.pool.connect()
-      await client.query('SELECT NOW()')
-      client.release()
-
-      // PostgreSQL connected successfully
-
-      // Create table if not exists
+      await this.db.query('SELECT NOW()')
       await this.createTable()
     } catch (error) {
       this.logger.error('Failed to initialize PostgreSQL', { error: error.message })
@@ -119,7 +97,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
     `
 
     try {
-      await this.pool.query(createTableQuery)
+      await this.db.query(createTableQuery)
       // Conversations table created/verified successfully
     } catch (error) {
       this.logger.error('Failed to create conversations table', { error: error.message })
@@ -135,7 +113,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
   async findById (id) {
     try {
       const query = 'SELECT * FROM conversations WHERE id = $1'
-      const result = await this.pool.query(query, [id])
+      const result = await this.db.query(query, [id])
 
       if (result.rows.length === 0) return null
 
@@ -167,7 +145,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
         params.push(botId)
       }
       
-      const result = await this.pool.query(query, params)
+      const result = await this.db.query(query, params)
 
       if (result.rows.length === 0) return null
 
@@ -192,7 +170,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
   async findByChatwootId (chatwootId) {
     try {
       const query = 'SELECT * FROM conversations WHERE chatwoot_id = $1'
-      const result = await this.pool.query(query, [chatwootId])
+      const result = await this.db.query(query, [chatwootId])
 
       if (result.rows.length === 0) return null
 
@@ -295,7 +273,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
         conversation.lastMessageAt
       ]
 
-      const result = await this.pool.query(query, values)
+      const result = await this.db.query(query, values)
       const savedConversation = this.mapRowToConversation(result.rows[0])
 
       this.logger.info('Conversation saved to PostgreSQL', {
@@ -340,7 +318,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
         RETURNING *
       `
 
-      const result = await this.pool.query(query, values)
+      const result = await this.db.query(query, values)
       
       if (result.rows.length === 0) {
         throw new Error(`Failed to update conversation ${conversationId}`)
@@ -423,7 +401,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
         conversation.lastMessageAt
       ]
 
-      const result = await this.pool.query(query, values)
+      const result = await this.db.query(query, values)
       const updatedConversation = this.mapRowToConversation(result.rows[0])
 
       this.logger.info('Conversation updated in PostgreSQL', {
@@ -448,7 +426,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
   async delete (id) {
     try {
       const query = 'DELETE FROM conversations WHERE id = $1'
-      const result = await this.pool.query(query, [id])
+      const result = await this.db.query(query, [id])
 
       const deleted = result.rowCount > 0
       if (deleted) {
@@ -507,7 +485,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
         values.push(options.limit)
       }
 
-      const result = await this.pool.query(query, values)
+      const result = await this.db.query(query, values)
       return result.rows.map(row => this.mapRowToConversation(row))
     } catch (error) {
       this.logger.error('Failed to find all conversations', {
@@ -559,7 +537,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
         SET last_message_at = $2, updated_at = $3
         WHERE id = $1
       `
-      const result = await this.pool.query(query, [id, timestamp, new Date()])
+      const result = await this.db.query(query, [id, timestamp, new Date()])
 
       return result.rowCount > 0
     } catch (error) {
@@ -617,10 +595,7 @@ class PostgreSQLConversationRepository extends ConversationRepository {
    * Close database connection
    */
   async close () {
-    if (this.pool) {
-      await this.pool.end()
-      this.logger.info('PostgreSQL connection closed')
-    }
+    // Using shared pool; no-op to keep interface compatibility
   }
 }
 

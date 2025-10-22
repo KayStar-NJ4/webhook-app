@@ -1,4 +1,3 @@
-const { Pool } = require('pg')
 const Logger = require('../logging/Logger')
 
 /**
@@ -6,16 +5,22 @@ const Logger = require('../logging/Logger')
  * Manages application logs in database
  */
 class LogRepository {
-  constructor () {
-    this.pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 5432,
-      database: process.env.DB_NAME || 'chatwoot_webhook',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'password',
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
-    })
-
+  constructor ({ db = null } = {}) {
+    if (!db) {
+      const { Pool } = require('pg')
+      this.pool = new Pool({
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 5432,
+        database: process.env.DB_NAME || 'chatwoot_webhook',
+        user: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || 'password',
+        ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
+      })
+      this.ownsPool = true
+    } else {
+      this.pool = db
+      this.ownsPool = false
+    }
     this.logger = new Logger('LogRepository')
   }
 
@@ -174,8 +179,10 @@ class LogRepository {
    */
   async close () {
     try {
-      await this.pool.end()
-      this.logger.info('Log repository connection closed')
+      if (this.ownsPool && this.pool) {
+        await this.pool.end()
+        this.logger.info('Log repository connection closed')
+      }
     } catch (error) {
       this.logger.error('Error closing log repository', { error: error.message })
     }

@@ -54,132 +54,116 @@ class ServiceRegistry {
     // Core services
     this.container.register('config', () => new Config(), true)
 
-    // Log repository
-    this.container.register('logRepository', () => new LogRepository(), true)
+    this.container.register('databaseService', (container) => new DatabaseService({
+      config: container.get('config')
+    }), true)
 
-    // Logger with database logging and config access (for debug_mode)
+    this.container.register('logRepository', (container) => {
+      const databaseService = container.get('databaseService')
+      return new LogRepository({ db: databaseService.getPool() })
+    }, true)
+
     this.container.register('logger', (container) => {
       const logRepository = container.get('logRepository')
       const config = container.get('config')
-      return new Logger('Application', logRepository, config)
+      const databaseService = container.get('databaseService')
+      return new Logger('Application', logRepository, config, databaseService)
     }, true)
 
     // Repositories - PostgreSQL only
     this.container.register('conversationRepository', (container) => {
-      const config = container.get('config')
+      const databaseService = container.get('databaseService')
       const logger = container.get('logger')
-      return new PostgreSQLConversationRepository({ config, logger })
+      return new PostgreSQLConversationRepository({ db: databaseService.getPool(), logger })
     }, true)
 
     this.container.register('messageRepository', () => new InMemoryMessageRepository(), true)
 
     this.container.register('configurationRepository', (container) => {
-      const config = container.get('config')
+      const databaseService = container.get('databaseService')
       const logger = container.get('logger')
-      const { Pool } = require('pg')
-      const db = new Pool(config.getDatabase())
-      return new ConfigurationRepository({ db, logger })
+      return new ConfigurationRepository({ db: databaseService.getPool(), logger })
     }, true)
 
     this.container.register('userRepository', (container) => {
-      const config = container.get('config')
+      const databaseService = container.get('databaseService')
       const logger = container.get('logger')
-      const { Pool } = require('pg')
-      const db = new Pool(config.getDatabase())
-      return new UserRepository({ db, logger })
+      return new UserRepository({ db: databaseService.getPool(), logger })
     }, true)
 
     this.container.register('telegramBotRepository', (container) => {
-      const config = container.get('config')
+      const databaseService = container.get('databaseService')
       const logger = container.get('logger')
-      const { Pool } = require('pg')
-      const db = new Pool(config.getDatabase())
-      return new TelegramBotRepository({ db, logger })
+      return new TelegramBotRepository({ db: databaseService.getPool(), logger })
     }, true)
 
     this.container.register('chatwootAccountRepository', (container) => {
-      const config = container.get('config')
+      const databaseService = container.get('databaseService')
       const logger = container.get('logger')
-      const { Pool } = require('pg')
-      const db = new Pool(config.getDatabase())
-      return new ChatwootAccountRepository({ db, logger })
+      return new ChatwootAccountRepository({ db: databaseService.getPool(), logger })
     }, true)
 
     this.container.register('difyAppRepository', (container) => {
-      const config = container.get('config')
+      const databaseService = container.get('databaseService')
       const logger = container.get('logger')
-      const { Pool } = require('pg')
-      const db = new Pool(config.getDatabase())
-      return new DifyAppRepository({ db, logger })
+      return new DifyAppRepository({ db: databaseService.getPool(), logger })
     }, true)
 
     this.container.register('roleRepository', (container) => {
-      const config = container.get('config')
+      const databaseService = container.get('databaseService')
       const logger = container.get('logger')
-      const { Pool } = require('pg')
-      const db = new Pool(config.getDatabase())
-      return new RoleRepository({ db, logger })
+      return new RoleRepository({ db: databaseService.getPool(), logger })
     }, true)
 
     this.container.register('permissionRepository', (container) => {
-      const config = container.get('config')
+      const databaseService = container.get('databaseService')
       const logger = container.get('logger')
-      const { Pool } = require('pg')
-      const db = new Pool(config.getDatabase())
-      return new PermissionRepository({ db, logger })
+      return new PermissionRepository({ db: databaseService.getPool(), logger })
     }, true)
 
     this.container.register('platformMappingRepository', (container) => {
-      const config = container.get('config')
+      const databaseService = container.get('databaseService')
       const logger = container.get('logger')
-      const { Pool } = require('pg')
-      const db = new Pool(config.getDatabase())
-      return new PlatformMappingRepository({ db, logger })
+      return new PlatformMappingRepository({ db: databaseService.getPool(), logger })
     }, true)
 
     this.container.register('webAppRepository', (container) => {
-      const config = container.get('config')
+      const databaseService = container.get('databaseService')
       const logger = container.get('logger')
-      const { Pool } = require('pg')
-      const db = new Pool(config.getDatabase())
-      return new WebAppRepository({ db, logger })
+      return new WebAppRepository({ db: databaseService.getPool(), logger })
     }, true)
 
     this.container.register('webConversationRepository', (container) => {
-      const config = container.get('config')
+      const databaseService = container.get('databaseService')
       const logger = container.get('logger')
-      const { Pool } = require('pg')
-      const db = new Pool(config.getDatabase())
-      return new WebConversationRepository({ db, logger })
+      return new WebConversationRepository({ db: databaseService.getPool(), logger })
     }, true)
 
     this.container.register('webMessageRepository', (container) => {
-      const config = container.get('config')
+      const databaseService = container.get('databaseService')
       const logger = container.get('logger')
-      const { Pool } = require('pg')
-      const db = new Pool(config.getDatabase())
-      return new WebMessageRepository({ db, logger })
+      return new WebMessageRepository({ db: databaseService.getPool(), logger })
     }, true)
 
     this.container.register('customerRepository', (container) => {
-      const config = container.get('config')
+      const databaseService = container.get('databaseService')
       const logger = container.get('logger')
-      const { Pool } = require('pg')
-      const db = new Pool(config.getDatabase())
-      return new CustomerRepository({ db, logger })
+      return new CustomerRepository({ db: databaseService.getPool(), logger })
     }, true)
 
     // External services
     this.container.register('telegramService', (container) => new TelegramService({
       config: container.get('config'),
       configurationService: container.get('configurationService'),
-      logger: container.get('logger')
+      logger: container.get('logger'),
+      databaseService: container.get('databaseService')
     }), true)
 
     this.container.register('chatwootService', (container) => new ChatwootService({
       config: container.get('config'),
       configurationService: container.get('configurationService'),
-      logger: container.get('logger')
+      logger: container.get('logger'),
+      databaseService: container.get('databaseService')
     }), true)
 
     this.container.register('configurationService', (container) => new ConfigurationService({
@@ -214,10 +198,6 @@ class ServiceRegistry {
       platformMappingService: container.get('platformMappingService'),
       chatwootService: container.get('chatwootService'),
       difyService: container.get('difyService'),
-      logger: container.get('logger')
-    }), true)
-
-    this.container.register('databaseService', (container) => new DatabaseService({
       logger: container.get('logger')
     }), true)
 
@@ -297,6 +277,9 @@ class ServiceRegistry {
 
       // Initialize database service
       const databaseService = this.get('databaseService')
+      if (!databaseService.logger && logger?.child) {
+        databaseService.logger = logger.child({ component: 'DatabaseService' })
+      }
       databaseService.initialize()
 
       // Initialize conversation repository
