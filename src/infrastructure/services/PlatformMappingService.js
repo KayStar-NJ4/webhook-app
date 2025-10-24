@@ -437,16 +437,23 @@ class PlatformMappingService {
           difyAppId: mapping.dify_app_id,
           difyAppName: mapping.dify_app_name,
           telegramBotId: mapping.telegram_bot_id,
+          zaloBotId: mapping.zalo_bot_id,
           routing: {
             telegramToChatwoot: mapping.enable_telegram_to_chatwoot,
             telegramToDify: mapping.enable_telegram_to_dify,
             chatwootToTelegram: mapping.enable_chatwoot_to_telegram,
             difyToChatwoot: mapping.enable_dify_to_chatwoot,
-            difyToTelegram: mapping.enable_dify_to_telegram
+            difyToTelegram: mapping.enable_dify_to_telegram,
+            zaloToChatwoot: mapping.enable_zalo_to_chatwoot,
+            zaloToDify: mapping.enable_zalo_to_dify,
+            chatwootToZalo: mapping.enable_chatwoot_to_zalo,
+            difyToZalo: mapping.enable_dify_to_zalo
           },
           autoConnect: {
             telegramChatwoot: mapping.auto_connect_telegram_chatwoot,
-            telegramDify: mapping.auto_connect_telegram_dify
+            telegramDify: mapping.auto_connect_telegram_dify,
+            zaloChatwoot: mapping.auto_connect_zalo_chatwoot,
+            zaloDify: mapping.auto_connect_zalo_dify
           }
         }))
       }

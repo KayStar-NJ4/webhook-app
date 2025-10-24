@@ -439,24 +439,36 @@ class MessageBrokerService {
       throw new Error('Bot not mentioned in group message')
     }
 
+    // Parse timestamp correctly (Zalo uses milliseconds)
+    const timestamp = message.date ? new Date(message.date).toISOString() : new Date().toISOString()
+    
     return {
       id: `zalo_${message.message_id}`,
-      platform: 'zalo',
-      text: message.text,
-      timestamp: message.date ? new Date(message.date * 1000).toISOString() : new Date().toISOString(),
-      conversationId: conversationId,
-      chatId: chat.id.toString(),
-      chatType: chat.type,
-      chatTitle: chat.title,
+      content: message.text, // Use 'content' not 'text' for Message entity
       senderId: from.id.toString(),
-      senderName: `${from.first_name || ''} ${from.last_name || ''}`.trim() || from.username || 'Unknown',
-      senderUsername: from.username,
-      isGroupChat: isGroupChat,
-      isBotMentioned: isBotMentioned,
-      platformMetadata: {
+      senderName: from.display_name || 'Unknown',
+      conversationId: conversationId,
+      platform: 'zalo',
+      timestamp: timestamp,
+      metadata: {
+        isGroupChat: isGroupChat,
+        isBotMentioned: isBotMentioned,
         messageId: message.message_id,
-        botId: botId,
-        botUsername: zaloData.bot?.username
+        chatId: chat.id.toString(),
+        chatType: chat.chat_type, // Zalo uses chat_type not type
+        senderId: from.id.toString(),
+        senderUsername: from.display_name,
+        botId: botId ? Number(botId) : undefined,
+        botUsername: zaloData.bot?.username,
+        chat: {
+          id: chat.id,
+          chat_type: chat.chat_type
+        },
+        sender: {
+          id: from.id,
+          display_name: from.display_name,
+          is_bot: from.is_bot
+        }
       }
     }
   }

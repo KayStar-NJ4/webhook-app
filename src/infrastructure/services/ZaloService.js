@@ -58,7 +58,9 @@ class ZaloService {
 
       const bot = result.rows[0]
       this.botToken = bot.bot_token
-      this.apiUrl = `${bot.api_url || 'https://bot.zapps.me'}/bot${this.botToken}`
+      // Zalo API URL format: https://bot-api.zapps.me/bot{token}
+      const baseUrl = bot.api_url || 'https://bot-api.zapps.me'
+      this.apiUrl = `${baseUrl}/bot${this.botToken}`
 
       this.logger.info('Zalo service initialized with bot', {
         botId,
@@ -87,7 +89,7 @@ class ZaloService {
       // Support per-bot token override for multi-bot setups
       let requestApiUrl = this.apiUrl
       if (options.botToken) {
-        const baseApiUrl = await this.configurationService.get('zalo.apiUrl', 'https://bot.zapps.me')
+        const baseApiUrl = await this.configurationService.get('zalo.apiUrl', 'https://bot-api.zapps.me')
         requestApiUrl = `${baseApiUrl}/bot${options.botToken}`
       } else if (!requestApiUrl) {
         await this.initialize()
@@ -99,7 +101,7 @@ class ZaloService {
         this.logger.warn('No Zalo API URL configured, trying to get from database')
         const botToken = await this.configurationService.get('zalo.botToken')
         if (botToken) {
-          const baseApiUrl = await this.configurationService.get('zalo.apiUrl', 'https://bot.zapps.me')
+          const baseApiUrl = await this.configurationService.get('zalo.apiUrl', 'https://bot-api.zapps.me')
           requestApiUrl = `${baseApiUrl}/bot${botToken}`
           this.logger.info('Using bot token from database for Zalo API')
         }
@@ -217,14 +219,47 @@ class ZaloService {
    * @param {string} secretToken - Optional secret token
    */
   async setWebhookForBot (botToken, webhookUrl, secretToken) {
-    const baseApiUrl = await this.configurationService.get('zalo.apiUrl', 'https://bot.zapps.me')
+    const baseApiUrl = await this.configurationService.get('zalo.apiUrl', 'https://bot-api.zapps.me')
     const url = `${baseApiUrl}/bot${botToken}/setWebhook`
     const payload = {
-      url: webhookUrl,
-      allowed_updates: ['message'],
-      secret_token: secretToken || undefined
+      url: webhookUrl
     }
+    
+    // Only add secret_token if provided and valid format
+    // Zalo requires: 8-256 characters, only A-Z, a-z, 0-9, _ and - are allowed
+    if (secretToken) {
+      const secretTokenPattern = /^[A-Za-z0-9_-]{8,256}$/
+      if (secretTokenPattern.test(secretToken)) {
+        payload.secret_token = secretToken
+      } else {
+        this.logger.warn('Secret token format invalid, omitting from webhook', {
+          tokenLength: secretToken.length,
+          hasSpecialChars: !secretTokenPattern.test(secretToken)
+        })
+      }
+    }
+    
+    this.logger.info('Setting Zalo webhook', { 
+      url: url.replace(botToken, '***'),
+      webhookUrl,
+      hasSecretToken: !!secretToken
+    })
+    
     const response = await axios.post(url, payload, { timeout: this.timeout })
+    
+    // Check if webhook was set successfully
+    if (response.data.ok !== false) {
+      this.logger.info('Zalo webhook set successfully', { 
+        response: response.data 
+      })
+    } else {
+      this.logger.error('Failed to set Zalo webhook', { 
+        error: response.data.description,
+        errorCode: response.data.error_code,
+        response: response.data 
+      })
+    }
+    
     return response.data
   }
 
@@ -298,7 +333,8 @@ class ZaloService {
       let apiUrl = this.apiUrl
       if (!apiUrl) {
         // Try to get base URL from configuration or use default
-        const baseApiUrl = await this.configurationService.get('zalo.apiUrl', 'https://bot.zapps.me')
+        const baseApiUrl = await this.configurationService.get('zalo.apiUrl', 'https://bot-api.zapps.me')
+        // Zalo API URL format: https://bot-api.zapps.me/bot{token}
         apiUrl = `${baseApiUrl}/bot${this.botToken}`
       }
 
@@ -307,21 +343,19 @@ class ZaloService {
         hasBotToken: !!this.botToken
       })
 
-      const response = await axios.get(`${apiUrl}/getMe`, {
-        timeout: this.timeout
+      // Zalo Bot Platform doesn't have a direct "get bot info" endpoint like Telegram
+      // So we just return basic info extracted from the token
+      const oauthId = this.botToken.split(':')[0] || 'unknown'
+      
+      this.logger.info('Successfully retrieved Zalo bot info from token', {
+        oauthId
       })
-
-      if (response.data.ok) {
-        this.logger.info('Successfully retrieved bot info', {
-          botId: response.data.result.id,
-          botUsername: response.data.result.username
-        })
-        return response.data.result
-      } else {
-        this.logger.warn('Zalo API returned error for getMe', {
-          error: response.data.description
-        })
-        return null
+      
+      return {
+        id: oauthId,
+        username: 'zalo_bot',
+        name: 'Zalo Bot',
+        is_bot: true
       }
     } catch (error) {
       this.logger.error('Failed to get bot info from Zalo API', {

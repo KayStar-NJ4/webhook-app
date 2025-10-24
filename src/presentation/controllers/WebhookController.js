@@ -67,6 +67,39 @@ class WebhookController {
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    */
+  /**
+   * Handle Zalo webhook verification (GET request)
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async handleZaloVerification (req, res) {
+    try {
+      this.logger.info('Received Zalo webhook verification', {
+        query: req.query,
+        params: req.params,
+        headers: req.headers
+      })
+
+      // Zalo Bot Platform sends GET request for webhook verification
+      // Just return 200 OK to confirm webhook is working
+      res.status(200).json({
+        success: true,
+        message: 'Zalo webhook verified successfully',
+        timestamp: new Date().toISOString()
+      })
+    } catch (error) {
+      this.logger.error('Zalo webhook verification error', {
+        error: error.message,
+        query: req.query
+      })
+
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
+
   async handleZaloWebhook (req, res) {
     try {
       const botIdFromPath = req.params?.botId

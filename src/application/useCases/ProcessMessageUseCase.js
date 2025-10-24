@@ -363,6 +363,8 @@ class ProcessMessageUseCase {
       await this.enrichTelegramConversationData(conversationData, message)
     } else if (message.platform === 'chatwoot') {
       await this.enrichChatwootConversationData(conversationData, message)
+    } else if (message.platform === 'zalo') {
+      await this.enrichZaloConversationData(conversationData, message)
     } else if (message.platform === 'web') {
       // Web conversations should be created in WebController already
       throw new Error('Web conversations should not be created here')
@@ -463,6 +465,46 @@ class ProcessMessageUseCase {
       conversationData.groupMemberCount = chat.member_count
       conversationData.groupIsVerified = chat.is_verified || false
       conversationData.groupIsRestricted = chat.is_restricted || false
+    }
+  }
+
+  /**
+   * Enrich Zalo conversation data
+   * @param {Object} conversationData - Conversation data object
+   * @param {Message} message - Message entity
+   */
+  async enrichZaloConversationData (conversationData, message) {
+    const metadata = message.metadata || {}
+    const chat = metadata.chat || {}
+    const sender = metadata.sender || {}
+
+    // Map Zalo chat_type to Telegram chat types
+    const chatTypeMap = {
+      'PRIVATE': 'private',
+      'GROUP': 'group'
+    }
+    conversationData.chatType = chatTypeMap[metadata.chatType] || 'private'
+    conversationData.chatTitle = sender.display_name || 'Zalo Conversation'
+    conversationData.chatUsername = sender.display_name
+    conversationData.chatDescription = null
+
+    // Thông tin sender
+    conversationData.senderId = sender.id
+    conversationData.senderUsername = sender.display_name
+    conversationData.senderFirstName = sender.display_name
+    conversationData.senderLastName = null
+    conversationData.senderLanguageCode = null
+    conversationData.senderIsBot = sender.is_bot || false
+
+    // Thông tin group (nếu là group chat)
+    if (metadata.chatType === 'GROUP') {
+      conversationData.groupId = chat.id
+      conversationData.groupTitle = chat.title
+      conversationData.groupUsername = null
+      conversationData.groupDescription = null
+      conversationData.groupMemberCount = null
+      conversationData.groupIsVerified = false
+      conversationData.groupIsRestricted = false
     }
   }
 
@@ -1833,7 +1875,7 @@ class ProcessMessageUseCase {
 
     // 1. Send message to Dify (REALTIME mode - no conversation history) if mapping allows or no mapping present
     let difyResponse = { conversationId: conversation.difyId, response: null }
-    const anyMappingAllowsDify = routingConfig.hasMapping ? routingConfig.mappings.some(m => m.routing?.difyToChatwoot || m.routing?.difyToTelegram || m.routing?.telegramToDify) : true
+    const anyMappingAllowsDify = routingConfig.hasMapping ? routingConfig.mappings.some(m => m.routing?.difyToChatwoot || m.routing?.difyToTelegram || m.routing?.difyToZalo || m.routing?.telegramToDify || m.routing?.zaloToDify) : true
 
     this.logger.info('Dify processing check (REALTIME mode)', {
       hasMapping: routingConfig.hasMapping,
@@ -2177,6 +2219,56 @@ class ProcessMessageUseCase {
       }
     }
 
+    // 3c. Optionally send response to Zalo if mapping allows
+    const allowDifyToZalo = routingConfig.hasMapping && routingConfig.mappings.some(m => m.routing?.difyToZalo)
+    if (allowDifyToZalo && difyResponse.response) {
+      try {
+        // Map Chatwoot conversation to original Zalo chat
+        const zaloConversation = await this.conversationRepository.findByChatwootId(conversation.chatwootId)
+        if (zaloConversation && zaloConversation.chatId && zaloConversation.platform === 'zalo') {
+          // Extract bot ID from chatId (format: {userId}_bot_{botId})
+          const botIdMatch = zaloConversation.chatId.match(/_bot_(\d+)$/)
+          const botId = botIdMatch ? botIdMatch[1] : null
+          
+          this.logger.info('Extracted bot ID from Zalo chatId for Dify response', {
+            chatId: zaloConversation.chatId,
+            extractedBotId: botId
+          })
+          
+          // Get Zalo bot token
+          const zaloBotToken = await this.getZaloBotToken(botId)
+          
+          if (zaloBotToken) {
+            // Extract actual user chat ID (remove _bot_{botId} suffix)
+            const actualChatId = zaloConversation.chatId.replace(/_bot_\d+$/, '')
+            
+            await this.zaloService.sendMessage(
+              actualChatId,
+              difyResponse.response,
+              { botToken: zaloBotToken }
+            )
+            
+            this.logger.info('✅ Dify response forwarded to Zalo', {
+              chatId: actualChatId,
+              chatwootConversationId: conversation.chatwootId,
+              conversationId: conversation.id,
+              botId: botId
+            })
+          } else {
+            this.logger.warn('No Zalo bot token found for Dify response', { botId })
+          }
+        } else {
+          this.logger.warn('No linked Zalo conversation found to forward Dify response', {
+            chatwootConversationId: conversation.chatwootId,
+            foundConversation: !!zaloConversation,
+            isZalo: zaloConversation?.platform === 'zalo'
+          })
+        }
+      } catch (zaloErr) {
+        this.logger.error('Failed to forward Dify response to Zalo', { error: zaloErr.message })
+      }
+    }
+
     // 3c. Forward Chatwoot outgoing messages to Telegram if Chatwoot is configured
     // LOGIC: Nếu có chatwoot_account_id → TỰ ĐỘNG đồng bộ 2 chiều (không cần routing flag)
     // IMPORTANT: Only forward messages from REAL AGENTS, not from Dify (to prevent duplicates)
@@ -2255,6 +2347,41 @@ class ProcessMessageUseCase {
               messagePreview: message.content?.substring(0, 50),
               usedBotId: telegramMapping?.telegramBotId
             })
+          }
+          // Forward to Zalo
+          else if (platformConversation.platform === 'zalo') {
+            // Extract bot ID from chatId (format: {userId}_bot_{botId})
+            const botIdMatch = platformConversation.chatId.match(/_bot_(\d+)$/)
+            const botId = botIdMatch ? botIdMatch[1] : null
+            
+            this.logger.info('Extracted bot ID from Zalo chatId', {
+              chatId: platformConversation.chatId,
+              extractedBotId: botId
+            })
+            
+            // Get Zalo bot token
+            const zaloBotToken = await this.getZaloBotToken(botId)
+            
+            if (zaloBotToken) {
+              // Extract actual user chat ID (remove _bot_{botId} suffix)
+              const actualChatId = platformConversation.chatId.replace(/_bot_\d+$/, '')
+              
+              await this.zaloService.sendMessage(
+                actualChatId,
+                message.content,
+                { botToken: zaloBotToken }
+              )
+              
+              this.logger.info('✅ Forwarded Chatwoot AGENT message to Zalo', {
+                chatId: actualChatId,
+                chatwootConversationId: conversation.chatwootId,
+                conversationId: conversation.id,
+                messagePreview: message.content?.substring(0, 50),
+                botId: botId
+              })
+            } else {
+              this.logger.warn('No Zalo bot token found', { botId })
+            }
           }
           // Forward to Web
           else if (platformConversation.platform === 'web') {

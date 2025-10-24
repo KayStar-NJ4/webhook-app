@@ -39,9 +39,22 @@ class WebhookRoutes {
       )
     )
 
+    // Zalo webhook verification (GET request)
+    this.router.get('/zalo',
+      this.errorHandler.asyncHandler(
+        (req, res) => this.webhookController.handleZaloVerification(req, res)
+      )
+    )
+
+    this.router.get('/zalo/:botId',
+      this.errorHandler.asyncHandler(
+        (req, res) => this.webhookController.handleZaloVerification(req, res)
+      )
+    )
+
     // Zalo webhook - auto-detect bot ID
     this.router.post('/zalo',
-      this.validation.validate(Validation.schemas.telegramWebhook, 'body'), // Use same schema as Telegram
+      this.validation.validate(Validation.schemas.zaloWebhook, 'body'), // Use Zalo schema
       this.errorHandler.asyncHandler(
         (req, res) => this.webhookController.handleZaloWebhook(req, res)
       )
@@ -49,7 +62,7 @@ class WebhookRoutes {
 
     // Zalo webhook with explicit botId in URL (optional)
     this.router.post('/zalo/:botId',
-      this.validation.validate(Validation.schemas.telegramWebhook, 'body'), // Use same schema as Telegram
+      this.validation.validate(Validation.schemas.zaloWebhook, 'body'), // Use Zalo schema
       this.errorHandler.asyncHandler(
         (req, res) => this.webhookController.handleZaloWebhook(req, res)
       )

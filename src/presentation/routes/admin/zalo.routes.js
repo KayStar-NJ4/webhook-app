@@ -11,15 +11,13 @@ class ZaloRoutes {
     zaloService,
     configurationService,
     authMiddleware,
-    permissionMiddleware,
-    errorHandler
+    permissionMiddleware
   }) {
     this.zaloBotRepository = zaloBotRepository
     this.zaloService = zaloService
     this.configurationService = configurationService
     this.authMiddleware = authMiddleware
     this.permissionMiddleware = permissionMiddleware
-    this.errorHandler = errorHandler
 
     this.router = express.Router()
     this.controller = new ZaloController({
@@ -32,43 +30,47 @@ class ZaloRoutes {
   }
 
   setupRoutes () {
-    // Apply auth middleware to all routes
-    this.router.use(this.authMiddleware.authenticate.bind(this.authMiddleware))
-
     // Zalo bot management API
     this.router.get('/',
+      this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('zalo', 'read'),
-      this.errorHandler.asyncHandler((req, res) => this.controller.getAll(req, res))
+      (req, res) => this.controller.getAll(req, res)
     )
 
     this.router.get('/active',
+      this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('zalo', 'read'),
-      this.errorHandler.asyncHandler((req, res) => this.controller.getActive(req, res))
+      (req, res) => this.controller.getActive(req, res)
     )
 
     this.router.get('/:id',
+      this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('zalo', 'read'),
-      this.errorHandler.asyncHandler((req, res) => this.controller.getById(req, res))
+      (req, res) => this.controller.getById(req, res)
     )
 
     this.router.post('/',
+      this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('zalo', 'create'),
-      this.errorHandler.asyncHandler((req, res) => this.controller.create(req, res))
+      (req, res) => this.controller.create(req, res)
     )
 
     this.router.put('/:id',
+      this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('zalo', 'update'),
-      this.errorHandler.asyncHandler((req, res) => this.controller.update(req, res))
+      (req, res) => this.controller.update(req, res)
     )
 
     this.router.delete('/:id',
+      this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('zalo', 'delete'),
-      this.errorHandler.asyncHandler((req, res) => this.controller.delete(req, res))
+      (req, res) => this.controller.delete(req, res)
     )
 
     this.router.post('/:id/test-connection',
+      this.authMiddleware.verifyToken,
       this.permissionMiddleware.requirePermission('zalo', 'read'),
-      this.errorHandler.asyncHandler((req, res) => this.controller.testConnection(req, res))
+      (req, res) => this.controller.testConnection(req, res)
     )
   }
 

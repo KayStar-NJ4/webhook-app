@@ -107,9 +107,7 @@ class AdminRoutesIndex {
       zaloService,
       configurationService,
       authMiddleware: this.authMiddleware,
-      permissionMiddleware: this.permissionMiddleware,
-      errorHandler: this.errorHandler,
-      logger
+      permissionMiddleware: this.permissionMiddleware
     })
 
     this.chatwootRoutes = new ChatwootRoutes({

@@ -40,24 +40,16 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <form-input-text-component
                                     v-model="form.secretToken"
                                     type="password"
                                     label="Secret Token"
                                     placeholder="Nhập Secret Token (tùy chọn)"
-                                    help-text="Token bí mật để bảo mật webhook"
+                                    help-text="Token bí mật để bảo mật webhook (chỉ A-Z, a-z, 0-9, _, -). Tự động tạo khi tạo bot mới."
                                     :show-password-toggle="true"
                                     auto-complete="off"
                                     :is-token="true"
-                                />
-                            </div>
-                            <div class="col-md-6">
-                                <form-input-text-component
-                                    v-model="form.apiUrl"
-                                    label="API URL"
-                                    placeholder="https://bot.zapps.me"
-                                    help-text="API base URL của Zalo Bot Platform"
                                 />
                             </div>
                         </div>
@@ -140,15 +132,17 @@ export default {
     methods: {
         loadFormData() {
             if (this.object_info && this.object_info.id) {
+                // Edit mode - load existing data
                 this.form = {
                     name: this.object_info.name || '',
                     botToken: this.object_info.bot_token || '',
                     secretToken: this.object_info.secret_token || '',
-                    apiUrl: this.object_info.api_url || 'https://bot.zapps.me',
                     isActive: this.object_info.is_active !== undefined ? this.object_info.is_active : true
                 };
             } else {
+                // Create mode - auto-generate secret token
                 this.clearFormData();
+                this.form.secretToken = this.generateSecretToken();
             }
         },
         async save() {
@@ -198,9 +192,18 @@ export default {
                 name: '',
                 botToken: '',
                 secretToken: '',
-                apiUrl: 'https://bot.zapps.me',
                 isActive: true
             };
+        },
+        generateSecretToken() {
+            // Generate random secret token following Zalo's requirements:
+            // 8-256 characters, only A-Z, a-z, 0-9, _ and - are allowed
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+            let token = 'zalo_' + Date.now() + '_';
+            for (let i = 0; i < 16; i++) {
+                token += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return token;
         },
         setupModalEvents() {
             const modal = document.getElementById('form-modal');
