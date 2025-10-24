@@ -1875,7 +1875,7 @@ class ProcessMessageUseCase {
 
     // 1. Send message to Dify (REALTIME mode - no conversation history) if mapping allows or no mapping present
     let difyResponse = { conversationId: conversation.difyId, response: null }
-    const anyMappingAllowsDify = routingConfig.hasMapping ? routingConfig.mappings.some(m => m.routing?.difyToChatwoot || m.routing?.difyToTelegram || m.routing?.telegramToDify) : true
+    const anyMappingAllowsDify = routingConfig.hasMapping ? routingConfig.mappings.some(m => m.routing?.difyToChatwoot || m.routing?.difyToTelegram || m.routing?.difyToZalo || m.routing?.telegramToDify || m.routing?.zaloToDify) : true
 
     this.logger.info('Dify processing check (REALTIME mode)', {
       hasMapping: routingConfig.hasMapping,
@@ -2216,6 +2216,56 @@ class ProcessMessageUseCase {
         }
       } catch (tgErr) {
         this.logger.error('Failed to forward Dify response to Telegram', { error: tgErr.message })
+      }
+    }
+
+    // 3c. Optionally send response to Zalo if mapping allows
+    const allowDifyToZalo = routingConfig.hasMapping && routingConfig.mappings.some(m => m.routing?.difyToZalo)
+    if (allowDifyToZalo && difyResponse.response) {
+      try {
+        // Map Chatwoot conversation to original Zalo chat
+        const zaloConversation = await this.conversationRepository.findByChatwootId(conversation.chatwootId)
+        if (zaloConversation && zaloConversation.chatId && zaloConversation.platform === 'zalo') {
+          // Extract bot ID from chatId (format: {userId}_bot_{botId})
+          const botIdMatch = zaloConversation.chatId.match(/_bot_(\d+)$/)
+          const botId = botIdMatch ? botIdMatch[1] : null
+          
+          this.logger.info('Extracted bot ID from Zalo chatId for Dify response', {
+            chatId: zaloConversation.chatId,
+            extractedBotId: botId
+          })
+          
+          // Get Zalo bot token
+          const zaloBotToken = await this.getZaloBotToken(botId)
+          
+          if (zaloBotToken) {
+            // Extract actual user chat ID (remove _bot_{botId} suffix)
+            const actualChatId = zaloConversation.chatId.replace(/_bot_\d+$/, '')
+            
+            await this.zaloService.sendMessage(
+              actualChatId,
+              difyResponse.response,
+              { botToken: zaloBotToken }
+            )
+            
+            this.logger.info('✅ Dify response forwarded to Zalo', {
+              chatId: actualChatId,
+              chatwootConversationId: conversation.chatwootId,
+              conversationId: conversation.id,
+              botId: botId
+            })
+          } else {
+            this.logger.warn('No Zalo bot token found for Dify response', { botId })
+          }
+        } else {
+          this.logger.warn('No linked Zalo conversation found to forward Dify response', {
+            chatwootConversationId: conversation.chatwootId,
+            foundConversation: !!zaloConversation,
+            isZalo: zaloConversation?.platform === 'zalo'
+          })
+        }
+      } catch (zaloErr) {
+        this.logger.error('Failed to forward Dify response to Zalo', { error: zaloErr.message })
       }
     }
 
