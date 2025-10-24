@@ -220,9 +220,15 @@ class ZaloService {
    */
   async setWebhookForBot (botToken, webhookUrl, secretToken) {
     const baseApiUrl = await this.configurationService.get('zalo.apiUrl', 'https://bot-api.zapps.me')
+    // Zalo API format: https://bot-api.zapps.me/bot{token}/setWebhook
     const url = `${baseApiUrl}/bot${botToken}/setWebhook`
     const payload = {
       url: webhookUrl
+    }
+    
+    // Add bot token to headers instead
+    const headers = {
+      'X-API-Key': botToken
     }
     
     // Only add secret_token if provided and valid format
@@ -245,7 +251,10 @@ class ZaloService {
       hasSecretToken: !!secretToken
     })
     
-    const response = await axios.post(url, payload, { timeout: this.timeout })
+    const response = await axios.post(url, payload, { 
+      timeout: this.timeout,
+      headers: headers
+    })
     
     // Check if webhook was set successfully
     if (response.data.ok !== false) {
