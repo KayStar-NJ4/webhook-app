@@ -2279,12 +2279,18 @@ class ProcessMessageUseCase {
     const isDifyMessage = messageId && this.difyMessageIds.has(messageId)
     const isRealAgentMessage = message.metadata?.isOutgoing && !this.isBotMessage(message) && !isDifyMessage
     
+    // For Zalo: Always forward Dify messages (they need to see AI responses)
+    const isZaloConversation = conversation.platform === 'zalo'
+    const shouldForwardToZalo = isZaloConversation && message.metadata?.isOutgoing && !this.isBotMessage(message)
+    
     this.logger.info('Checking if should forward Chatwoot message to Telegram', {
       hasChatwootMapping,
       isOutgoing: message.metadata?.isOutgoing,
       isBotMessage: this.isBotMessage(message),
       isDifyMessage,
       isRealAgentMessage,
+      shouldForwardToZalo,
+      isZaloConversation,
       messageId,
       trackedDifyMessages: Array.from(this.difyMessageIds.keys()),
       senderType: message.metadata?.sender?.type,
@@ -2294,7 +2300,7 @@ class ProcessMessageUseCase {
       mappings: routingConfig.mappings?.map(m => ({ id: m.id, chatwootAccountId: m.chatwootAccountId }))
     })
     
-    if (hasChatwootMapping && isRealAgentMessage) {
+    if (hasChatwootMapping && (isRealAgentMessage || shouldForwardToZalo)) {
       try {
         // Find the original platform conversation (Telegram or Web) linked by chatwootId
         const platformConversation = await this.conversationRepository.findByChatwootId(conversation.chatwootId)
