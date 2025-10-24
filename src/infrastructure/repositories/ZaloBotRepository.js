@@ -15,15 +15,15 @@ class ZaloBotRepository {
    */
   async create (botData) {
     try {
-      const { name, botToken, webhookUrl, isActive, createdBy, secretToken } = botData
+      const { name, botToken, webhookUrl, apiUrl, isActive, createdBy, secretToken } = botData
 
       const query = `
-        INSERT INTO zalo_bots (name, bot_token, is_active, created_by, secret_token)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, name, bot_token, is_active, created_at, secret_token
+        INSERT INTO zalo_bots (name, bot_token, webhook_url, api_url, is_active, created_by, secret_token)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
       `
 
-      const result = await this.db.query(query, [name, botToken, isActive, createdBy, secretToken])
+      const result = await this.db.query(query, [name, botToken, webhookUrl, apiUrl, isActive, createdBy, secretToken])
 
       this.logger.info('Zalo bot created', { botId: result.rows[0].id, name })
       return result.rows[0]
@@ -142,20 +142,55 @@ class ZaloBotRepository {
    */
   async update (id, updateData) {
     try {
-      const { name, botToken, isActive, secretToken } = updateData
+      const { name, botToken, isActive, secretToken, webhookUrl, apiUrl } = updateData
+
+      const updates = []
+      const params = []
+      let paramCount = 0
+
+      if (name !== undefined) {
+        paramCount++
+        updates.push(`name = $${paramCount}`)
+        params.push(name)
+      }
+      if (botToken !== undefined) {
+        paramCount++
+        updates.push(`bot_token = $${paramCount}`)
+        params.push(botToken)
+      }
+      if (isActive !== undefined) {
+        paramCount++
+        updates.push(`is_active = $${paramCount}`)
+        params.push(isActive)
+      }
+      if (secretToken !== undefined) {
+        paramCount++
+        updates.push(`secret_token = $${paramCount}`)
+        params.push(secretToken)
+      }
+      if (webhookUrl !== undefined) {
+        paramCount++
+        updates.push(`webhook_url = $${paramCount}`)
+        params.push(webhookUrl)
+      }
+      if (apiUrl !== undefined) {
+        paramCount++
+        updates.push(`api_url = $${paramCount}`)
+        params.push(apiUrl)
+      }
+
+      paramCount++
+      updates.push(`updated_at = CURRENT_TIMESTAMP`)
+      params.push(id)
 
       const query = `
         UPDATE zalo_bots 
-        SET name = COALESCE($1, name),
-            bot_token = COALESCE($2, bot_token),
-            is_active = COALESCE($3, is_active),
-            secret_token = COALESCE($4, secret_token),
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = $5
-        RETURNING id, name, bot_token, is_active, created_at, updated_at, secret_token
+        SET ${updates.join(', ')}
+        WHERE id = $${paramCount}
+        RETURNING *
       `
 
-      const result = await this.db.query(query, [name, botToken, isActive, secretToken, id])
+      const result = await this.db.query(query, params)
 
       if (result.rows.length === 0) {
         throw new Error('Zalo bot not found')

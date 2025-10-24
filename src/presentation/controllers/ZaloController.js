@@ -32,20 +32,54 @@ class ZaloController {
 
   async create (req, res) {
     try {
-      const { name, botToken, secretToken, webhookUrl, apiUrl, isActive = true } = req.body
+      const { name, botToken, secretToken, isActive = true } = req.body
 
       if (!name || !botToken) {
         return res.status(400).json({ success: false, message: 'Name and bot token are required' })
       }
 
+      // Auto-generate webhook URL from system config
+      let appUrl = process.env.APP_URL
+      if (!appUrl) {
+        try {
+          appUrl = await this.configurationService.get('app_url')
+        } catch (configError) {
+          this.logger.warn('Failed to get app_url from config', { error: configError.message })
+        }
+      }
+      appUrl = appUrl || 'https://webhook-bot.turbo.vn'
+
       const bot = await this.zaloBotRepository.create({
-        name, botToken, secretToken, webhookUrl,
-        apiUrl: apiUrl || 'https://bot.zapps.me',
+        name, 
+        botToken, 
+        secretToken, 
+        webhookUrl: null, // Will be set later when we know the bot ID
+        apiUrl: 'https://bot-api.zapps.me', // Fixed API URL
         isActive,
         createdBy: req.user.userId
       })
 
-      res.status(201).json({ success: true, message: 'Zalo bot created successfully', data: bot })
+      // Update webhook URL with bot ID
+      const webhookUrl = `${appUrl}/webhook/zalo/${bot.id}`
+      const updatedBot = await this.zaloBotRepository.update(bot.id, { webhookUrl })
+
+      // Try to set webhook automatically
+      try {
+        await this.zaloService.setWebhookForBot(botToken, webhookUrl, secretToken)
+        this.logger.info('Webhook set successfully for Zalo bot', { botId: bot.id })
+      } catch (webhookError) {
+        this.logger.warn('Failed to set webhook automatically', { 
+          botId: bot.id, 
+          error: webhookError.message 
+        })
+        // Don't fail the bot creation if webhook setup fails
+      }
+
+      res.status(201).json({ 
+        success: true, 
+        message: 'Zalo bot created successfully', 
+        data: updatedBot
+      })
     } catch (error) {
       this.logger.error('Create Zalo bot failed', { error: error.message })
       res.status(500).json({ success: false, message: 'Internal server error' })
@@ -71,10 +105,11 @@ class ZaloController {
   async update (req, res) {
     try {
       const { id } = req.params
-      const { name, botToken, webhookUrl, apiUrl, isActive, secretToken } = req.body
+      const { name, botToken, isActive, secretToken } = req.body
 
+      // Don't allow changing apiUrl and webhookUrl - they're auto-managed
       const bot = await this.zaloBotRepository.update(id, {
-        name, botToken, webhookUrl, apiUrl, isActive, secretToken
+        name, botToken, isActive, secretToken
       })
 
       res.json({ success: true, message: 'Zalo bot updated successfully', data: bot })
@@ -125,18 +160,19 @@ class ZaloController {
       }
 
       this.zaloService.botToken = bot.bot_token
-      this.zaloService.apiUrl = `https://bot.zapps.me/bot${bot.bot_token}`
+      // Zalo API URL format: https://bot-api.zapps.me/bot{token}
+      const baseUrl = bot.api_url || 'https://bot-api.zapps.me'
+      this.zaloService.apiUrl = `${baseUrl}/bot${bot.bot_token}`
 
       try {
         const result = await this.zaloService.getBotInfo()
         
         if (!result) {
-          return res.json({ success: false, data: { connected: false, message: 'Connection failed', botInfo: null } })
+          return res.json({ success: false, data: { connected: false, message: 'Bot token invalid', botInfo: null } })
         }
 
-        let webhookConfigured = false
+        // Generate webhook URL (don't actually set it since Zalo requires manual setup)
         let webhookUrl = null
-
         try {
           const axios = require('axios')
           let appUrl = process.env.APP_URL
@@ -150,23 +186,48 @@ class ZaloController {
           
           appUrl = appUrl || 'https://webhook-bot.turbo.vn'
           webhookUrl = `${appUrl}/webhook/zalo/${bot.id}`
-          
-          const webhookResponse = await axios.post(`https://bot.zapps.me/bot${bot.bot_token}/setWebhook`, {
-            url: webhookUrl,
-            allowed_updates: ['message']
-          }, {
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 10000
-          })
-
-          if (webhookResponse.data.ok) {
-            webhookConfigured = true
-          }
         } catch (webhookErr) {
-          this.logger.error('Error setting Zalo webhook', { botId: bot.id, error: webhookErr.message })
+          this.logger.error('Error generating webhook URL', { botId: bot.id, error: webhookErr.message })
         }
 
-        res.json({ success: true, data: { connected: true, message: webhookConfigured ? 'Connection successful and webhook configured' : 'Connection successful but webhook setup failed', botInfo: result, webhookConfigured, webhookUrl } })
+        // Try to set webhook automatically
+        let webhookSetResult = null
+        if (webhookUrl) {
+          try {
+            webhookSetResult = await this.zaloService.setWebhookForBot(bot.bot_token, webhookUrl, bot.secret_token)
+            
+            // Check if webhook was actually set successfully
+            if (webhookSetResult.ok !== false) {
+              this.logger.info('Webhook set successfully during test', { botId: bot.id })
+            } else {
+              this.logger.warn('Webhook set failed during test', { 
+                botId: bot.id, 
+                error: webhookSetResult.description,
+                errorCode: webhookSetResult.error_code
+              })
+            }
+          } catch (webhookError) {
+            this.logger.warn('Failed to set webhook during test', { 
+              botId: bot.id, 
+              error: webhookError.message 
+            })
+          }
+        }
+
+        const webhookSuccess = webhookSetResult && webhookSetResult.ok !== false
+        
+        res.json({ 
+          success: true, 
+          data: { 
+            connected: true, 
+            message: webhookSuccess ? 'Bot token valid and webhook configured successfully' : (webhookSetResult ? `Bot token valid but webhook setup failed: ${webhookSetResult.description}` : 'Bot token is valid. Please configure webhook manually in Zalo Bot Platform.'), 
+            botInfo: result, 
+            webhookConfigured: webhookSuccess, 
+            webhookUrl,
+            webhookResult: webhookSetResult,
+            note: webhookSuccess ? 'Webhook configured successfully. Try sending a message to the bot.' : (webhookSetResult ? 'Please check secret token format (only A-Z, a-z, 0-9, _, - allowed)' : 'Zalo Bot Platform requires manual webhook configuration through their dashboard')
+          } 
+        })
       } finally {
         this.zaloService.botToken = originalConfig.botToken
         this.zaloService.apiUrl = originalConfig.apiUrl

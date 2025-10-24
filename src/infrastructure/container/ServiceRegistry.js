@@ -337,7 +337,11 @@ class ServiceRegistry {
         logger.warn('Dify service connection test failed')
       }
     } catch (error) {
-      logger.error('Service initialization failed', { error: error.message })
+      logger.error('Service initialization failed', { 
+        error: error.message,
+        stack: error.stack,
+        details: error
+      })
       throw error
     }
   }

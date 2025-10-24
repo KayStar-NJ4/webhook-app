@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS zalo_bots (
     bot_token VARCHAR(255) NOT NULL,
     secret_token TEXT,
     webhook_url VARCHAR(500),
-    api_url VARCHAR(255) DEFAULT 'https://bot.zapps.me',
+    api_url VARCHAR(255) DEFAULT 'https://bot-api.zapps.me',
     is_active BOOLEAN DEFAULT true,
     created_by INTEGER REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -57,7 +57,7 @@ COMMENT ON TABLE zalo_bots IS 'Zalo Bots for integration with Chatwoot and Dify'
 COMMENT ON COLUMN zalo_bots.bot_token IS 'Zalo Bot token (format: oauth_id:token)';
 COMMENT ON COLUMN zalo_bots.secret_token IS 'Secret token for webhook verification (optional)';
 COMMENT ON COLUMN zalo_bots.webhook_url IS 'Webhook URL for receiving messages from Zalo';
-COMMENT ON COLUMN zalo_bots.api_url IS 'Zalo Bot API base URL (default: https://bot.zapps.me)';
+COMMENT ON COLUMN zalo_bots.api_url IS 'Zalo Bot API base URL (default: https://bot-api.zapps.me)';
 
 COMMIT;
 
