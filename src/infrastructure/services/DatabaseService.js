@@ -213,6 +213,120 @@ class DatabaseService {
   }
 
   /**
+   * Get Zalo bot token from database
+   * @param {number} botId - Zalo bot ID
+   * @returns {Promise<string|null>} - Bot token or null
+   */
+  async getZaloBotToken (botId) {
+    if (!botId) return null
+
+    // Check cache first
+    const cacheKey = `zalo_bot_token_${botId}`
+    const cached = this.botTokenCache.get(cacheKey)
+    const expiry = this.botTokenCacheExpiry.get(cacheKey)
+
+    if (cached && expiry && Date.now() < expiry) {
+      this.logger.info('Zalo bot token retrieved from cache', { botId })
+      return cached
+    }
+
+    try {
+      const pool = this.getPool()
+      const result = await pool.query('SELECT bot_token FROM zalo_bots WHERE id = $1 AND is_active = true', [botId])
+
+      this.logger.info('Zalo bot token query result', { 
+        botId, 
+        rowsCount: result.rows.length,
+        hasToken: result.rows.length > 0 ? !!result.rows[0].bot_token : false
+      })
+
+      if (result.rows.length === 0) {
+        this.logger.warn('Zalo bot not found or inactive', { botId })
+        return null
+      }
+
+      const token = result.rows[0].bot_token
+
+      // Cache the token
+      this.botTokenCache.set(cacheKey, token)
+      this.botTokenCacheExpiry.set(cacheKey, Date.now() + this.cacheTimeout)
+
+      this.logger.info('Zalo bot token retrieved from database and cached', { botId })
+      return token
+    } catch (error) {
+      this.logger.error('Failed to get Zalo bot token', { error: error.message, botId })
+      return null
+    }
+  }
+
+  /**
+   * Get Zalo bot ID by secret token
+   * @param {string} secretToken - Secret token
+   * @returns {Promise<number|null>} - Bot ID or null
+   */
+  async getZaloBotIdBySecretToken (secretToken) {
+    if (!secretToken) return null
+
+    // Check cache first
+    const cacheKey = `zalo_bot_id_${secretToken}`
+    const cached = this.botTokenCache.get(cacheKey)
+    const expiry = this.botTokenCacheExpiry.get(cacheKey)
+
+    if (cached && expiry && Date.now() < expiry) {
+      this.logger.info('Zalo bot ID retrieved from cache', { secretToken })
+      return cached
+    }
+
+    try {
+      const pool = this.getPool()
+      const result = await pool.query(
+        'SELECT id FROM zalo_bots WHERE secret_token = $1 AND is_active = true LIMIT 1',
+        [secretToken]
+      )
+
+      if (result.rows.length === 0) {
+        this.logger.warn('Zalo bot not found for secret token', { secretToken })
+        return null
+      }
+
+      const botId = result.rows[0].id
+
+      // Cache the bot ID
+      this.botTokenCache.set(cacheKey, botId)
+      this.botTokenCacheExpiry.set(cacheKey, Date.now() + this.cacheTimeout)
+
+      this.logger.info('Zalo bot ID retrieved from database and cached', { botId, secretToken })
+      return botId
+    } catch (error) {
+      this.logger.error('Failed to get Zalo bot ID by secret token', { error: error.message, secretToken })
+      return null
+    }
+  }
+
+  /**
+   * Get first active Zalo bot ID
+   * @returns {Promise<number|null>} - Bot ID or null
+   */
+  async getFirstActiveZaloBotId () {
+    try {
+      const pool = this.getPool()
+      const result = await pool.query('SELECT id FROM zalo_bots WHERE is_active = true ORDER BY id LIMIT 1')
+
+      if (result.rows.length === 0) {
+        this.logger.warn('No active Zalo bots found')
+        return null
+      }
+
+      const botId = result.rows[0].id
+      this.logger.info('First active Zalo bot ID retrieved', { botId })
+      return botId
+    } catch (error) {
+      this.logger.error('Failed to get first active Zalo bot ID', { error: error.message })
+      return null
+    }
+  }
+
+  /**
    * Get Chatwoot account by external account ID
    * @param {number} externalAccountId - External account ID
    * @returns {Promise<Object|null>} - Chatwoot account or null

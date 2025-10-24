@@ -63,6 +63,60 @@ class WebhookController {
   }
 
   /**
+   * Handle Zalo webhook
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async handleZaloWebhook (req, res) {
+    try {
+      const botIdFromPath = req.params?.botId
+      const secretToken = req.headers['x-zalo-bot-api-secret-token']
+
+      this.logger.info('Received Zalo webhook', {
+        body: req.body,
+        botIdFromPath,
+        hasSecretToken: !!secretToken,
+        hasMessage: !!req.body.message,
+        messageId: req.body.message?.message_id,
+        chatId: req.body.message?.chat?.id,
+        chatType: req.body.message?.chat?.type,
+        chatTitle: req.body.message?.chat?.title,
+        userId: req.body.message?.from?.id,
+        userName: req.body.message?.from?.first_name,
+        hasText: !!req.body.message?.text,
+        textPreview: req.body.message?.text?.substring(0, 50)
+      })
+
+      // Attach botId to body metadata if provided
+      const body = { ...req.body }
+      if (botIdFromPath) {
+        body.__bot_id = botIdFromPath
+      }
+      if (secretToken) {
+        body.__secret_token = secretToken
+      }
+
+      const result = await this.messageBrokerService.handleZaloWebhook(body)
+
+      res.status(200).json({
+        success: true,
+        data: result
+      })
+    } catch (error) {
+      this.logger.error('Zalo webhook error', {
+        error: error.message,
+        stack: error.stack,
+        body: req.body
+      })
+
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
+
+  /**
    * Handle Chatwoot webhook verification (GET request)
    * @param {Object} req - Express request
    * @param {Object} res - Express response

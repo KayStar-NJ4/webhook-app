@@ -269,6 +269,199 @@ class MessageBrokerService {
   }
 
   /**
+   * Handle Zalo webhook
+   * @param {Object} zaloData - Raw Zalo webhook data
+   * @returns {Promise<Object>} - Processing result
+   */
+  async handleZaloWebhook (zaloData) {
+    try {
+      // Get bot info from database if available
+      let botInfo = null
+      if (zaloData.__bot_id) {
+        try {
+          // Get bot info from database service
+          const databaseService = this.container.get('databaseService')
+          const botToken = await databaseService.getZaloBotToken(zaloData.__bot_id)
+          
+          if (botToken) {
+            // Extract bot ID from token (format: oauth_id:token)
+            const tokenParts = botToken.split(':')
+            if (tokenParts.length >= 2) {
+              botInfo = {
+                id: parseInt(zaloData.__bot_id),
+                username: `bot${tokenParts[0]}`
+              }
+            }
+          }
+        } catch (dbError) {
+          this.logger.warn('Failed to get bot info from database', { error: dbError.message })
+        }
+      }
+
+      // Attach bot info to zaloData
+      if (botInfo) {
+        zaloData.bot = botInfo
+      }
+
+      this.logger.info('Processing Zalo webhook', {
+        messageId: zaloData.message?.message_id,
+        chatId: zaloData.message?.chat?.id,
+        timestamp: new Date().toISOString()
+      })
+
+      const messageData = this.parseZaloMessage(zaloData)
+      return await this.handleMessage('zalo', messageData)
+    } catch (error) {
+      // Check if this is a skippable error
+      const isSkippableError = error.message && (
+        error.message.includes('skipped') ||
+        error.message.includes('Special event message') ||
+        error.message.includes('Non-text message') ||
+        error.message.includes('not mentioned in group')
+      )
+
+      if (isSkippableError) {
+        // Return success for skippable messages to prevent Zalo from retrying
+        this.logger.info('Zalo webhook processed but message skipped', {
+          reason: error.message,
+          messageId: zaloData.message?.message_id,
+          chatId: zaloData.message?.chat?.id
+        })
+        return { success: true, message: 'Message skipped', reason: error.message }
+      }
+
+      // For real errors, log and throw
+      this.logger.error('Failed to handle Zalo webhook', {
+        error: error.message,
+        stack: error.stack,
+        zaloData
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Parse Zalo message data
+   * @param {Object} zaloData - Raw Zalo data
+   * @returns {Object} - Parsed message data
+   */
+  parseZaloMessage (zaloData) {
+    // Validate webhook data structure
+    if (!zaloData || !zaloData.message) {
+      this.logger.warn('Invalid Zalo webhook data - no message found', { zaloData })
+      throw new Error('Invalid Zalo webhook data - no message found')
+    }
+
+    const message = zaloData.message
+    const chat = message.chat
+    const from = message.from
+
+    // Validate required fields
+    if (!chat || !from) {
+      this.logger.warn('Invalid Zalo message structure', { message })
+      throw new Error('Invalid Zalo message structure - missing chat or from data')
+    }
+
+    // Skip messages from this bot to prevent loops
+    if (from.is_bot && from.id === zaloData.bot?.id) {
+      this.logger.info('Skipping message from this bot to prevent loops', {
+        messageId: message.message_id,
+        botId: from.id,
+        isThisBot: true
+      })
+      throw new Error('Message from this bot skipped to prevent loops')
+    }
+
+    // Skip special event messages
+    const isSpecialEvent = !!(
+      message.new_chat_member ||
+      message.new_chat_members ||
+      message.new_chat_participant ||
+      message.left_chat_member ||
+      message.migrate_from_chat_id ||
+      message.migrate_to_chat_id ||
+      message.group_chat_created ||
+      message.supergroup_chat_created ||
+      message.channel_chat_created
+    )
+
+    if (isSpecialEvent) {
+      this.logger.info('Skipping special event message from Zalo', {
+        messageId: message.message_id,
+        chatId: chat.id,
+        chatType: chat.type,
+        eventType: message.new_chat_member ? 'new_chat_member' :
+                   message.new_chat_members ? 'new_chat_members' :
+                   message.left_chat_member ? 'left_chat_member' :
+                   message.migrate_from_chat_id ? 'migrate_from_chat_id' :
+                   message.migrate_to_chat_id ? 'migrate_to_chat_id' :
+                   message.group_chat_created ? 'group_chat_created' :
+                   message.supergroup_chat_created ? 'supergroup_chat_created' :
+                   message.channel_chat_created ? 'channel_chat_created' : 'unknown'
+      })
+      throw new Error('Special event message skipped - no processing needed')
+    }
+
+    // Skip messages without text content
+    if (!message.text || !message.text.trim()) {
+      this.logger.info('Skipping non-text message from Zalo', {
+        messageId: message.message_id,
+        chatId: chat.id,
+        hasText: !!message.text
+      })
+      throw new Error('Non-text message skipped')
+    }
+
+    const isGroupChat = chat.type === 'group' || chat.type === 'supergroup'
+    
+    // Include bot ID in conversation ID to separate conversations between different bots
+    const botId = zaloData.bot?.id || zaloData.__bot_id
+    const baseConversationId = isGroupChat ? chat.id.toString() : from.id.toString()
+    const conversationId = botId ? `${baseConversationId}_bot_${botId}` : baseConversationId
+
+    // For group chats, check if bot is mentioned
+    let isBotMentioned = false
+    if (isGroupChat && message.text) {
+      const botUsername = zaloData.bot?.username
+      if (botUsername && message.text.includes(`@${botUsername}`)) {
+        isBotMentioned = true
+      }
+    }
+
+    // For group chats, only respond when bot is mentioned
+    if (isGroupChat && !isBotMentioned) {
+      this.logger.info('Skipping Zalo group message - bot not mentioned', {
+        messageId: message.message_id,
+        chatId: chat.id,
+        chatTitle: chat.title,
+        messageText: message.text.substring(0, 50)
+      })
+      throw new Error('Bot not mentioned in group message')
+    }
+
+    return {
+      id: `zalo_${message.message_id}`,
+      platform: 'zalo',
+      text: message.text,
+      timestamp: message.date ? new Date(message.date * 1000).toISOString() : new Date().toISOString(),
+      conversationId: conversationId,
+      chatId: chat.id.toString(),
+      chatType: chat.type,
+      chatTitle: chat.title,
+      senderId: from.id.toString(),
+      senderName: `${from.first_name || ''} ${from.last_name || ''}`.trim() || from.username || 'Unknown',
+      senderUsername: from.username,
+      isGroupChat: isGroupChat,
+      isBotMentioned: isBotMentioned,
+      platformMetadata: {
+        messageId: message.message_id,
+        botId: botId,
+        botUsername: zaloData.bot?.username
+      }
+    }
+  }
+
+  /**
    * Handle Chatwoot webhook
    * @param {Object} chatwootData - Chatwoot webhook data
    * @returns {Promise<Object>} - Processing result

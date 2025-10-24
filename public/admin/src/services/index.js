@@ -5,6 +5,7 @@ window.Services = {
   AuthService: window.AuthService,
   AdminService: window.AdminService,
   TelegramService: window.TelegramService,
+  ZaloService: window.ZaloService,
   ChatwootService: window.ChatwootService,
   DifyService: window.DifyService,
   PlatformMappingService: window.PlatformMappingService,

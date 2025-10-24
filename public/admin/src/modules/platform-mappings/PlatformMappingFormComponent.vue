@@ -193,6 +193,7 @@ export default {
       },
       available: {
         telegramBots: [],
+        zaloBots: [],
         webApps: [],
         chatwootAccounts: [],
         difyApps: []

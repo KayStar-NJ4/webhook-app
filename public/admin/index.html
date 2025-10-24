@@ -150,6 +150,7 @@
     <script src="/admin/src/services/AuthService.js"></script>
     <script src="/admin/src/services/AdminService.js"></script>
     <script src="/admin/src/services/TelegramService.js"></script>
+    <script src="/admin/src/services/ZaloService.js"></script>
     <script src="/admin/src/services/ChatwootService.js"></script>
     <script src="/admin/src/services/DifyService.js"></script>
     <script src="/admin/src/services/WebService.js"></script>
@@ -356,6 +357,16 @@
             TelegramBotsPageComponent = await loadVueComponent('/admin/src/modules/telegram/TelegramBotsPageComponent.vue');
             window.TelegramBotsPageComponent = TelegramBotsPageComponent;
             
+            // Load Zalo components
+            ZaloBotsListComponent = await loadVueComponent('/admin/src/modules/zalo/ZaloBotsListComponent.vue');
+            window.ZaloBotsListComponent = ZaloBotsListComponent;
+            
+            ZaloBotFormComponent = await loadVueComponent('/admin/src/modules/zalo/ZaloBotFormComponent.vue');
+            window.ZaloBotFormComponent = ZaloBotFormComponent;
+            
+            ZaloBotsPageComponent = await loadVueComponent('/admin/src/modules/zalo/ZaloBotsPageComponent.vue');
+            window.ZaloBotsPageComponent = ZaloBotsPageComponent;
+            
             // Load Web Apps components
             WebAppsListComponent = await loadVueComponent('/admin/src/modules/web/WebAppsListComponent.vue');
             window.WebAppsListComponent = WebAppsListComponent;
@@ -455,6 +466,13 @@
                 component: window.AdminLayoutComponent,
                 children: [
                     { path: '', component: window.TelegramBotsPageComponent }
+                ]
+            },
+            {
+                path: '/admin/zalo-bots',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.ZaloBotsPageComponent }
                 ]
             },
             {
