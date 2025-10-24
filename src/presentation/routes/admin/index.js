@@ -9,6 +9,7 @@ class AdminRoutesIndex {
     userRepository,
     customerService,
     telegramBotRepository,
+    zaloBotRepository,
     chatwootAccountRepository,
     difyAppRepository,
     webAppRepository,
@@ -22,6 +23,7 @@ class AdminRoutesIndex {
     permissionService,
     platformMappingService,
     telegramService,
+    zaloService,
     chatwootService,
     difyService,
     logger
@@ -32,9 +34,11 @@ class AdminRoutesIndex {
     // Initialize middleware
     const AuthMiddleware = require('../../middleware/AuthMiddleware')
     const PermissionMiddleware = require('../../middleware/PermissionMiddleware')
+    const ErrorHandler = require('../../middleware/ErrorHandler')
     
     this.authMiddleware = new AuthMiddleware({ logger, configurationService })
     this.permissionMiddleware = new PermissionMiddleware({ permissionService, logger })
+    this.errorHandler = new ErrorHandler({ logger })
 
     // Initialize route modules
     const AuthRoutes = require('./auth.routes')
@@ -43,6 +47,7 @@ class AdminRoutesIndex {
     const RolesRoutes = require('./roles.routes')
     const PermissionsRoutes = require('./permissions.routes')
     const TelegramRoutes = require('./telegram.routes')
+    const ZaloRoutes = require('./zalo.routes')
     const ChatwootRoutes = require('./chatwoot.routes')
     const DifyRoutes = require('./dify.routes')
     const WebRoutes = require('./web.routes')
@@ -95,6 +100,14 @@ class AdminRoutesIndex {
       authMiddleware: this.authMiddleware,
       permissionMiddleware: this.permissionMiddleware,
       logger
+    })
+
+    this.zaloRoutes = new ZaloRoutes({
+      zaloBotRepository,
+      zaloService,
+      configurationService,
+      authMiddleware: this.authMiddleware,
+      permissionMiddleware: this.permissionMiddleware
     })
 
     this.chatwootRoutes = new ChatwootRoutes({
@@ -160,6 +173,7 @@ class AdminRoutesIndex {
     this.router.use('/roles', this.rolesRoutes.getRouter())
     this.router.use('/permissions', this.permissionsRoutes.getRouter())
     this.router.use('/telegram-bots', this.telegramRoutes.getRouter())
+    this.router.use('/zalo-bots', this.zaloRoutes.getRouter())
     this.router.use('/chatwoot-accounts', this.chatwootRoutes.getRouter())
     this.router.use('/dify-apps', this.difyRoutes.getRouter())
     this.router.use('/configurations', this.configsRoutes.getRouter())

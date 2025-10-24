@@ -3,11 +3,12 @@
  */
 class Platform {
   static TELEGRAM = 'telegram'
+  static ZALO = 'zalo'
   static CHATWOOT = 'chatwoot'
   static DIFY = 'dify'
   static WEB = 'web'
 
-  static ALL = [Platform.TELEGRAM, Platform.CHATWOOT, Platform.DIFY, Platform.WEB]
+  static ALL = [Platform.TELEGRAM, Platform.ZALO, Platform.CHATWOOT, Platform.DIFY, Platform.WEB]
 
   constructor (value) {
     if (!Platform.ALL.includes(value)) {
@@ -26,6 +27,10 @@ class Platform {
 
   isTelegram () {
     return this.value === Platform.TELEGRAM
+  }
+
+  isZalo () {
+    return this.value === Platform.ZALO
   }
 
   isChatwoot () {

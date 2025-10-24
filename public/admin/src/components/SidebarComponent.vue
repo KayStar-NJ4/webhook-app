@@ -56,7 +56,7 @@
 
           <!-- Mạng xã hội -->
           <li class="nav-item has-treeview" 
-              v-if="hasPermission('telegram', 'read') || hasPermission('web', 'read')"
+              v-if="hasPermission('telegram', 'read') || hasPermission('zalo', 'read') || hasPermission('web', 'read')"
               :class="{ 'menu-open': isMenuOpen('social-network') }">
             <a href="#" class="nav-link" :class="{ 'active': isMenuActive('social-network') }" @click="toggleMenu('social-network')">
               <i class="nav-icon fas fa-share-alt"></i>
@@ -66,13 +66,22 @@
               </p>
             </a>
             <ul class="nav nav-treeview" :style="{ display: isMenuOpen('social-network') ? 'block' : 'none' }">
-              <li class="nav-item">
+              <li class="nav-item" v-if="hasPermission('telegram', 'read')">
                 <a href="#" 
                    class="nav-link" 
                    :class="{ active: activeRoute === '/admin/telegram-bots' }"
                    @click="navigate('/admin/telegram-bots')">
                   <i class="nav-icon fab fa-telegram"></i>
                   <p>Telegram</p>
+                </a>
+              </li>
+              <li class="nav-item" v-if="hasPermission('zalo', 'read')">
+                <a href="#" 
+                   class="nav-link" 
+                   :class="{ active: activeRoute === '/admin/zalo-bots' }"
+                   @click="navigate('/admin/zalo-bots')">
+                  <i class="nav-icon fas fa-comment"></i>
+                  <p>Zalo</p>
                 </a>
               </li>
               <li class="nav-item" v-if="hasPermission('web', 'read')">
@@ -210,7 +219,7 @@ export default {
       if (menuKey === 'data-source') {
         return this.activeRoute.includes('/admin/chatwoot-accounts') || this.activeRoute.includes('/admin/dify-apps');
       } else if (menuKey === 'social-network') {
-        return this.activeRoute.includes('/admin/telegram-bots') || this.activeRoute.includes('/admin/web-apps');
+        return this.activeRoute.includes('/admin/telegram-bots') || this.activeRoute.includes('/admin/zalo-bots') || this.activeRoute.includes('/admin/web-apps');
       } else if (menuKey === 'marketing') {
         return this.activeRoute.includes('/admin/customers') || this.activeRoute.includes('/admin/platform-mappings');
       } else if (menuKey === 'system-settings') {
@@ -240,7 +249,7 @@ export default {
     const currentRoute = this.activeRoute;
     if (currentRoute.includes('/admin/chatwoot-accounts') || currentRoute.includes('/admin/dify-apps')) {
       this.openMenus.add('data-source');
-    } else if (currentRoute.includes('/admin/telegram-bots') || currentRoute.includes('/admin/web-apps')) {
+    } else if (currentRoute.includes('/admin/telegram-bots') || currentRoute.includes('/admin/zalo-bots') || currentRoute.includes('/admin/web-apps')) {
       this.openMenus.add('social-network');
     } else if (currentRoute.includes('/admin/customers') || currentRoute.includes('/admin/platform-mappings')) {
       this.openMenus.add('marketing');

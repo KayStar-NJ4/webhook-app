@@ -6,10 +6,12 @@ class PlatformMappingService {
   constructor ({
     platformMappingRepository,
     telegramBotRepository,
+    zaloBotRepository,
     webAppRepository,
     chatwootAccountRepository,
     difyAppRepository,
     telegramService,
+    zaloService,
     chatwootService,
     difyService,
     configurationService,
@@ -17,10 +19,12 @@ class PlatformMappingService {
   }) {
     this.platformMappingRepository = platformMappingRepository
     this.telegramBotRepository = telegramBotRepository
+    this.zaloBotRepository = zaloBotRepository
     this.webAppRepository = webAppRepository
     this.chatwootAccountRepository = chatwootAccountRepository
     this.difyAppRepository = difyAppRepository
     this.telegramService = telegramService
+    this.zaloService = zaloService
     this.configurationService = configurationService
     this.chatwootService = chatwootService
     this.difyService = difyService
@@ -350,6 +354,62 @@ class PlatformMappingService {
   }
 
   /**
+   * Get routing configuration for a Zalo bot
+   * @param {number} zaloBotId - Zalo bot ID
+   * @returns {Promise<Object>} - Routing configuration
+   */
+  async getRoutingConfigurationForZalo (zaloBotId) {
+    try {
+      // Find routes where source=zalo/botId
+      const routes = await this.platformMappingRepository.findRoutesFor('zalo', zaloBotId)
+
+      if (routes.length === 0) {
+        return {
+          hasMapping: false,
+          mappings: []
+        }
+      }
+
+      // Use new auto-detection logic based on non-null IDs
+      const routingConfig = {
+        hasMapping: true,
+        mappings: routes.map(r => ({
+          id: r.id,
+          zaloBotId: zaloBotId,
+          chatwootAccountId: r.chatwoot_account_id,
+          difyAppId: r.dify_app_id,
+          routing: {
+            // Auto-detect from non-null IDs
+            zaloToChatwoot: !!r.chatwoot_account_id,
+            zaloToDify: !!r.dify_app_id,
+            // Auto-sync behaviors
+            chatwootToZalo: !!r.chatwoot_account_id, // Chatwoot employees auto-sync to source
+            difyToChatwoot: !!r.dify_app_id && !!r.chatwoot_account_id, // Dify auto-syncs to Chatwoot when both present
+            difyToZalo: !!r.dify_app_id // Dify auto-replies to source
+          },
+          autoConnect: {
+            zaloChatwoot: !!r.chatwoot_account_id,
+            zaloDify: !!r.dify_app_id
+          }
+        }))
+      }
+
+      this.logger.info('Retrieved routing configuration for Zalo', {
+        zaloBotId,
+        mappingCount: routes.length
+      })
+
+      return routingConfig
+    } catch (error) {
+      this.logger.error('Failed to get routing configuration for Zalo', {
+        error: error.message,
+        zaloBotId
+      })
+      throw error
+    }
+  }
+
+  /**
    * Get routing configuration by Chatwoot external account ID
    * @param {number|string} chatwootExternalAccountId - Chatwoot external account id (chatwoot.accounts.account_id)
    * @returns {Promise<Object>} - Routing configuration
@@ -459,6 +519,9 @@ class PlatformMappingService {
     if (platform(sourcePlatform) === 'telegram') {
       const bot = await this.telegramBotRepository.findById(sourceId)
       if (!bot || !bot.is_active) throw new Error('Source Telegram bot not found or inactive')
+    } else if (platform(sourcePlatform) === 'zalo') {
+      const bot = await this.zaloBotRepository.findById(sourceId)
+      if (!bot || !bot.is_active) throw new Error('Source Zalo bot not found or inactive')
     } else if (platform(sourcePlatform) === 'web') {
       const webApp = await this.webAppRepository.findById(sourceId)
       if (!webApp || !webApp.is_active) throw new Error('Source Web app not found or inactive')
@@ -492,6 +555,9 @@ class PlatformMappingService {
     if (platform(sourcePlatform) === 'telegram') {
       const bot = await this.telegramBotRepository.findById(sourceId)
       if (!bot || !bot.is_active) throw new Error('Source Telegram bot not found or inactive')
+    } else if (platform(sourcePlatform) === 'zalo') {
+      const bot = await this.zaloBotRepository.findById(sourceId)
+      if (!bot || !bot.is_active) throw new Error('Source Zalo bot not found or inactive')
     } else if (platform(sourcePlatform) === 'web') {
       const webApp = await this.webAppRepository.findById(sourceId)
       if (!webApp || !webApp.is_active) throw new Error('Source Web app not found or inactive')
@@ -509,6 +575,9 @@ class PlatformMappingService {
     if (platform(targetPlatform) === 'telegram') {
       const bot = await this.telegramBotRepository.findById(targetId)
       if (!bot || !bot.is_active) throw new Error('Target Telegram bot not found or inactive')
+    } else if (platform(targetPlatform) === 'zalo') {
+      const bot = await this.zaloBotRepository.findById(targetId)
+      if (!bot || !bot.is_active) throw new Error('Target Zalo bot not found or inactive')
     } else if (platform(targetPlatform) === 'chatwoot') {
       const acc = await this.chatwootAccountRepository.findById(targetId)
       if (!acc || !acc.is_active) throw new Error('Target Chatwoot account not found or inactive')
@@ -526,8 +595,9 @@ class PlatformMappingService {
    */
   async getAvailablePlatforms () {
     try {
-      const [telegramBotsResult, webAppsResult, chatwootAccountsResult, difyAppsResult] = await Promise.all([
+      const [telegramBotsResult, zaloBotsResult, webAppsResult, chatwootAccountsResult, difyAppsResult] = await Promise.all([
         this.telegramBotRepository.findAll({ isActive: true, limit: 1000 }),
+        this.zaloBotRepository.findAll({ isActive: true, limit: 1000 }),
         this.webAppRepository.findAll({ isActive: true, limit: 1000 }),
         this.chatwootAccountRepository.findAll({ isActive: true, limit: 1000 }),
         this.difyAppRepository.findAll({ isActive: true, limit: 1000 })
@@ -535,12 +605,18 @@ class PlatformMappingService {
 
       // Extract data arrays from pagination results
       const telegramBots = telegramBotsResult.data || telegramBotsResult.bots || []
+      const zaloBots = zaloBotsResult.data || zaloBotsResult.bots || []
       const webApps = webAppsResult.data || webAppsResult.apps || []
       const chatwootAccounts = chatwootAccountsResult.data || chatwootAccountsResult.accounts || []
       const difyApps = difyAppsResult.data || difyAppsResult.apps || []
 
       const availablePlatforms = {
         telegramBots: telegramBots.map(bot => ({
+          id: bot.id,
+          name: bot.name,
+          isActive: bot.is_active
+        })),
+        zaloBots: zaloBots.map(bot => ({
           id: bot.id,
           name: bot.name,
           isActive: bot.is_active
@@ -567,6 +643,7 @@ class PlatformMappingService {
 
       this.logger.info('Retrieved available platforms', {
         telegramBotCount: availablePlatforms.telegramBots.length,
+        zaloBotCount: availablePlatforms.zaloBots.length,
         webAppCount: availablePlatforms.webApps.length,
         chatwootAccountCount: availablePlatforms.chatwootAccounts.length,
         difyAppCount: availablePlatforms.difyApps.length

@@ -9,6 +9,7 @@ const LogRepository = require('../repositories/LogRepository')
 const ConfigurationRepository = require('../repositories/ConfigurationRepository')
 const UserRepository = require('../repositories/UserRepository')
 const TelegramBotRepository = require('../repositories/TelegramBotRepository')
+const ZaloBotRepository = require('../repositories/ZaloBotRepository')
 const ChatwootAccountRepository = require('../repositories/ChatwootAccountRepository')
 const DifyAppRepository = require('../repositories/DifyAppRepository')
 const RoleRepository = require('../repositories/RoleRepository')
@@ -21,6 +22,7 @@ const CustomerRepository = require('../repositories/CustomerRepository')
 
 // Services
 const TelegramService = require('../services/TelegramService')
+const ZaloService = require('../services/ZaloService')
 const ChatwootService = require('../services/ChatwootService')
 const DifyService = require('../services/DifyService')
 const DatabaseService = require('../services/DatabaseService')
@@ -95,6 +97,14 @@ class ServiceRegistry {
       const { Pool } = require('pg')
       const db = new Pool(config.getDatabase())
       return new TelegramBotRepository({ db, logger })
+    }, true)
+
+    this.container.register('zaloBotRepository', (container) => {
+      const config = container.get('config')
+      const logger = container.get('logger')
+      const { Pool } = require('pg')
+      const db = new Pool(config.getDatabase())
+      return new ZaloBotRepository({ db, logger })
     }, true)
 
     this.container.register('chatwootAccountRepository', (container) => {
@@ -176,6 +186,12 @@ class ServiceRegistry {
       logger: container.get('logger')
     }), true)
 
+    this.container.register('zaloService', (container) => new ZaloService({
+      config: container.get('config'),
+      configurationService: container.get('configurationService'),
+      logger: container.get('logger')
+    }), true)
+
     this.container.register('chatwootService', (container) => new ChatwootService({
       config: container.get('config'),
       configurationService: container.get('configurationService'),
@@ -197,10 +213,12 @@ class ServiceRegistry {
     this.container.register('platformMappingService', (container) => new PlatformMappingService({
       platformMappingRepository: container.get('platformMappingRepository'),
       telegramBotRepository: container.get('telegramBotRepository'),
+      zaloBotRepository: container.get('zaloBotRepository'),
       webAppRepository: container.get('webAppRepository'),
       chatwootAccountRepository: container.get('chatwootAccountRepository'),
       difyAppRepository: container.get('difyAppRepository'),
       telegramService: container.get('telegramService'),
+      zaloService: container.get('zaloService'),
       chatwootService: container.get('chatwootService'),
       difyService: container.get('difyService'),
       configurationService: container.get('configurationService'),
@@ -228,6 +246,7 @@ class ServiceRegistry {
       webConversationRepository: container.get('webConversationRepository'),
       webMessageRepository: container.get('webMessageRepository'),
       telegramService: container.get('telegramService'),
+      zaloService: container.get('zaloService'),
       chatwootService: container.get('chatwootService'),
       difyService: container.get('difyService'),
       configurationService: container.get('configurationService'),
@@ -318,7 +337,11 @@ class ServiceRegistry {
         logger.warn('Dify service connection test failed')
       }
     } catch (error) {
-      logger.error('Service initialization failed', { error: error.message })
+      logger.error('Service initialization failed', { 
+        error: error.message,
+        stack: error.stack,
+        details: error
+      })
       throw error
     }
   }

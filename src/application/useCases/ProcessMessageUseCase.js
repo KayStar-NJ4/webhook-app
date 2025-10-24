@@ -13,6 +13,7 @@ class ProcessMessageUseCase {
     webConversationRepository,
     webMessageRepository,
     telegramService,
+    zaloService,
     chatwootService,
     difyService,
     configurationService,
@@ -25,6 +26,7 @@ class ProcessMessageUseCase {
     this.webConversationRepository = webConversationRepository
     this.webMessageRepository = webMessageRepository
     this.telegramService = telegramService
+    this.zaloService = zaloService
     this.chatwootService = chatwootService
     this.difyService = difyService
     this.configurationService = configurationService
@@ -361,6 +363,8 @@ class ProcessMessageUseCase {
       await this.enrichTelegramConversationData(conversationData, message)
     } else if (message.platform === 'chatwoot') {
       await this.enrichChatwootConversationData(conversationData, message)
+    } else if (message.platform === 'zalo') {
+      await this.enrichZaloConversationData(conversationData, message)
     } else if (message.platform === 'web') {
       // Web conversations should be created in WebController already
       throw new Error('Web conversations should not be created here')
@@ -465,6 +469,46 @@ class ProcessMessageUseCase {
   }
 
   /**
+   * Enrich Zalo conversation data
+   * @param {Object} conversationData - Conversation data object
+   * @param {Message} message - Message entity
+   */
+  async enrichZaloConversationData (conversationData, message) {
+    const metadata = message.metadata || {}
+    const chat = metadata.chat || {}
+    const sender = metadata.sender || {}
+
+    // Map Zalo chat_type to Telegram chat types
+    const chatTypeMap = {
+      'PRIVATE': 'private',
+      'GROUP': 'group'
+    }
+    conversationData.chatType = chatTypeMap[metadata.chatType] || 'private'
+    conversationData.chatTitle = sender.display_name || 'Zalo Conversation'
+    conversationData.chatUsername = sender.display_name
+    conversationData.chatDescription = null
+
+    // Thông tin sender
+    conversationData.senderId = sender.id
+    conversationData.senderUsername = sender.display_name
+    conversationData.senderFirstName = sender.display_name
+    conversationData.senderLastName = null
+    conversationData.senderLanguageCode = null
+    conversationData.senderIsBot = sender.is_bot || false
+
+    // Thông tin group (nếu là group chat)
+    if (metadata.chatType === 'GROUP') {
+      conversationData.groupId = chat.id
+      conversationData.groupTitle = chat.title
+      conversationData.groupUsername = null
+      conversationData.groupDescription = null
+      conversationData.groupMemberCount = null
+      conversationData.groupIsVerified = false
+      conversationData.groupIsRestricted = false
+    }
+  }
+
+  /**
    * Enrich Chatwoot conversation data
    * @param {Object} conversationData - Conversation data object
    * @param {Message} message - Message entity
@@ -512,6 +556,8 @@ class ProcessMessageUseCase {
 
     if (platform.isTelegram()) {
       return await this.processTelegramMessage(message, conversation)
+    } else if (platform.isZalo()) {
+      return await this.processZaloMessage(message, conversation)
     } else if (platform.isChatwoot()) {
       return await this.processChatwootMessage(message, conversation)
     } else if (platform.isWeb()) {
@@ -807,6 +853,332 @@ class ProcessMessageUseCase {
         conversationId: conversation.id
       })
       throw error
+    }
+  }
+
+  /**
+   * Process Zalo message
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @returns {Promise<Object>}
+   */
+  async processZaloMessage (message, conversation) {
+    try {
+      // 1. Get platform mapping configuration for this Zalo bot
+      const zaloBotId = await this.getZaloBotIdFromMessage(message)
+      const routingConfig = await this.platformMappingService.getRoutingConfigurationForZalo(zaloBotId)
+
+      if (!routingConfig.hasMapping) {
+        this.logger.warn('No platform mapping found for Zalo bot', {
+          zaloBotId,
+          conversationId: conversation.id
+        })
+        return {
+          success: false,
+          error: 'No platform mapping configured for this Zalo bot'
+        }
+      }
+
+      // 2. Process based on routing configuration
+      const results = {
+        chatwootConversationId: null,
+        difyConversationId: null,
+        responses: []
+      }
+
+      // Process each mapping
+      for (const mapping of routingConfig.mappings) {
+        const mappingResult = await this.processZaloMessageWithMapping(
+          message,
+          conversation,
+          mapping
+        )
+
+        if (mappingResult.chatwootConversationId) {
+          results.chatwootConversationId = mappingResult.chatwootConversationId
+        }
+        if (mappingResult.difyConversationId) {
+          results.difyConversationId = mappingResult.difyConversationId
+        }
+        if (mappingResult.response) {
+          results.responses.push(mappingResult.response)
+        }
+      }
+
+      return {
+        success: true,
+        ...results,
+        note: 'Message processed with platform routing'
+      }
+    } catch (error) {
+      this.logger.error('Failed to process Zalo message with routing', {
+        error: error.message,
+        conversationId: conversation.id,
+        messageId: message.id
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Process Zalo message with specific mapping
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @param {Object} mapping - Platform mapping configuration
+   * @returns {Promise<Object>}
+   */
+  async processZaloMessageWithMapping (message, conversation, mapping) {
+    const results = {
+      chatwootConversationId: null,
+      difyConversationId: null,
+      response: null
+    }
+
+    try {
+      // 1. Handle Chatwoot routing or auto-connect
+      const shouldConnectChatwoot = (mapping.routing.zaloToChatwoot || mapping.autoConnect?.zaloChatwoot) && mapping.chatwootAccountId
+      if (shouldConnectChatwoot) {
+        const chatwootResult = await this.processZaloToChatwoot(
+          message,
+          conversation,
+          mapping.chatwootAccountId
+        )
+        results.chatwootConversationId = chatwootResult.conversationId
+      }
+
+      // 2. Handle Dify routing or auto-connect
+      const shouldConnectDify = (mapping.routing.zaloToDify || mapping.autoConnect?.zaloDify) && mapping.difyAppId
+      if (shouldConnectDify) {
+        this.logger.info('Processing Zalo message to Dify', {
+          conversationId: conversation.id,
+          difyAppId: mapping.difyAppId
+        })
+
+        try {
+          const difyResult = await this.processZaloToDify(
+            message,
+            conversation,
+            mapping.difyAppId
+          )
+          results.difyConversationId = difyResult.conversationId
+          results.response = difyResult.response
+
+          this.logger.info('Dify processing completed successfully for Zalo', {
+            conversationId: conversation.id,
+            difyConversationId: difyResult.conversationId
+          })
+
+          // If configured, forward Dify response back to Zalo immediately
+          if (mapping.routing?.difyToZalo && difyResult.response && conversation.chatId) {
+            try {
+              await this.zaloService.sendMessage(
+                conversation.chatId,
+                difyResult.response,
+                { botToken: await this.getZaloBotToken(mapping.zaloBotId) }
+              )
+              this.logger.info('Dify response forwarded to Zalo (Zalo-origin message)', {
+                chatId: conversation.chatId,
+                conversationId: conversation.id
+              })
+            } catch (e) {
+              this.logger.error('Failed to forward Dify response to Zalo (Zalo-origin message)', { error: e.message })
+            }
+          }
+        } catch (difyError) {
+          this.logger.error('Dify processing failed for Zalo, continuing without it', {
+            error: difyError.message,
+            conversationId: conversation.id,
+            stack: difyError.stack
+          })
+          // Continue without Dify
+        }
+      }
+
+      // 3. Handle combined routing (Zalo -> Chatwoot + Dify -> Chatwoot)
+      if (mapping.routing.zaloToChatwoot &&
+          mapping.routing.zaloToDify &&
+          mapping.routing.difyToChatwoot &&
+          results.chatwootConversationId &&
+          results.difyConversationId &&
+          results.response) {
+        await this.processDifyResponseToChatwoot(
+          results.response,
+          results.chatwootConversationId,
+          conversation.id
+        )
+      }
+
+      return results
+    } catch (error) {
+      this.logger.error('Failed to process Zalo message with mapping', {
+        error: error.message,
+        mappingId: mapping.id,
+        conversationId: conversation.id
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Process Zalo to Chatwoot routing
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @param {number} chatwootAccountId - Chatwoot account ID
+   * @returns {Promise<Object>}
+   */
+  async processZaloToChatwoot (message, conversation, chatwootAccountId) {
+    try {
+      await this.chatwootService.initializeWithAccountId(chatwootAccountId)
+
+      let chatwootConversation
+      try {
+        chatwootConversation = await this.chatwootService.createOrUpdateConversation(
+          conversation,
+          message,
+          chatwootAccountId
+        )
+
+        this.logger.info('Chatwoot conversation created/updated for Zalo', {
+          conversationId: conversation.id,
+          chatwootConversationId: chatwootConversation.id
+        })
+      } catch (error) {
+        this.logger.error('Failed to create/update Chatwoot conversation for Zalo', {
+          error: error.message,
+          conversationId: conversation.id
+        })
+        throw error
+      }
+
+      // Update conversation with Chatwoot ID
+      conversation.chatwootId = chatwootConversation.id
+      conversation.chatwootInboxId = chatwootConversation.inbox_id || 'auto-created'
+      
+      try {
+        await this.conversationRepository.updateFields(conversation.id, {
+          chatwoot_id: chatwootConversation.id,
+          chatwoot_inbox_id: chatwootConversation.inbox_id || 'auto-created'
+        })
+        this.logger.info('Zalo conversation updated with Chatwoot IDs', {
+          conversationId: conversation.id,
+          chatwootId: chatwootConversation.id
+        })
+      } catch (updateError) {
+        this.logger.error('Failed to update conversation with Chatwoot IDs', {
+          error: updateError.message,
+          conversationId: conversation.id
+        })
+        // Continue even if update fails
+      }
+
+      return {
+        conversationId: chatwootConversation.id
+      }
+    } catch (error) {
+      this.logger.error('Failed to process Zalo to Chatwoot', {
+        error: error.message,
+        conversationId: conversation.id,
+        messageId: message.id
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Process Zalo to Dify routing
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @param {number} difyAppId - Dify app ID
+   * @returns {Promise<Object>}
+   */
+  async processZaloToDify (message, conversation, difyAppId) {
+    // Send message to Dify
+    const difyResponse = await this.difyService.sendMessage(
+      conversation,
+      message.getFormattedContent(),
+      { difyAppId }
+    )
+
+    // Update conversation with Dify conversation_id from API response
+    this.logger.info('Updating Zalo conversation with Dify conversation_id from API response', {
+      dbConversationId: conversation.id,
+      difyConversationId: difyResponse.conversationId
+    })
+
+    conversation.difyId = difyResponse.conversationId
+
+    await this.conversationRepository.update(conversation)
+
+    this.logger.info('Zalo conversation updated successfully with Dify ID', {
+      conversationId: conversation.id,
+      difyId: conversation.difyId
+    })
+
+    return {
+      conversationId: difyResponse.conversationId,
+      response: difyResponse.response
+    }
+  }
+
+  /**
+   * Get Zalo bot ID from message
+   * @param {Message} message - Message entity
+   * @returns {Promise<number>}
+   */
+  async getZaloBotIdFromMessage (message) {
+    this.logger.info('Getting Zalo bot ID from message', {
+      messageKeys: Object.keys(message),
+      hasMetadata: !!message.metadata,
+      hasBotId: !!message.botId,
+      hasMetadataBotId: !!message.metadata?.botId
+    })
+
+    // Try to get bot ID from message metadata (if available)
+    if (message.botId) {
+      this.logger.info('Using bot ID from message', { botId: message.botId })
+      return message.botId
+    }
+    if (message.metadata?.botId) {
+      this.logger.info('Using bot ID from message metadata', { botId: message.metadata.botId })
+      return message.metadata.botId
+    }
+
+    // Try to find bot ID by secret token (recommended) or matching webhook
+    try {
+      // 1) via secret token if configured
+      if (message.metadata?.secretToken) {
+        const botId = await this.databaseService.getZaloBotIdBySecretToken(message.metadata.secretToken)
+        if (botId) {
+          this.logger.info('Resolved Zalo bot by secret token', { botId })
+          return botId
+        }
+      }
+
+      // 2) fallback: get first active Zalo bot
+      const botId = await this.databaseService.getFirstActiveZaloBotId()
+      if (botId) {
+        this.logger.info('First active Zalo bot ID retrieved', { botId })
+        return botId
+      }
+    } catch (error) {
+      this.logger.error('Failed to find Zalo bot from database', { error: error.message })
+    }
+
+    // Final fallback
+    this.logger.warn('Using fallback Zalo bot ID: 1')
+    return 1
+  }
+
+  /**
+   * Resolve Zalo bot token from mapping id
+   */
+  async getZaloBotToken (zaloBotId) {
+    try {
+      if (!zaloBotId) return null
+      return await this.databaseService.getZaloBotToken(zaloBotId)
+    } catch (e) {
+      this.logger.warn('Failed to resolve Zalo bot token', { error: e.message, zaloBotId })
+      return null
     }
   }
 
@@ -1925,6 +2297,41 @@ class ProcessMessageUseCase {
               messagePreview: message.content?.substring(0, 50),
               usedBotId: telegramMapping?.telegramBotId
             })
+          }
+          // Forward to Zalo
+          else if (platformConversation.platform === 'zalo') {
+            // Extract bot ID from chatId (format: {userId}_bot_{botId})
+            const botIdMatch = platformConversation.chatId.match(/_bot_(\d+)$/)
+            const botId = botIdMatch ? botIdMatch[1] : null
+            
+            this.logger.info('Extracted bot ID from Zalo chatId', {
+              chatId: platformConversation.chatId,
+              extractedBotId: botId
+            })
+            
+            // Get Zalo bot token
+            const zaloBotToken = await this.getZaloBotToken(botId)
+            
+            if (zaloBotToken) {
+              // Extract actual user chat ID (remove _bot_{botId} suffix)
+              const actualChatId = platformConversation.chatId.replace(/_bot_\d+$/, '')
+              
+              await this.zaloService.sendMessage(
+                actualChatId,
+                message.content,
+                { botToken: zaloBotToken }
+              )
+              
+              this.logger.info('✅ Forwarded Chatwoot AGENT message to Zalo', {
+                chatId: actualChatId,
+                chatwootConversationId: conversation.chatwootId,
+                conversationId: conversation.id,
+                messagePreview: message.content?.substring(0, 50),
+                botId: botId
+              })
+            } else {
+              this.logger.warn('No Zalo bot token found', { botId })
+            }
           }
           // Forward to Web
           else if (platformConversation.platform === 'web') {
