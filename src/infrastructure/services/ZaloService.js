@@ -226,11 +226,6 @@ class ZaloService {
       url: webhookUrl
     }
     
-    // Add bot token to headers instead
-    const headers = {
-      'X-API-Key': botToken
-    }
-    
     // Only add secret_token if provided and valid format
     // Zalo requires: 8-256 characters, only A-Z, a-z, 0-9, _ and - are allowed
     if (secretToken) {
@@ -248,28 +243,40 @@ class ZaloService {
     this.logger.info('Setting Zalo webhook', { 
       url: url.replace(botToken, '***'),
       webhookUrl,
-      hasSecretToken: !!secretToken
+      hasSecretToken: !!payload.secret_token
     })
     
-    const response = await axios.post(url, payload, { 
-      timeout: this.timeout,
-      headers: headers
-    })
-    
-    // Check if webhook was set successfully
-    if (response.data.ok !== false) {
-      this.logger.info('Zalo webhook set successfully', { 
-        response: response.data 
-      })
-    } else {
+    try {
+      const response = await axios.post(url, payload, { timeout: this.timeout })
+      
+      // Check if webhook was set successfully
+      if (response.data.ok !== false) {
+        this.logger.info('Zalo webhook set successfully', { 
+          response: response.data 
+        })
+      } else {
+        this.logger.error('Failed to set Zalo webhook', { 
+          error: response.data.description,
+          errorCode: response.data.error_code,
+          response: response.data 
+        })
+      }
+      
+      return response.data
+    } catch (error) {
+      // Don't throw error, just log and return error response
       this.logger.error('Failed to set Zalo webhook', { 
-        error: response.data.description,
-        errorCode: response.data.error_code,
-        response: response.data 
+        error: error.message,
+        errorCode: error.response?.status,
+        response: error.response?.data 
       })
+      
+      return {
+        ok: false,
+        error_code: error.response?.status || 500,
+        description: error.message
+      }
     }
-    
-    return response.data
   }
 
   /**

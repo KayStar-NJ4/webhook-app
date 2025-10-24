@@ -63,17 +63,7 @@ class ZaloController {
       const webhookUrl = `${appUrl}/webhook/zalo/${bot.id}`
       const updatedBot = await this.zaloBotRepository.update(bot.id, { webhookUrl })
 
-      // Try to set webhook automatically
-      try {
-        await this.zaloService.setWebhookForBot(botToken, webhookUrl, secretToken)
-        this.logger.info('Webhook set successfully for Zalo bot', { botId: bot.id })
-      } catch (webhookError) {
-        this.logger.warn('Failed to set webhook automatically', { 
-          botId: bot.id, 
-          error: webhookError.message 
-        })
-        // Don't fail the bot creation if webhook setup fails
-      }
+      // Webhook will be set when user clicks "Test Connection" button
 
       res.status(201).json({ 
         success: true, 
