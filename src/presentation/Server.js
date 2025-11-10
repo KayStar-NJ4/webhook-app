@@ -153,26 +153,26 @@ class Server {
     // Contact form routes (public, no auth)
     if (this.contactRoutes) {
       this.app.use('/api/contact',
-        this.securityMiddleware.getApiRateLimiter(),
+        // this.securityMiddleware.getApiRateLimiter(),
         this.contactRoutes.getRouter()
       )
     }
 
     // Web platform routes (landing page chat widget)
     this.app.use('/webhook/web',
-      this.securityMiddleware.getWebhookRateLimiter(),
+      // this.securityMiddleware.getWebhookRateLimiter(),
       this.webRoutes.getRouter()
     )
 
     // Webhook routes with rate limiting
     this.app.use('/webhook',
-      this.securityMiddleware.getWebhookRateLimiter(),
+      // this.securityMiddleware.getWebhookRateLimiter(),
       this.webhookRoutes.getRouter()
     )
 
     // API routes with rate limiting
     this.app.use('/api',
-      this.securityMiddleware.getApiRateLimiter(),
+      // this.securityMiddleware.getApiRateLimiter(),
       this.apiRoutes.getRouter()
     )
 
@@ -227,7 +227,7 @@ class Server {
 
     // Root POST endpoint for Chatwoot webhooks (backward compatibility)
     this.app.post('/',
-      this.securityMiddleware.getWebhookRateLimiter(),
+      // this.securityMiddleware.getWebhookRateLimiter(),
       this.validation.validate(Validation.schemas.chatwootWebhook, 'body'),
       this.errorHandler.asyncHandler(
         (req, res) => this.webhookController.handleChatwootWebhook(req, res)
