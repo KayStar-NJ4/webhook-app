@@ -8,6 +8,8 @@
     "users": "Người dùng",
     "chatwootAccounts": "Tài khoản Chatwoot",
     "telegramBots": "Bot Telegram",
+    "zaloBots": "Zalo Bot",
+    "zaloOAs": "Zalo OA",
     "difyApps": "Ứng dụng Dify",
     "platformMappings": "Liên kết Platform",
     "configurations": "Cấu hình"
@@ -170,6 +172,66 @@
       "botToken": "Lấy token này từ @BotFather trên Telegram",
       "apiUrl": "URL API Telegram (thường là https://api.telegram.org)",
       "webhookUrl": "URL để nhận cập nhật từ Telegram"
+    }
+  },
+  "zalo": {
+    "title": "Zalo Bot",
+    "list": "Danh sách bot",
+    "create": "Tạo bot",
+    "edit": "Chỉnh sửa bot",
+    "delete": "Xóa bot",
+    "noBots": "Chưa có bot nào",
+    "createFirst": "Tạo bot đầu tiên",
+    "fields": {
+      "name": "Tên bot",
+      "botToken": "Bot Token",
+      "secretToken": "Secret Token",
+      "isActive": "Kích hoạt"
+    },
+    "messages": {
+      "created": "Bot đã được tạo",
+      "updated": "Bot đã được cập nhật",
+      "deleted": "Bot đã được xóa",
+      "deleteConfirm": "Bạn có chắc chắn muốn xóa bot này?",
+      "testSuccess": "Kết nối thành công!",
+      "testFailed": "Kết nối thất bại"
+    },
+    "help": {
+      "botToken": "Token bot từ Zalo Developer Console",
+      "secretToken": "Token bí mật để bảo mật webhook"
+    }
+  },
+  "zaloOa": {
+    "title": "Zalo Official Account",
+    "list": "Danh sách OA",
+    "create": "Tạo OA",
+    "edit": "Chỉnh sửa OA",
+    "delete": "Xóa OA",
+    "noOAs": "Chưa có OA nào",
+    "createFirst": "Tạo OA đầu tiên",
+    "fields": {
+      "name": "Tên OA",
+      "oaId": "OA ID",
+      "accessToken": "Access Token",
+      "refreshToken": "Refresh Token",
+      "secretKey": "Secret Key",
+      "webhookUrl": "Webhook URL",
+      "isActive": "Kích hoạt"
+    },
+    "messages": {
+      "created": "OA đã được tạo",
+      "updated": "OA đã được cập nhật",
+      "deleted": "OA đã được xóa",
+      "deleteConfirm": "Bạn có chắc chắn muốn xóa OA này?",
+      "testSuccess": "Kết nối thành công!",
+      "testFailed": "Kết nối thất bại"
+    },
+    "help": {
+      "oaId": "ID của Official Account từ Zalo Developer Console",
+      "accessToken": "Access Token để gọi API Zalo OA",
+      "refreshToken": "Token để làm mới Access Token khi hết hạn",
+      "secretKey": "Key bí mật để xác thực webhook từ Zalo",
+      "webhookUrl": "URL để nhận webhook từ Zalo OA"
     }
   },
   "dify": {

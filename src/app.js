@@ -171,6 +171,7 @@ class Application {
         customerService: this.serviceRegistry.get('customerService'),
         telegramBotRepository: this.serviceRegistry.get('telegramBotRepository'),
         zaloBotRepository: this.serviceRegistry.get('zaloBotRepository'),
+        zaloOARepository: this.serviceRegistry.get('zaloOARepository'),
         chatwootAccountRepository: this.serviceRegistry.get('chatwootAccountRepository'),
         difyAppRepository: this.serviceRegistry.get('difyAppRepository'),
         webAppRepository: this.serviceRegistry.get('webAppRepository'),
@@ -186,6 +187,7 @@ class Application {
         platformMappingService: this.serviceRegistry.get('platformMappingService'),
         telegramService: this.serviceRegistry.get('telegramService'),
         zaloService: this.serviceRegistry.get('zaloService'),
+        zaloOAService: this.serviceRegistry.get('zaloOAService'),
         chatwootService: this.serviceRegistry.get('chatwootService'),
         difyService: this.serviceRegistry.get('difyService'),
         logger: logger.child({ component: 'AdminRoutes' })

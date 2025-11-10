@@ -74,7 +74,7 @@ class Validation {
    * Common validation schemas
    */
   static schemas = {
-    // Zalo webhook schema
+    // Zalo webhook schema (for Zalo Bot)
     zaloWebhook: Joi.object({
       event_name: Joi.string().required(),
       message: Joi.object({
@@ -91,6 +91,22 @@ class Validation {
         text: Joi.string().optional(),
         date: Joi.number().required()
       }).required()
+    }),
+
+    // Zalo OA webhook schema (for Zalo Official Account)
+    zaloOAWebhook: Joi.object({
+      event: Joi.string().valid('user_send_text', 'user_send_image', 'user_send_attachment', 'oa_send_text', 'oa_send_image').required(),
+      recipient: Joi.object({
+        id: Joi.string().required()
+      }).required(),
+      sender: Joi.object({
+        id: Joi.string().required()
+      }).required(),
+      message: Joi.object({
+        text: Joi.string().optional(),
+        attachments: Joi.array().optional()
+      }).optional(),
+      timestamp: Joi.number().optional()
     }),
 
     telegramWebhook: Joi.object({

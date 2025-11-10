@@ -4,11 +4,12 @@
 class Platform {
   static TELEGRAM = 'telegram'
   static ZALO = 'zalo'
+  static ZALO_OA = 'zalo_oa'
   static CHATWOOT = 'chatwoot'
   static DIFY = 'dify'
   static WEB = 'web'
 
-  static ALL = [Platform.TELEGRAM, Platform.ZALO, Platform.CHATWOOT, Platform.DIFY, Platform.WEB]
+  static ALL = [Platform.TELEGRAM, Platform.ZALO, Platform.ZALO_OA, Platform.CHATWOOT, Platform.DIFY, Platform.WEB]
 
   constructor (value) {
     if (!Platform.ALL.includes(value)) {
@@ -31,6 +32,10 @@ class Platform {
 
   isZalo () {
     return this.value === Platform.ZALO
+  }
+
+  isZaloOA () {
+    return this.value === Platform.ZALO_OA
   }
 
   isChatwoot () {

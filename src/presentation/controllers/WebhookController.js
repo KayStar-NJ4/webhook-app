@@ -150,6 +150,59 @@ class WebhookController {
   }
 
   /**
+   * Handle Zalo OA webhook
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   */
+  async handleZaloOAWebhook (req, res) {
+    try {
+      const oaIdFromPath = req.params?.oaId
+      const signature = req.headers['x-zalo-signature'] || req.headers['x-zalo-signature-256']
+
+      // Get raw body for signature verification
+      const rawBody = JSON.stringify(req.body)
+
+      this.logger.info('Received Zalo OA webhook', {
+        body: req.body,
+        oaIdFromPath,
+        hasSignature: !!signature,
+        event: req.body.event,
+        senderId: req.body.sender?.id,
+        recipientId: req.body.recipient?.id,
+        hasText: !!req.body.message?.text
+      })
+
+      // Attach oaId to body metadata if provided
+      const body = { ...req.body }
+      if (oaIdFromPath) {
+        body.__oa_id = oaIdFromPath
+      }
+      if (signature) {
+        body.__signature = signature
+      }
+      body.__raw_body = rawBody
+
+      const result = await this.messageBrokerService.handleZaloOAWebhook(body)
+
+      res.status(200).json({
+        success: true,
+        data: result
+      })
+    } catch (error) {
+      this.logger.error('Zalo OA webhook error', {
+        error: error.message,
+        stack: error.stack,
+        body: req.body
+      })
+
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
+
+  /**
    * Handle Chatwoot webhook verification (GET request)
    * @param {Object} req - Express request
    * @param {Object} res - Express response

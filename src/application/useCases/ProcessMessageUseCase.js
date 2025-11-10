@@ -14,6 +14,7 @@ class ProcessMessageUseCase {
     webMessageRepository,
     telegramService,
     zaloService,
+    zaloOAService,
     chatwootService,
     difyService,
     configurationService,
@@ -27,6 +28,7 @@ class ProcessMessageUseCase {
     this.webMessageRepository = webMessageRepository
     this.telegramService = telegramService
     this.zaloService = zaloService
+    this.zaloOAService = zaloOAService
     this.chatwootService = chatwootService
     this.difyService = difyService
     this.configurationService = configurationService
@@ -558,6 +560,8 @@ class ProcessMessageUseCase {
       return await this.processTelegramMessage(message, conversation)
     } else if (platform.isZalo()) {
       return await this.processZaloMessage(message, conversation)
+    } else if (platform.isZaloOA()) {
+      return await this.processZaloOAMessage(message, conversation)
     } else if (platform.isChatwoot()) {
       return await this.processChatwootMessage(message, conversation)
     } else if (platform.isWeb()) {
@@ -1179,6 +1183,321 @@ class ProcessMessageUseCase {
     } catch (e) {
       this.logger.warn('Failed to resolve Zalo bot token', { error: e.message, zaloBotId })
       return null
+    }
+  }
+
+  /**
+   * Get Zalo OA ID from message metadata
+   * @param {Message} message - Message entity
+   * @returns {Promise<number>} - Zalo OA ID
+   */
+  async getZaloOAIdFromMessage (message) {
+    const metadata = message.metadata || {}
+    const oaId = metadata.oaId
+
+    if (oaId) {
+      return Number(oaId)
+    }
+
+    // Fallback: try to get from conversation metadata or default to 1
+    this.logger.warn('Zalo OA ID not found in message metadata, using default', {
+      messageId: message.id,
+      metadata
+    })
+
+    return 1
+  }
+
+  /**
+   * Resolve Zalo OA access token from OA id
+   */
+  async getZaloOAAccessToken (zaloOAId) {
+    try {
+      if (!zaloOAId) return null
+      const oa = await this.databaseService.getZaloOA(zaloOAId)
+      return oa?.access_token || null
+    } catch (e) {
+      this.logger.warn('Failed to resolve Zalo OA access token', { error: e.message, zaloOAId })
+      return null
+    }
+  }
+
+  /**
+   * Resolve Zalo OA OA ID (the actual Zalo OA ID string) from OA id
+   */
+  async getZaloOAOAId (zaloOAId) {
+    try {
+      if (!zaloOAId) return null
+      const oa = await this.databaseService.getZaloOA(zaloOAId)
+      return oa?.oa_id || null
+    } catch (e) {
+      this.logger.warn('Failed to resolve Zalo OA OA ID', { error: e.message, zaloOAId })
+      return null
+    }
+  }
+
+  /**
+   * Process Zalo OA message
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @returns {Promise<Object>}
+   */
+  async processZaloOAMessage (message, conversation) {
+    try {
+      // 1. Get platform mapping configuration for this Zalo OA
+      const zaloOAId = await this.getZaloOAIdFromMessage(message)
+      const routingConfig = await this.platformMappingService.getRoutingConfigurationForZaloOA(zaloOAId)
+
+      if (!routingConfig.hasMapping) {
+        this.logger.warn('No platform mapping found for Zalo OA', {
+          zaloOAId,
+          conversationId: conversation.id
+        })
+        return {
+          success: false,
+          error: 'No platform mapping configured for this Zalo OA'
+        }
+      }
+
+      // 2. Process based on routing configuration
+      const results = {
+        chatwootConversationId: null,
+        difyConversationId: null,
+        responses: []
+      }
+
+      // Process each mapping
+      for (const mapping of routingConfig.mappings) {
+        const mappingResult = await this.processZaloOAMessageWithMapping(
+          message,
+          conversation,
+          mapping
+        )
+
+        if (mappingResult.chatwootConversationId) {
+          results.chatwootConversationId = mappingResult.chatwootConversationId
+        }
+        if (mappingResult.difyConversationId) {
+          results.difyConversationId = mappingResult.difyConversationId
+        }
+        if (mappingResult.response) {
+          results.responses.push(mappingResult.response)
+        }
+      }
+
+      return {
+        success: true,
+        ...results,
+        note: 'Message processed with platform routing'
+      }
+    } catch (error) {
+      this.logger.error('Failed to process Zalo OA message with routing', {
+        error: error.message,
+        conversationId: conversation.id,
+        messageId: message.id
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Process Zalo OA message with specific mapping
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @param {Object} mapping - Platform mapping configuration
+   * @returns {Promise<Object>}
+   */
+  async processZaloOAMessageWithMapping (message, conversation, mapping) {
+    const results = {
+      chatwootConversationId: null,
+      difyConversationId: null,
+      response: null
+    }
+
+    try {
+      // 1. Handle Chatwoot routing or auto-connect
+      const shouldConnectChatwoot = (mapping.routing.zaloOAToChatwoot || mapping.autoConnect?.zaloOAChatwoot) && mapping.chatwootAccountId
+      if (shouldConnectChatwoot) {
+        const chatwootResult = await this.processZaloOAToChatwoot(
+          message,
+          conversation,
+          mapping.chatwootAccountId
+        )
+        results.chatwootConversationId = chatwootResult.conversationId
+      }
+
+      // 2. Handle Dify routing or auto-connect
+      const shouldConnectDify = (mapping.routing.zaloOAToDify || mapping.autoConnect?.zaloOADify) && mapping.difyAppId
+      if (shouldConnectDify) {
+        this.logger.info('Processing Zalo OA message to Dify', {
+          conversationId: conversation.id,
+          difyAppId: mapping.difyAppId
+        })
+
+        try {
+          const difyResult = await this.processZaloOAToDify(
+            message,
+            conversation,
+            mapping.difyAppId
+          )
+          results.difyConversationId = difyResult.conversationId
+          results.response = difyResult.response
+
+          this.logger.info('Dify processing completed successfully for Zalo OA', {
+            conversationId: conversation.id,
+            difyConversationId: difyResult.conversationId
+          })
+
+          // If configured, forward Dify response back to Zalo OA immediately
+          if (mapping.routing?.difyToZaloOA && difyResult.response && conversation.chatId) {
+            try {
+              const oaId = message.metadata?.oaId
+              await this.zaloOAService.sendMessage(
+                conversation.chatId,
+                difyResult.response,
+                { accessToken: await this.getZaloOAAccessToken(oaId), oaId: await this.getZaloOAOAId(oaId) }
+              )
+              this.logger.info('Dify response forwarded to Zalo OA', {
+                chatId: conversation.chatId,
+                conversationId: conversation.id
+              })
+            } catch (e) {
+              this.logger.error('Failed to forward Dify response to Zalo OA', { error: e.message })
+            }
+          }
+        } catch (difyError) {
+          this.logger.error('Dify processing failed for Zalo OA, continuing without it', {
+            error: difyError.message,
+            conversationId: conversation.id,
+            stack: difyError.stack
+          })
+          // Continue without Dify
+        }
+      }
+
+      // 3. Handle combined routing (Zalo OA -> Chatwoot + Dify -> Chatwoot)
+      if (mapping.routing.zaloOAToChatwoot &&
+          mapping.routing.zaloOAToDify &&
+          mapping.routing.difyToChatwoot &&
+          results.chatwootConversationId &&
+          results.difyConversationId &&
+          results.response) {
+        await this.processDifyResponseToChatwoot(
+          results.response,
+          results.chatwootConversationId,
+          conversation.id
+        )
+      }
+
+      return results
+    } catch (error) {
+      this.logger.error('Failed to process Zalo OA message with mapping', {
+        error: error.message,
+        conversationId: conversation.id,
+        messageId: message.id
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Process Zalo OA to Chatwoot routing
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @param {number} chatwootAccountId - Chatwoot account ID
+   * @returns {Promise<Object>}
+   */
+  async processZaloOAToChatwoot (message, conversation, chatwootAccountId) {
+    try {
+      await this.chatwootService.initializeWithAccountId(chatwootAccountId)
+
+      let chatwootConversation
+      try {
+        chatwootConversation = await this.chatwootService.createOrUpdateConversation(
+          conversation,
+          message,
+          chatwootAccountId
+        )
+
+        this.logger.info('Chatwoot conversation created/updated for Zalo OA', {
+          conversationId: conversation.id,
+          chatwootConversationId: chatwootConversation.id
+        })
+      } catch (error) {
+        this.logger.error('Failed to create/update Chatwoot conversation for Zalo OA', {
+          error: error.message,
+          conversationId: conversation.id
+        })
+        throw error
+      }
+
+      // Update conversation with Chatwoot ID
+      conversation.chatwootId = chatwootConversation.id
+      conversation.chatwootInboxId = chatwootConversation.inbox_id || 'auto-created'
+      
+      try {
+        await this.conversationRepository.updateFields(conversation.id, {
+          chatwoot_id: chatwootConversation.id,
+          chatwoot_inbox_id: chatwootConversation.inbox_id || 'auto-created'
+        })
+        this.logger.info('Zalo OA conversation updated with Chatwoot IDs', {
+          conversationId: conversation.id,
+          chatwootId: chatwootConversation.id
+        })
+      } catch (updateError) {
+        this.logger.error('Failed to update conversation with Chatwoot IDs', {
+          error: updateError.message,
+          conversationId: conversation.id
+        })
+        // Continue even if update fails
+      }
+
+      return {
+        conversationId: chatwootConversation.id
+      }
+    } catch (error) {
+      this.logger.error('Failed to process Zalo OA to Chatwoot', {
+        error: error.message,
+        conversationId: conversation.id,
+        messageId: message.id
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Process Zalo OA to Dify routing
+   * @param {Message} message - Message entity
+   * @param {Conversation} conversation - Conversation entity
+   * @param {number} difyAppId - Dify app ID
+   * @returns {Promise<Object>}
+   */
+  async processZaloOAToDify (message, conversation, difyAppId) {
+    // Send message to Dify
+    const difyResponse = await this.difyService.sendMessage(
+      conversation,
+      message.getFormattedContent(),
+      { difyAppId }
+    )
+
+    // Update conversation with Dify conversation_id from API response
+    this.logger.info('Updating Zalo OA conversation with Dify conversation_id from API response', {
+      dbConversationId: conversation.id,
+      difyConversationId: difyResponse.conversationId
+    })
+
+    conversation.difyId = difyResponse.conversationId
+
+    await this.conversationRepository.update(conversation)
+
+    this.logger.info('Zalo OA conversation updated successfully with Dify ID', {
+      conversationId: conversation.id,
+      difyId: conversation.difyId
+    })
+
+    return {
+      conversationId: difyResponse.conversationId,
+      response: difyResponse.answer
     }
   }
 

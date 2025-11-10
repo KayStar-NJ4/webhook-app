@@ -17,6 +17,7 @@ class AdminRoutes {
     customerService,
     telegramBotRepository,
     zaloBotRepository,
+    zaloOARepository,
     chatwootAccountRepository,
     difyAppRepository,
     webAppRepository,
@@ -32,6 +33,7 @@ class AdminRoutes {
     platformMappingService,
     telegramService,
     zaloService,
+    zaloOAService,
     chatwootService,
     difyService,
     logger
@@ -65,6 +67,7 @@ class AdminRoutes {
       customerService,
       telegramBotRepository,
       zaloBotRepository,
+      zaloOARepository,
       chatwootAccountRepository,
       difyAppRepository,
       webAppRepository,
@@ -80,6 +83,7 @@ class AdminRoutes {
       platformMappingService,
       telegramService,
       zaloService,
+      zaloOAService,
       chatwootService,
       difyService,
       logger

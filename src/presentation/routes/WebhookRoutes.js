@@ -68,6 +68,22 @@ class WebhookRoutes {
       )
     )
 
+    // Zalo OA webhook - auto-detect OA ID
+    this.router.post('/zalo-oa',
+      this.validation.validate(Validation.schemas.zaloOAWebhook, 'body'),
+      this.errorHandler.asyncHandler(
+        (req, res) => this.webhookController.handleZaloOAWebhook(req, res)
+      )
+    )
+
+    // Zalo OA webhook with explicit oaId in URL (optional)
+    this.router.post('/zalo-oa/:oaId',
+      this.validation.validate(Validation.schemas.zaloOAWebhook, 'body'),
+      this.errorHandler.asyncHandler(
+        (req, res) => this.webhookController.handleZaloOAWebhook(req, res)
+      )
+    )
+
     // Chatwoot webhook - GET for verification, POST for events
     this.router.get('/chatwoot',
       this.errorHandler.asyncHandler(

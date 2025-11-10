@@ -10,6 +10,7 @@ const ConfigurationRepository = require('../repositories/ConfigurationRepository
 const UserRepository = require('../repositories/UserRepository')
 const TelegramBotRepository = require('../repositories/TelegramBotRepository')
 const ZaloBotRepository = require('../repositories/ZaloBotRepository')
+const ZaloOARepository = require('../repositories/ZaloOARepository')
 const ChatwootAccountRepository = require('../repositories/ChatwootAccountRepository')
 const DifyAppRepository = require('../repositories/DifyAppRepository')
 const RoleRepository = require('../repositories/RoleRepository')
@@ -23,6 +24,7 @@ const CustomerRepository = require('../repositories/CustomerRepository')
 // Services
 const TelegramService = require('../services/TelegramService')
 const ZaloService = require('../services/ZaloService')
+const ZaloOAService = require('../services/ZaloOAService')
 const ChatwootService = require('../services/ChatwootService')
 const DifyService = require('../services/DifyService')
 const DatabaseService = require('../services/DatabaseService')
@@ -105,6 +107,14 @@ class ServiceRegistry {
       const { Pool } = require('pg')
       const db = new Pool(config.getDatabase())
       return new ZaloBotRepository({ db, logger })
+    }, true)
+
+    this.container.register('zaloOARepository', (container) => {
+      const config = container.get('config')
+      const logger = container.get('logger')
+      const { Pool } = require('pg')
+      const db = new Pool(config.getDatabase())
+      return new ZaloOARepository({ db, logger })
     }, true)
 
     this.container.register('chatwootAccountRepository', (container) => {
@@ -192,6 +202,12 @@ class ServiceRegistry {
       logger: container.get('logger')
     }), true)
 
+    this.container.register('zaloOAService', (container) => new ZaloOAService({
+      config: container.get('config'),
+      configurationService: container.get('configurationService'),
+      logger: container.get('logger')
+    }), true)
+
     this.container.register('chatwootService', (container) => new ChatwootService({
       config: container.get('config'),
       configurationService: container.get('configurationService'),
@@ -214,11 +230,13 @@ class ServiceRegistry {
       platformMappingRepository: container.get('platformMappingRepository'),
       telegramBotRepository: container.get('telegramBotRepository'),
       zaloBotRepository: container.get('zaloBotRepository'),
+      zaloOARepository: container.get('zaloOARepository'),
       webAppRepository: container.get('webAppRepository'),
       chatwootAccountRepository: container.get('chatwootAccountRepository'),
       difyAppRepository: container.get('difyAppRepository'),
       telegramService: container.get('telegramService'),
       zaloService: container.get('zaloService'),
+      zaloOAService: container.get('zaloOAService'),
       chatwootService: container.get('chatwootService'),
       difyService: container.get('difyService'),
       configurationService: container.get('configurationService'),
@@ -247,6 +265,7 @@ class ServiceRegistry {
       webMessageRepository: container.get('webMessageRepository'),
       telegramService: container.get('telegramService'),
       zaloService: container.get('zaloService'),
+      zaloOAService: container.get('zaloOAService'),
       chatwootService: container.get('chatwootService'),
       difyService: container.get('difyService'),
       configurationService: container.get('configurationService'),

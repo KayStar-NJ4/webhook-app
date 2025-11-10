@@ -213,6 +213,33 @@ class DatabaseService {
   }
 
   /**
+   * Get Zalo OA from database
+   * @param {number} oaId - Zalo OA ID
+   * @returns {Promise<Object|null>} - OA object or null
+   */
+  async getZaloOA (oaId) {
+    if (!oaId) return null
+
+    try {
+      const pool = this.getPool()
+      const result = await pool.query(
+        'SELECT id, name, oa_id, access_token, secret_key, is_active FROM zalo_oas WHERE id = $1 AND is_active = true',
+        [oaId]
+      )
+
+      if (result.rows.length === 0) {
+        this.logger.warn('Zalo OA not found or inactive', { oaId })
+        return null
+      }
+
+      return result.rows[0]
+    } catch (error) {
+      this.logger.error('Failed to get Zalo OA', { error: error.message, oaId })
+      return null
+    }
+  }
+
+  /**
    * Get Zalo bot token from database
    * @param {number} botId - Zalo bot ID
    * @returns {Promise<string|null>} - Bot token or null

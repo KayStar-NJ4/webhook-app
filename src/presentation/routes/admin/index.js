@@ -10,6 +10,7 @@ class AdminRoutesIndex {
     customerService,
     telegramBotRepository,
     zaloBotRepository,
+    zaloOARepository,
     chatwootAccountRepository,
     difyAppRepository,
     webAppRepository,
@@ -24,6 +25,7 @@ class AdminRoutesIndex {
     platformMappingService,
     telegramService,
     zaloService,
+    zaloOAService,
     chatwootService,
     difyService,
     logger
@@ -48,6 +50,7 @@ class AdminRoutesIndex {
     const PermissionsRoutes = require('./permissions.routes')
     const TelegramRoutes = require('./telegram.routes')
     const ZaloRoutes = require('./zalo.routes')
+    const ZaloOARoutes = require('./zalo-oa.routes')
     const ChatwootRoutes = require('./chatwoot.routes')
     const DifyRoutes = require('./dify.routes')
     const WebRoutes = require('./web.routes')
@@ -105,6 +108,14 @@ class AdminRoutesIndex {
     this.zaloRoutes = new ZaloRoutes({
       zaloBotRepository,
       zaloService,
+      configurationService,
+      authMiddleware: this.authMiddleware,
+      permissionMiddleware: this.permissionMiddleware
+    })
+
+    this.zaloOARoutes = new ZaloOARoutes({
+      zaloOARepository,
+      zaloOAService,
       configurationService,
       authMiddleware: this.authMiddleware,
       permissionMiddleware: this.permissionMiddleware
@@ -174,6 +185,7 @@ class AdminRoutesIndex {
     this.router.use('/permissions', this.permissionsRoutes.getRouter())
     this.router.use('/telegram-bots', this.telegramRoutes.getRouter())
     this.router.use('/zalo-bots', this.zaloRoutes.getRouter())
+    this.router.use('/zalo-oas', this.zaloOARoutes.getRouter())
     this.router.use('/chatwoot-accounts', this.chatwootRoutes.getRouter())
     this.router.use('/dify-apps', this.difyRoutes.getRouter())
     this.router.use('/configurations', this.configsRoutes.getRouter())

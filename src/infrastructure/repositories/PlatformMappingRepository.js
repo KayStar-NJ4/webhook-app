@@ -327,14 +327,14 @@ class PlatformMappingRepository extends BaseRepository {
   /**
    * Find routes for a platform and id using specific target columns
    * Returns active mappings where (source=platform,id) OR (chatwoot_account_id=id and enable_chatwoot) OR (dify_app_id=id and enable_dify)
-   * @param {string} platform - telegram|chatwoot|dify
+   * @param {string} platform - telegram|zalo|zalo_oa|chatwoot|dify|web
    * @param {number} platformId - id
    */
   async findRoutesFor (platform, platformId) {
     try {
       // Convert platformId to appropriate type based on platform
       let convertedPlatformId = platformId
-      if (platform === 'telegram' || platform === 'chatwoot') {
+      if (platform === 'telegram' || platform === 'chatwoot' || platform === 'zalo' || platform === 'zalo_oa') {
         convertedPlatformId = parseInt(platformId, 10)
         if (isNaN(convertedPlatformId)) {
           throw new Error(`Invalid ${platform} ID: ${platformId}`)

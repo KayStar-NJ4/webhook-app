@@ -474,6 +474,176 @@ class MessageBrokerService {
   }
 
   /**
+   * Handle Zalo OA webhook
+   * @param {Object} zaloOAData - Raw Zalo OA webhook data
+   * @returns {Promise<Object>} - Processing result
+   */
+  async handleZaloOAWebhook (zaloOAData) {
+    try {
+      // Get OA info from database if available
+      let oaInfo = null
+      if (zaloOAData.__oa_id) {
+        try {
+          // Get OA info from database service
+          const databaseService = this.container.get('databaseService')
+          const oa = await databaseService.getZaloOA(zaloOAData.__oa_id)
+          
+          if (oa) {
+            oaInfo = {
+              id: parseInt(zaloOAData.__oa_id),
+              oaId: oa.oa_id,
+              name: oa.name
+            }
+          }
+        } catch (dbError) {
+          this.logger.warn('Failed to get OA info from database', { error: dbError.message })
+        }
+      }
+
+      // Verify webhook signature if secret key is available
+      if (zaloOAData.__signature && oaInfo) {
+        try {
+          const databaseService = this.container.get('databaseService')
+          const oa = await databaseService.getZaloOA(zaloOAData.__oa_id)
+          if (oa && oa.secret_key) {
+            const zaloOAService = this.container.get('zaloOAService')
+            const isValid = zaloOAService.verifyWebhookSignature(
+              zaloOAData.__signature,
+              zaloOAData.__raw_body || JSON.stringify(zaloOAData),
+              oa.secret_key
+            )
+            
+            if (!isValid) {
+              this.logger.warn('Invalid Zalo OA webhook signature', {
+                oaId: oaInfo.oaId
+              })
+              throw new Error('Invalid webhook signature')
+            }
+          }
+        } catch (sigError) {
+          this.logger.warn('Failed to verify webhook signature', { error: sigError.message })
+          // Don't throw if signature verification fails - may be optional
+        }
+      }
+
+      // Attach OA info to zaloOAData
+      if (oaInfo) {
+        zaloOAData.oa = oaInfo
+      }
+
+      this.logger.info('Processing Zalo OA webhook', {
+        event: zaloOAData.event,
+        senderId: zaloOAData.sender?.id,
+        recipientId: zaloOAData.recipient?.id,
+        timestamp: new Date().toISOString()
+      })
+
+      const messageData = this.parseZaloOAMessage(zaloOAData)
+      return await this.handleMessage('zalo_oa', messageData)
+    } catch (error) {
+      // Check if this is a skippable error
+      const isSkippableError = error.message && (
+        error.message.includes('skipped') ||
+        error.message.includes('Non-text message') ||
+        error.message.includes('Invalid webhook signature')
+      )
+
+      if (isSkippableError) {
+        // Return success for skippable messages to prevent Zalo from retrying
+        this.logger.info('Zalo OA webhook processed but message skipped', {
+          reason: error.message,
+          event: zaloOAData.event,
+          senderId: zaloOAData.sender?.id
+        })
+        return { success: true, message: 'Message skipped', reason: error.message }
+      }
+
+      // For real errors, log and throw
+      this.logger.error('Failed to handle Zalo OA webhook', {
+        error: error.message,
+        stack: error.stack,
+        zaloOAData
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Parse Zalo OA message data
+   * @param {Object} zaloOAData - Raw Zalo OA data
+   * @returns {Object} - Parsed message data
+   */
+  parseZaloOAMessage (zaloOAData) {
+    // Validate webhook data structure
+    if (!zaloOAData || !zaloOAData.event) {
+      this.logger.warn('Invalid Zalo OA webhook data - no event found', { zaloOAData })
+      throw new Error('Invalid Zalo OA webhook data - no event found')
+    }
+
+    // Only handle user_send_text events for now
+    if (zaloOAData.event !== 'user_send_text') {
+      this.logger.info('Skipping non-text Zalo OA event', {
+        event: zaloOAData.event,
+        senderId: zaloOAData.sender?.id
+      })
+      throw new Error('Non-text message skipped')
+    }
+
+    const sender = zaloOAData.sender
+    const recipient = zaloOAData.recipient
+    const message = zaloOAData.message
+
+    // Validate required fields
+    if (!sender || !recipient) {
+      this.logger.warn('Invalid Zalo OA message structure', { zaloOAData })
+      throw new Error('Invalid Zalo OA message structure - missing sender or recipient data')
+    }
+
+    // Skip messages without text content
+    if (!message || !message.text || !message.text.trim()) {
+      this.logger.info('Skipping empty Zalo OA message', {
+        senderId: sender.id,
+        hasText: !!message?.text
+      })
+      throw new Error('Non-text message skipped')
+    }
+
+    // Include OA ID in conversation ID to separate conversations between different OAs
+    const oaId = zaloOAData.oa?.id || zaloOAData.__oa_id
+    const conversationId = oaId ? `${sender.id}_oa_${oaId}` : sender.id.toString()
+
+    // Parse timestamp
+    const timestamp = zaloOAData.timestamp 
+      ? new Date(zaloOAData.timestamp).toISOString() 
+      : new Date().toISOString()
+    
+    return {
+      id: `zalo_oa_${sender.id}_${Date.now()}`,
+      content: message.text,
+      senderId: sender.id.toString(),
+      senderName: sender.name || 'Unknown',
+      conversationId: conversationId,
+      platform: 'zalo_oa',
+      timestamp: timestamp,
+      metadata: {
+        event: zaloOAData.event,
+        senderId: sender.id.toString(),
+        recipientId: recipient.id.toString(),
+        oaId: oaId ? Number(oaId) : undefined,
+        oaName: zaloOAData.oa?.name,
+        timestamp: zaloOAData.timestamp,
+        sender: {
+          id: sender.id,
+          name: sender.name
+        },
+        recipient: {
+          id: recipient.id
+        }
+      }
+    }
+  }
+
+  /**
    * Handle Chatwoot webhook
    * @param {Object} chatwootData - Chatwoot webhook data
    * @returns {Promise<Object>} - Processing result

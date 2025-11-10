@@ -151,6 +151,7 @@
     <script src="/admin/src/services/AdminService.js"></script>
     <script src="/admin/src/services/TelegramService.js"></script>
     <script src="/admin/src/services/ZaloService.js"></script>
+    <script src="/admin/src/services/ZaloOAService.js"></script>
     <script src="/admin/src/services/ChatwootService.js"></script>
     <script src="/admin/src/services/DifyService.js"></script>
     <script src="/admin/src/services/WebService.js"></script>
@@ -367,6 +368,16 @@
             ZaloBotsPageComponent = await loadVueComponent('/admin/src/modules/zalo/ZaloBotsPageComponent.vue');
             window.ZaloBotsPageComponent = ZaloBotsPageComponent;
             
+            // Load Zalo OA components
+            ZaloOAsListComponent = await loadVueComponent('/admin/src/modules/zalo-oa/ZaloOAsListComponent.vue');
+            window.ZaloOAsListComponent = ZaloOAsListComponent;
+            
+            ZaloOAFormComponent = await loadVueComponent('/admin/src/modules/zalo-oa/ZaloOAFormComponent.vue');
+            window.ZaloOAFormComponent = ZaloOAFormComponent;
+            
+            ZaloOAsPageComponent = await loadVueComponent('/admin/src/modules/zalo-oa/ZaloOAsPageComponent.vue');
+            window.ZaloOAsPageComponent = ZaloOAsPageComponent;
+            
             // Load Web Apps components
             WebAppsListComponent = await loadVueComponent('/admin/src/modules/web/WebAppsListComponent.vue');
             window.WebAppsListComponent = WebAppsListComponent;
@@ -473,6 +484,13 @@
                 component: window.AdminLayoutComponent,
                 children: [
                     { path: '', component: window.ZaloBotsPageComponent }
+                ]
+            },
+            {
+                path: '/admin/zalo-oas',
+                component: window.AdminLayoutComponent,
+                children: [
+                    { path: '', component: window.ZaloOAsPageComponent }
                 ]
             },
             {
@@ -770,6 +788,16 @@
             if (window.ZaloBotFormComponent) app.component('ZaloBotFormComponent', window.ZaloBotFormComponent);
             if (window.ZaloBotsPageComponent) app.component('ZaloBotsPageComponent', window.ZaloBotsPageComponent);
             
+            if (window.ZaloOAsListComponent) {
+              app.component('ZaloOAsListComponent', window.ZaloOAsListComponent);
+              app.component('zalo-oas-list-component', window.ZaloOAsListComponent);
+            }
+            if (window.ZaloOAFormComponent) {
+              app.component('ZaloOAFormComponent', window.ZaloOAFormComponent);
+              app.component('zalo-oa-form-component', window.ZaloOAFormComponent);
+            }
+            if (window.ZaloOAsPageComponent) app.component('ZaloOAsPageComponent', window.ZaloOAsPageComponent);
+            
             if (window.WebAppsListComponent) app.component('WebAppsListComponent', window.WebAppsListComponent);
             if (window.WebAppFormComponent) app.component('WebAppFormComponent', window.WebAppFormComponent);
             if (window.WebAppsPageComponent) app.component('WebAppsPageComponent', window.WebAppsPageComponent);
@@ -803,7 +831,8 @@
         
         // Wait for all services to load, then mount
                 const allServicesLoaded = window.BaseService && window.AuthService && 
-                                        window.TelegramService && window.ChatwootService && 
+                                        window.TelegramService && window.ZaloService && window.ZaloOAService &&
+                                        window.ChatwootService && 
                                         window.DifyService && window.UserService && 
                                         window.ConfigurationService;
                 
